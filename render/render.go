@@ -145,12 +145,20 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 
 // renderBorders renders the borders of a layout box.
 // CSS 2.1 §8.5 Border properties
+// CSS 2.1 §8.5.3: Borders only render if border-style is not 'none' or absent
 func renderBorders(canvas *Canvas, box *layout.LayoutBox) {
 	if box.StyledNode == nil {
 		return
 	}
 
 	styles := box.StyledNode.Styles
+	
+	// CSS 2.1 §8.5.3: Check if border-style is set and not 'none'
+	borderStyle := styles["border-style"]
+	if borderStyle == "" || borderStyle == "none" {
+		return
+	}
+
 	borderColor := parseColor(styles["border-color"])
 
 	// Get the padding box coordinates (borders are drawn around it)
