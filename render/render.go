@@ -80,34 +80,40 @@ func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
 	// Use basicfont.Face7x13 as a simple built-in font
 	face := basicfont.Face7x13
 	
-	// Create a point for the starting position
-	// The point represents the baseline of the text
-	point := fixed.Point26_6{
-		X: fixed.Int26_6(x * 64),
-		Y: fixed.Int26_6(y * 64),
-	}
+	// Calculate the bounding box for the text
+	width := len(text) * face.Advance
+	height := face.Height
 	
-	// Create a drawer
+	// Create a temporary image for just the text
+	textImg := image.NewRGBA(image.Rect(0, 0, width, height))
+	
+	// Create a drawer for the text
 	drawer := &font.Drawer{
-		Dst:  c.ToImage(),
+		Dst:  textImg,
 		Src:  image.NewUniform(col),
 		Face: face,
-		Dot:  point,
+		Dot:  fixed.Point26_6{X: 0, Y: fixed.I(face.Ascent)},
 	}
 	
 	// Draw the text
 	drawer.DrawString(text)
 	
-	// Copy pixels back from the image to our pixel buffer
-	img := drawer.Dst.(*image.RGBA)
-	for py := 0; py < c.Height; py++ {
-		for px := 0; px < c.Width; px++ {
-			r, g, b, a := img.At(px, py).RGBA()
-			c.Pixels[py*c.Width+px] = color.RGBA{
-				R: uint8(r >> 8),
-				G: uint8(g >> 8),
-				B: uint8(b >> 8),
-				A: uint8(a >> 8),
+	// Copy only the text pixels to the canvas
+	for dy := 0; dy < height; dy++ {
+		for dx := 0; dx < width; dx++ {
+			px := x + dx
+			py := y - face.Ascent + dy // Adjust for baseline
+			if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
+				r, g, b, a := textImg.At(dx, dy).RGBA()
+				// Only copy non-transparent pixels (text)
+				if a > 0 {
+					c.Pixels[py*c.Width+px] = color.RGBA{
+						R: uint8(r >> 8),
+						G: uint8(g >> 8),
+						B: uint8(b >> 8),
+						A: uint8(a >> 8),
+					}
+				}
 			}
 		}
 	}

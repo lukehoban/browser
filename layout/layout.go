@@ -323,9 +323,11 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	}
 
 	// Calculate text dimensions using basicfont.Face7x13
-	// Each character is 7 pixels wide, and the font height is 13 pixels
+	// Note: For basicfont.Face7x13, all characters have fixed width (Advance)
+	// For more accurate measurement, we could use font.Drawer.MeasureString()
+	// but basicfont is monospaced so character count * Advance is accurate
 	face := basicfont.Face7x13
-	width := float64(len(text)) * float64(face.Advance)
+	width := float64(len(text) * face.Advance)
 	height := float64(face.Height)
 
 	// Position the text node
