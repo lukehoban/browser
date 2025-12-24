@@ -71,6 +71,46 @@ func TestCanvasFillRect(t *testing.T) {
 	}
 }
 
+func TestCanvasDrawRect(t *testing.T) {
+	c := NewCanvas(30, 30)
+	white := color.RGBA{255, 255, 255, 255}
+	red := color.RGBA{255, 0, 0, 255}
+	c.Clear(white)
+
+	// Draw a rectangle outline at (5, 5) with size 20x20 and thickness 2
+	c.DrawRect(5, 5, 20, 20, red, 2)
+
+	// Check top border - pixel at (10, 5) should be red (inside top border)
+	if c.Pixels[5*30+10] != red {
+		t.Errorf("expected red at top border (10,5), got %v", c.Pixels[5*30+10])
+	}
+
+	// Check bottom border - pixel at (10, 23) should be red (inside bottom border, y=5+20-2=23)
+	if c.Pixels[23*30+10] != red {
+		t.Errorf("expected red at bottom border (10,23), got %v", c.Pixels[23*30+10])
+	}
+
+	// Check left border - pixel at (5, 15) should be red
+	if c.Pixels[15*30+5] != red {
+		t.Errorf("expected red at left border (5,15), got %v", c.Pixels[15*30+5])
+	}
+
+	// Check right border - pixel at (23, 15) should be red (x=5+20-2=23)
+	if c.Pixels[15*30+23] != red {
+		t.Errorf("expected red at right border (23,15), got %v", c.Pixels[15*30+23])
+	}
+
+	// Check center should be white (not filled)
+	if c.Pixels[15*30+15] != white {
+		t.Errorf("expected white at center (15,15), got %v", c.Pixels[15*30+15])
+	}
+
+	// Check outside should be white
+	if c.Pixels[0*30+0] != white {
+		t.Errorf("expected white outside rect (0,0), got %v", c.Pixels[0])
+	}
+}
+
 func TestParseColor(t *testing.T) {
 	tests := []struct {
 		input    string

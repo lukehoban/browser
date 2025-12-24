@@ -87,9 +87,17 @@ func (c *Canvas) SavePNG(filename string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
 
-	return png.Encode(file, c.ToImage())
+	if err := png.Encode(file, c.ToImage()); err != nil {
+		_ = file.Close()
+		return err
+	}
+
+	if err := file.Close(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Render renders a layout tree to a canvas.
@@ -152,6 +160,14 @@ func renderBorders(canvas *Canvas, box *layout.LayoutBox) {
 	}
 
 	styles := box.StyledNode.Styles
+	
+	// CSS 2.1 §8.5.3: Check if border-style is set and not 'none'
+	borderStyle := styles["border-style"]
+	if borderStyle == "" || borderStyle == "none" {
+		return
+	}
+
+	borderColor := parseColor(styles["border-color"])
 
 	// Get the padding box coordinates (borders are drawn around it)
 	paddingBox := box.Dimensions.Content
@@ -208,6 +224,33 @@ func renderBorders(canvas *Canvas, box *layout.LayoutBox) {
 // parseColor parses a CSS color value and returns a color.RGBA.
 // Supports basic color names and hex colors.
 // CSS 2.1 §4.3.6 Colors
+func parseColor(value string) color.RGBA {
+	value = strings.TrimSpace(strings.ToLower(value))
+
+	// Named colors (CSS 2.1 §4.3.6)
+	namedColors := map[string]color.RGBA{
+		"black":   {0, 0, 0, 255},
+		"white":   {255, 255, 255, 255},
+		"red":     {255, 0, 0, 255},
+		"green":   {0, 128, 0, 255},
+		"blue":    {0, 0, 255, 255},
+		"yellow":  {255, 255, 0, 255},
+		"cyan":    {0, 255, 255, 255},
+		"magenta": {255, 0, 255, 255},
+		"gray":    {128, 128, 128, 255},
+		"grey":    {128, 128, 128, 255},
+		"silver":  {192, 192, 192, 255},
+		"maroon":  {128, 0, 0, 255},
+		"navy":    {0, 0, 128, 255},
+		"olive":   {128, 128, 0, 255},
+		"purple":  {128, 0, 128, 255},
+		"teal":    {0, 128, 128, 255},
+		"orange":  {255, 165, 0, 255},
+		"aqua":    {0, 255, 255, 255},
+		"fuchsia": {255, 0, 255, 255},
+		"lime":    {0, 255, 0, 255},
+	}
+
 	if col, ok := namedColors[value]; ok {
 		return col
 	}
