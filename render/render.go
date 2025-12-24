@@ -12,6 +12,8 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
+	"io"
+	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -179,23 +181,29 @@ func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
 	}
 }
 
-// LoadImage loads an image from an absolute file path.
+// LoadImage loads an image from an absolute file path or URL.
 // Supports PNG, JPEG, and GIF formats.
 // The path should be already resolved (absolute) before calling this method.
+//
+// Network loading follows standard HTTP/HTTPS protocols for remote images.
 func (c *Canvas) LoadImage(path string) (image.Image, error) {
 	// Check cache first
 	if img, ok := c.ImageCache[path]; ok {
 		return img, nil
 	}
 
-	// Open and decode the image
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+	var img image.Image
+	var err error
 
-	img, _, err := image.Decode(file)
+	// Check if path is a URL
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		// Fetch from network
+		img, err = loadImageFromURL(path)
+	} else {
+		// Load from file
+		img, err = loadImageFromFile(path)
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -204,6 +212,34 @@ func (c *Canvas) LoadImage(path string) (image.Image, error) {
 	c.ImageCache[path] = img
 
 	return img, nil
+}
+
+// loadImageFromFile loads an image from a local file
+func loadImageFromFile(path string) (image.Image, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	img, _, err := image.Decode(file)
+	return img, err
+}
+
+// loadImageFromURL loads an image from a URL
+func loadImageFromURL(urlStr string) (image.Image, error) {
+	resp, err := http.Get(urlStr)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, io.EOF // Return a generic error
+	}
+
+	img, _, err := image.Decode(resp.Body)
+	return img, err
 }
 
 
