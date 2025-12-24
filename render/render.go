@@ -152,14 +152,6 @@ func renderBorders(canvas *Canvas, box *layout.LayoutBox) {
 	}
 
 	styles := box.StyledNode.Styles
-	
-	// CSS 2.1 §8.5.3: Check if border-style is set and not 'none'
-	borderStyle := styles["border-style"]
-	if borderStyle == "" || borderStyle == "none" {
-		return
-	}
-
-	borderColor := parseColor(styles["border-color"])
 
 	// Get the padding box coordinates (borders are drawn around it)
 	paddingBox := box.Dimensions.Content
