@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/lukehoban/browser/css"
@@ -70,7 +71,7 @@ func main() {
 
 	// Render to PNG if output specified
 	if *outputFile != "" {
-		canvas := render.Render(layoutTree, *width, *height)
+		canvas := render.Render(layoutTree, *width, *height, filepath.Dir(inputFile))
 		if err := canvas.SavePNG(*outputFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving PNG: %v\n", err)
 			os.Exit(1)
