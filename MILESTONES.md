@@ -168,6 +168,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 **Spec References**:
 - CSS 2.1 §14 Colors and backgrounds
+- CSS 2.1 §15 Fonts
 - CSS 2.1 §16 Text
 
 ### Tasks:
@@ -175,21 +176,29 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Render backgrounds and borders
 - [x] Render text content
 - [x] Output to PNG image format
+- [x] Font rendering with multiple families, sizes, and weights
 
 ### Deliverables:
 - ✅ Basic renderer with text support
 - ✅ Visual output of simple pages
 - ✅ Color support for text and backgrounds
 - ✅ Border rendering
+- ✅ Font family support (sans-serif, monospace, serif fallback)
+- ✅ Font size support (px, pt, em, named sizes)
+- ✅ Font weight support (normal, bold)
 
 ### Validation:
 - ✅ Rendered pages show text content
 - ✅ Colors and borders display correctly
 - ✅ Text is readable with proper color styling
 - ✅ PNG output works correctly
+- ✅ Different font sizes render correctly
+- ✅ Bold text renders with proper weight
+- ✅ Monospace fonts render with fixed-width glyphs
 
 ### Known Limitations:
-- ⚠️ Basic font rendering only (no font selection)
+- ⚠️ Limited font families (sans-serif, monospace only; serif falls back to sans-serif)
+- ⚠️ No font-style support (italic, oblique)
 - ⚠️ Limited text layout (no text-align, line-height control)
 - ⚠️ No background-image support (CSS property)
 
@@ -358,11 +367,16 @@ The browser can now load Hacker News from the network and render content with pr
   - Narrow columns (rank, votelinks) sized appropriately (~50px)
   - Wide columns (title) get remaining space
   - Maximum column width capping to prevent overflow
+- [x] **Font Rendering** ✅ COMPLETE
+  - Multiple font families (sans-serif, monospace)
+  - Font sizes (px, pt, em, named sizes)
+  - Font weights (normal, bold)
+  - Proper text measurement and layout
 
 ### Required Features for Full Fidelity:
 - [ ] **Text Layout Improvements**
   - [ ] Inline text layout (wrap text within line boxes)
-  - [ ] Font size support (not just default font)
+  - [x] Font size support
   - [ ] Text-align property (left, center, right)
   - [ ] Line-height property
   - [ ] Proper inline box model
@@ -396,7 +410,7 @@ The browser can now load Hacker News from the network and render content with pr
   - [x] Load remote images
 
 ### Current Status:
-The browser successfully loads and renders Hacker News from the network with improved table layout. Tables now use content-based column sizing, so narrow columns like rank numbers and vote arrows stay narrow, while title columns expand to fill available space. Colspan support allows subtext rows to properly span across multiple columns.
+The browser successfully loads and renders Hacker News from the network with improved table layout and font rendering. Tables use content-based column sizing, text renders with proper font families, sizes, and weights. The browser now supports CSS 2.1 font properties including font-family (sans-serif, monospace), font-size (px, pt, em, named sizes), and font-weight (normal, bold).
 
 ---
 
@@ -405,7 +419,8 @@ The browser successfully loads and renders Hacker News from the network with imp
 - CSS 3 features (flexbox, grid, transitions, animations)
 - Form handling
 - Media queries (responsive design)
-- Advanced typography (web fonts, font-weight, etc.)
+- Advanced typography (web fonts, font-style italic, additional font families)
+- Text layout improvements (text-align, line-height, text wrapping)
 - Accessibility features
 
 ---
