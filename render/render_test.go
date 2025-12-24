@@ -196,3 +196,28 @@ func TestToImage(t *testing.T) {
 		t.Errorf("expected red, got rgba(%d, %d, %d, %d)", r>>8, g>>8, b>>8, a>>8)
 	}
 }
+
+func TestDrawText(t *testing.T) {
+	c := NewCanvas(100, 50)
+	white := color.RGBA{255, 255, 255, 255}
+	black := color.RGBA{0, 0, 0, 255}
+	c.Clear(white)
+
+	// Draw text "Hello"
+	c.DrawText("Hello", 10, 20, black)
+
+	// Check that some pixels are black (text was drawn)
+	// We can't check exact positions since font rendering is complex,
+	// but we can verify that not all pixels are white anymore
+	hasBlackPixels := false
+	for _, px := range c.Pixels {
+		if px.R < 255 || px.G < 255 || px.B < 255 {
+			hasBlackPixels = true
+			break
+		}
+	}
+
+	if !hasBlackPixels {
+		t.Errorf("expected text to be drawn (some non-white pixels), but canvas is all white")
+	}
+}

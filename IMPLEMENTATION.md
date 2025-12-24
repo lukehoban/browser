@@ -85,7 +85,23 @@ From the problem statement:
 
 **Test Coverage**: 90.0%
 
-#### 5. Browser Application
+#### 5. Rendering Engine ✓
+**Specification**: CSS 2.1 §14 Colors and backgrounds, §16 Text
+
+**Implementation**:
+- `render/render.go`: Rendering engine with text support
+
+**Features**:
+- Canvas-based rendering to PNG
+- Background color rendering (CSS 2.1 §14.2)
+- Border rendering (CSS 2.1 §8.5)
+- Text rendering with color support (CSS 2.1 §16)
+- Font rendering using golang.org/x/image/font/basicfont
+- Color parsing (named colors and hex values)
+
+**Test Coverage**: 90%+
+
+#### 6. Browser Application
 **Implementation**:
 - `cmd/browser/main.go`: Command-line browser application
 
@@ -95,6 +111,7 @@ From the problem statement:
 - Parses HTML and CSS
 - Computes styles
 - Calculates layout
+- Renders to PNG with `-output` flag
 - Displays DOM tree, styled tree, and layout tree
 
 ### 📋 Documented
@@ -188,6 +205,7 @@ browser/
 ├── css/                  # CSS parsing
 ├── style/                # Style computation
 ├── layout/               # Layout engine
+├── render/               # Rendering engine
 ├── test/                 # Test HTML files
 ├── MILESTONES.md         # Milestone tracking
 ├── TESTING.md            # Testing documentation
@@ -200,7 +218,7 @@ browser/
 2. **Simple and clear**: Code is straightforward and well-commented
 3. **Modular**: Clear separation of concerns across packages
 4. **Testable**: High test coverage with unit and integration tests
-5. **Incremental**: Built in logical layers (parse → style → layout)
+5. **Incremental**: Built in logical layers (parse → style → layout → render)
 
 ## What Can It Do?
 
@@ -212,25 +230,33 @@ The browser can:
 5. ✅ Apply the CSS cascade
 6. ✅ Compute the box model for each element
 7. ✅ Calculate layout dimensions and positions
-8. ✅ Display the parsed structures in text format
+8. ✅ Render text with color styling
+9. ✅ Render backgrounds and borders
+10. ✅ Output to PNG images
 
 ## Example Output
 
-Running `./browser test/styled.html` produces:
+Running `./browser -output page.png test/styled.html` produces:
+- PNG image with rendered HTML content including:
+  - Text in specified colors
+  - Background colors
+  - Borders with specified widths and colors
+  
+Running `./browser test/styled.html` without output flag displays:
 - Complete DOM tree with elements and attributes
 - Styled tree showing computed styles for each element
 - Layout tree showing box dimensions (content, padding, border, margin)
 
 ## Next Steps (Not Implemented)
 
-The following were planned but not implemented as they go beyond the "first steps" requirement:
+The following were planned but not implemented:
 
-1. **Rendering**: Visual output (image or terminal)
-2. **Additional selectors**: Pseudo-classes, attribute selectors
-3. **Advanced layout**: Inline layout, positioning schemes
-4. **Property inheritance**: CSS inheritance mechanism
-5. **Shorthand properties**: Expanding shorthands like `margin: 10px`
-6. **Public test suite integration**: Automated test running
+1. **Additional selectors**: Pseudo-classes, attribute selectors, child/sibling combinators
+2. **Advanced layout**: Better inline layout, positioning schemes (absolute, relative, fixed)
+3. **Property inheritance**: Full CSS inheritance mechanism
+4. **Shorthand properties**: Expanding shorthands like `margin: 10px`
+5. **Advanced text**: Font selection, font sizes, text-align, line-height
+6. **Public test suite integration**: Automated test running against W3C test suites
 
 ## Conclusion
 

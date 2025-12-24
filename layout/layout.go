@@ -11,7 +11,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/style"
+	"golang.org/x/image/font/basicfont"
 )
 
 // LayoutBox represents a box in the layout tree.
@@ -81,6 +83,22 @@ func LayoutTree(styledNode *style.StyledNode, containingBlock Dimensions) *Layou
 
 // buildLayoutTree constructs the layout tree.
 func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
+	// Skip whitespace-only text nodes
+	// CSS 2.1 §16.6.1: Whitespace-only text nodes should not affect layout
+	if styledNode.Node != nil && styledNode.Node.Type == dom.TextNode {
+		text := styledNode.Node.Data
+		isWhitespaceOnly := true
+		for _, ch := range text {
+			if ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
+				isWhitespaceOnly = false
+				break
+			}
+		}
+		if isWhitespaceOnly {
+			return nil // Don't create a box for whitespace-only text
+		}
+	}
+
 	// Determine box type based on display property
 	boxType := BlockBox
 	if display := styledNode.Styles["display"]; display == "inline" {
@@ -122,6 +140,12 @@ func (box *LayoutBox) Layout(containingBlock Dimensions) {
 // CSS 2.1 §10.3 Calculating widths and margins
 // CSS 2.1 §10.6 Calculating heights and margins
 func (box *LayoutBox) layoutBlock(containingBlock Dimensions) {
+	// Check if this is a text node
+	if box.StyledNode != nil && box.StyledNode.Node != nil && box.StyledNode.Node.Type == dom.TextNode {
+		box.layoutText(containingBlock)
+		return
+	}
+
 	// Calculate width
 	box.calculateBlockWidth(containingBlock)
 
@@ -301,4 +325,30 @@ func expandRect(rect Rect, edges EdgeSizes) Rect {
 		Width:  rect.Width + edges.Left + edges.Right,
 		Height: rect.Height + edges.Top + edges.Bottom,
 	}
+}
+
+// layoutText lays out a text node.
+// CSS 2.1 §16 Text
+func (box *LayoutBox) layoutText(containingBlock Dimensions) {
+	// Get the text content
+	text := box.StyledNode.Node.Data
+	if text == "" {
+		box.Dimensions.Content.Width = 0
+		box.Dimensions.Content.Height = 0
+		return
+	}
+
+	// Calculate text dimensions using basicfont.Face7x13
+	// Note: For basicfont.Face7x13, all characters have fixed width (Advance)
+	// For more accurate measurement, we could use font.Drawer.MeasureString()
+	// but basicfont is monospaced so character count * Advance is accurate
+	face := basicfont.Face7x13
+	width := float64(len(text) * face.Advance)
+	height := float64(face.Height)
+
+	// Position the text node
+	box.Dimensions.Content.X = containingBlock.Content.X
+	box.Dimensions.Content.Y = containingBlock.Content.Y + containingBlock.Content.Height
+	box.Dimensions.Content.Width = width
+	box.Dimensions.Content.Height = height
 }
