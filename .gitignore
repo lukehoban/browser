@@ -42,3 +42,4 @@ testdata/output/
 # Generated PNG files (except test fixtures and screenshots)
 /*.png
 !/*_screenshot.png
+
