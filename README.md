@@ -81,6 +81,35 @@ go build ./cmd/browser
 ./browser test/styled.html
 ```
 
+## TODO: Next Major Features
+
+The following are the next major features planned for implementation, listed in priority order:
+
+1. **Text Rendering** - Render actual text content from HTML elements, including font support and basic typography
+2. **Inline Layout** - Implement inline formatting context (CSS 2.1 §9.4.2) to properly handle inline elements like `<span>`, `<a>`, and text flow
+3. **CSS Inheritance** - Implement property inheritance (CSS 2.1 §6.2) so child elements inherit applicable properties from parents
+4. **Advanced Selectors** - Add support for:
+   - Child combinator (`>`)
+   - Adjacent sibling combinator (`+`)
+   - Attribute selectors (`[attr]`, `[attr=value]`)
+   - Pseudo-classes (`:hover`, `:first-child`, `:last-child`)
+5. **Positioning Schemes** - Implement additional positioning (CSS 2.1 §9.3):
+   - Relative positioning (`position: relative`)
+   - Absolute positioning (`position: absolute`)
+   - Fixed positioning (`position: fixed`)
+6. **Float and Clear** - Implement floating elements (CSS 2.1 §9.5) and the clear property
+7. **Shorthand Properties** - Expand shorthand CSS properties like `margin`, `padding`, `border`, `font`, `background`
+8. **Additional Color Formats** - Support `rgb()`, `rgba()`, `hsl()`, `hsla()` color functions
+9. **CSS Box Model Extensions** - Add support for:
+   - `min-width`, `max-width`, `min-height`, `max-height`
+   - `box-sizing` property
+10. **Network Stack** - Add HTTP/HTTPS support to fetch remote HTML and CSS resources
+11. **Image Support** - Render `<img>` elements with support for common image formats (PNG, JPEG, GIF)
+12. **Table Layout** - Implement table formatting context (CSS 2.1 §17) for proper `<table>` rendering
+13. **List Styling** - Support list-style properties for `<ul>`, `<ol>`, and `<li>` elements
+14. **Interactive Elements** - Add support for forms and form controls (`<input>`, `<button>`, `<select>`, etc.)
+15. **CSS 2.1 Test Suite Integration** - Automate running and reporting on W3C CSS 2.1 test suite compliance
+
 ## License
 
 MIT
