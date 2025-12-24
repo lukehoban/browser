@@ -80,6 +80,11 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 // DrawImage draws an image onto the canvas at the specified position.
 // HTML5 §4.8.2 The img element
 func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
+	// Validate dimensions to prevent division by zero
+	if width <= 0 || height <= 0 {
+		return
+	}
+
 	bounds := img.Bounds()
 	srcWidth := bounds.Dx()
 	srcHeight := bounds.Dy()
@@ -104,19 +109,25 @@ func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
 			}
 			
 			// Handle alpha blending with existing pixel
+			destX := x + dx
+			destY := y + dy
+			
 			if rgba.A == 255 {
-				c.SetPixel(x+dx, y+dy, rgba)
+				c.SetPixel(destX, destY, rgba)
 			} else if rgba.A > 0 {
-				// Simple alpha blending
-				existing := c.Pixels[(y+dy)*c.Width+(x+dx)]
-				alpha := float64(rgba.A) / 255.0
-				blended := color.RGBA{
-					R: uint8(float64(rgba.R)*alpha + float64(existing.R)*(1-alpha)),
-					G: uint8(float64(rgba.G)*alpha + float64(existing.G)*(1-alpha)),
-					B: uint8(float64(rgba.B)*alpha + float64(existing.B)*(1-alpha)),
-					A: 255,
+				// Check bounds before accessing pixel array directly
+				if destX >= 0 && destX < c.Width && destY >= 0 && destY < c.Height {
+					// Simple alpha blending
+					existing := c.Pixels[destY*c.Width+destX]
+					alpha := float64(rgba.A) / 255.0
+					blended := color.RGBA{
+						R: uint8(float64(rgba.R)*alpha + float64(existing.R)*(1-alpha)),
+						G: uint8(float64(rgba.G)*alpha + float64(existing.G)*(1-alpha)),
+						B: uint8(float64(rgba.B)*alpha + float64(existing.B)*(1-alpha)),
+						A: 255,
+					}
+					c.SetPixel(destX, destY, blended)
 				}
-				c.SetPixel(x+dx, y+dy, blended)
 			}
 		}
 	}
