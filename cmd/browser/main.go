@@ -1,0 +1,137 @@
+// Package main provides the browser command-line application.
+// It parses HTML and CSS, computes styles, calculates layout, and renders to PNG.
+package main
+
+import (
+	"flag"
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/lukehoban/browser/css"
+	"github.com/lukehoban/browser/dom"
+	"github.com/lukehoban/browser/html"
+	"github.com/lukehoban/browser/layout"
+	"github.com/lukehoban/browser/render"
+	"github.com/lukehoban/browser/style"
+)
+
+func main() {
+	// Parse command-line flags
+	outputFile := flag.String("output", "", "Output PNG file path (optional)")
+	width := flag.Int("width", 800, "Viewport width in pixels")
+	height := flag.Int("height", 600, "Viewport height in pixels")
+	flag.Parse()
+
+	// Check for input file
+	args := flag.Args()
+	if len(args) < 1 {
+		fmt.Fprintf(os.Stderr, "Usage: browser [options] <html-file>\n")
+		fmt.Fprintf(os.Stderr, "Options:\n")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
+	inputFile := args[0]
+
+	// Read HTML file
+	content, err := os.ReadFile(inputFile)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading file: %v\n", err)
+		os.Exit(1)
+	}
+
+	// Parse HTML
+	doc := html.Parse(string(content))
+
+	// Extract CSS from <style> tags
+	cssContent := extractCSS(doc)
+
+	// Parse CSS
+	stylesheet := css.Parse(cssContent)
+
+	// Compute styles
+	styledTree := style.StyleTree(doc, stylesheet)
+
+	// Build layout tree
+	// Note: Height starts at 0 - it accumulates as children are laid out
+	containingBlock := layout.Dimensions{
+		Content: layout.Rect{
+			Width:  float64(*width),
+			Height: 0,
+		},
+	}
+	layoutTree := layout.LayoutTree(styledTree, containingBlock)
+
+	// Print summary
+	fmt.Println("=== Browser Rendering ===")
+	fmt.Printf("Input: %s\n", inputFile)
+	fmt.Printf("Viewport: %dx%d\n", *width, *height)
+
+	// Render to PNG if output specified
+	if *outputFile != "" {
+		canvas := render.Render(layoutTree, *width, *height)
+		if err := canvas.SavePNG(*outputFile); err != nil {
+			fmt.Fprintf(os.Stderr, "Error saving PNG: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("Output: %s\n", *outputFile)
+		fmt.Println("Rendering complete!")
+	} else {
+		// Print layout tree for debugging
+		fmt.Println("\n=== Layout Tree ===")
+		printLayoutTree(layoutTree, 0)
+	}
+}
+
+// extractCSS extracts CSS from <style> tags in the document.
+func extractCSS(doc *dom.Node) string {
+	var cssBuilder strings.Builder
+	extractCSSFromNode(doc, &cssBuilder)
+	return cssBuilder.String()
+}
+
+// extractCSSFromNode recursively extracts CSS from style elements.
+func extractCSSFromNode(node *dom.Node, builder *strings.Builder) {
+	if node.Type == dom.ElementNode && node.Data == "style" {
+		for _, child := range node.Children {
+			if child.Type == dom.TextNode {
+				builder.WriteString(child.Data)
+				builder.WriteString("\n")
+			}
+		}
+	}
+
+	for _, child := range node.Children {
+		extractCSSFromNode(child, builder)
+	}
+}
+
+// printLayoutTree prints the layout tree for debugging.
+func printLayoutTree(box *layout.LayoutBox, indent int) {
+	prefix := strings.Repeat("  ", indent)
+
+	boxType := "Block"
+	if box.BoxType == layout.InlineBox {
+		boxType = "Inline"
+	} else if box.BoxType == layout.AnonymousBox {
+		boxType = "Anonymous"
+	}
+
+	nodeName := "?"
+	if box.StyledNode != nil && box.StyledNode.Node != nil {
+		nodeName = box.StyledNode.Node.Data
+	}
+
+	fmt.Printf("%s%s <%s> [x:%.0f y:%.0f w:%.0f h:%.0f]\n",
+		prefix, boxType, nodeName,
+		box.Dimensions.Content.X,
+		box.Dimensions.Content.Y,
+		box.Dimensions.Content.Width,
+		box.Dimensions.Content.Height,
+	)
+
+	for _, child := range box.Children {
+		printLayoutTree(child, indent+1)
+	}
+}
