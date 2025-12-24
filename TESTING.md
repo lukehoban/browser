@@ -66,6 +66,7 @@ Integration tests use complete HTML documents with embedded CSS:
 
 - `test/simple.html`: Basic HTML structure
 - `test/styled.html`: HTML with CSS styles
+- `test/hackernews.html`: Simplified Hacker News homepage for testing real-world layout
 
 ## Test Results
 

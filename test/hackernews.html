@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Hacker News</title>
+    <style>
+        body {
+            font-family: Verdana, Geneva, sans-serif;
+            font-size: 10pt;
+            margin: 0;
+            padding: 0;
+            background: #f6f6ef;
+        }
+        
+        #hnmain {
+            width: 85%;
+            margin: 0 auto;
+            background: #f6f6ef;
+        }
+        
+        #header {
+            background: #ff6600;
+            padding: 2px;
+        }
+        
+        .hnname {
+            font-weight: bold;
+        }
+        
+        .pagetop {
+            font-size: 10pt;
+            color: black;
+        }
+        
+        .pagetop a {
+            color: black;
+        }
+        
+        .title {
+            font-size: 10pt;
+        }
+        
+        .titleline a {
+            color: black;
+        }
+        
+        .sitestr {
+            font-size: 8pt;
+            color: #828282;
+        }
+        
+        .subtext {
+            font-size: 7pt;
+            color: #828282;
+        }
+        
+        .subtext a {
+            color: #828282;
+        }
+        
+        .score {
+            color: #828282;
+        }
+        
+        .hnuser {
+            color: #828282;
+        }
+        
+        .age {
+            color: #828282;
+        }
+        
+        .rank {
+            color: #828282;
+            font-size: 10pt;
+        }
+        
+        .spacer {
+            height: 5px;
+        }
+        
+        table {
+            border-collapse: collapse;
+        }
+        
+        td {
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <center>
+        <table id="hnmain" border="0" cellpadding="0" cellspacing="0" width="85%" bgcolor="#f6f6ef">
+            <tr>
+                <td id="header" bgcolor="#ff6600">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                        <tr>
+                            <td>
+                                <span class="pagetop">
+                                    <b class="hnname"><a href="news">Hacker News</a></b>
+                                    <a href="newest">new</a> | 
+                                    <a href="front">past</a> | 
+                                    <a href="comments">comments</a> | 
+                                    <a href="ask">ask</a> | 
+                                    <a href="show">show</a> | 
+                                    <a href="jobs">jobs</a> | 
+                                    <a href="submit">submit</a>
+                                </span>
+                            </td>
+                            <td>
+                                <span class="pagetop"><a href="login">login</a></span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr class="spacer"></tr>
+            <tr>
+                <td>
+                    <table border="0" cellpadding="0" cellspacing="0">
+                        <tr class="athing" id="item1">
+                            <td class="title">
+                                <span class="rank">1.</span>
+                            </td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://example.com/article1">When Compilers Surprise You</a>
+                                    <span class="sitebit">
+                                        (<span class="sitestr">xania.org</span>)
+                                    </span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">99 points</span> by 
+                                    <a href="user" class="hnuser">brewmarche</a> 
+                                    <span class="age"><a href="item">4 hours ago</a></span> | 
+                                    <a href="item">41 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="spacer"></tr>
+                        <tr class="athing" id="item2">
+                            <td class="title">
+                                <span class="rank">2.</span>
+                            </td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://example.com/article2">Fabrice Bellard Releases MicroQuickJS</a>
+                                    <span class="sitebit">
+                                        (<span class="sitestr">github.com/bellard</span>)
+                                    </span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">1294 points</span> by 
+                                    <a href="user" class="hnuser">Aissen</a> 
+                                    <span class="age"><a href="item">1 day ago</a></span> | 
+                                    <a href="item">483 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="spacer"></tr>
+                        <tr class="athing" id="item3">
+                            <td class="title">
+                                <span class="rank">3.</span>
+                            </td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://example.com/article3">Some Epstein file redactions are being undone with hacks</a>
+                                    <span class="sitebit">
+                                        (<span class="sitestr">theguardian.com</span>)
+                                    </span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">791 points</span> by 
+                                    <a href="user" class="hnuser">vinni2</a> 
+                                    <span class="age"><a href="item">20 hours ago</a></span> | 
+                                    <a href="item">615 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="spacer"></tr>
+                        <tr class="athing" id="item4">
+                            <td class="title">
+                                <span class="rank">4.</span>
+                            </td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://example.com/article4">X-ray: a Python library for finding bad redactions in PDF documents</a>
+                                    <span class="sitebit">
+                                        (<span class="sitestr">github.com/freelawproject</span>)
+                                    </span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">595 points</span> by 
+                                    <a href="user" class="hnuser">rendx</a> 
+                                    <span class="age"><a href="item">20 hours ago</a></span> | 
+                                    <a href="item">102 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="spacer"></tr>
+                        <tr class="athing" id="item5">
+                            <td class="title">
+                                <span class="rank">5.</span>
+                            </td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://example.com/article5">Unifi Travel Router</a>
+                                    <span class="sitebit">
+                                        (<span class="sitestr">ui.com</span>)
+                                    </span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">394 points</span> by 
+                                    <a href="user" class="hnuser">flurdy</a> 
+                                    <span class="age"><a href="item">17 hours ago</a></span> | 
+                                    <a href="item">339 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </center>
+</body>
+</html>
