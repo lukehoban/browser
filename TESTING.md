@@ -156,6 +156,20 @@ go build -o wptrunner ./cmd/wptrunner
 go test ./reftest/... -v
 ```
 
+### WPT Tests in CI
+
+WPT tests run automatically in CI as a separate job that:
+- **Does not block merges** - The WPT job uses `continue-on-error: true` to allow PRs to merge even when tests fail
+- **Generates reports** - Test results are uploaded as CI artifacts (wpt-report.txt and wpt-summary.md)
+- **Provides visibility** - The test summary is displayed in the CI logs
+- **Tracks progress** - Results are retained for 30 days to track improvements over time
+
+To view WPT test results from CI:
+1. Go to the Actions tab in GitHub
+2. Click on a workflow run
+3. Find the "WPT Tests" job
+4. View the summary in the logs or download the "wpt-test-report" artifact
+
 ### Current WPT CSS Reftest Results
 
 | Category | Tests | Passed | Failed | Pass Rate |
