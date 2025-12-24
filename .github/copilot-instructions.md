@@ -63,7 +63,11 @@ go build ./cmd/browser
 ## Code Guidelines
 
 - Follow existing code style and patterns
-- Add spec references for CSS/HTML implementations (see existing code for examples)
+- **ALWAYS add spec references for CSS/HTML/DOM implementations** (see existing code for examples)
+  - For CSS features: Reference CSS 2.1 specification sections (e.g., "CSS 2.1 §5.8 Attribute selectors")
+  - For HTML features: Reference HTML5 specification sections (e.g., "HTML5 §2.5 URLs")
+  - For DOM features: Reference DOM Level 2 Core or relevant specs
+  - For non-standard or practical implementations: Document the reasoning
 - Write unit tests for new functionality
 - Run `go test ./...` before submitting changes
 - Update MILESTONES.md when completing tasks or discovering limitations

@@ -59,6 +59,13 @@ func (p *Parser) Parse() *Stylesheet {
 			break
 		}
 
+		// Skip @-rules (media queries, imports, etc.)
+		// CSS 2.1 §4.1.5 At-rules - not implementing for simplicity
+		if token.Type == AtKeywordToken {
+			p.skipAtRule()
+			continue
+		}
+
 		rule := p.parseRule()
 		if rule != nil {
 			stylesheet.Rules = append(stylesheet.Rules, rule)
@@ -66,6 +73,37 @@ func (p *Parser) Parse() *Stylesheet {
 	}
 
 	return stylesheet
+}
+
+// skipAtRule skips an @-rule (like @media, @import, @keyframes).
+// CSS 2.1 §4.1.5 At-rules
+// We skip these because we don't implement them, but we need to properly
+// parse past them to avoid infinite loops.
+func (p *Parser) skipAtRule() {
+	// Consume the @keyword token
+	p.tokenizer.Next()
+
+	// Skip tokens until we find either a semicolon (for simple @rules like @import)
+	// or a block (for complex @rules like @media)
+	braceDepth := 0
+	for {
+		token := p.tokenizer.Next()
+		if token.Type == EOFToken {
+			break
+		}
+		if token.Type == SemicolonToken && braceDepth == 0 {
+			break
+		}
+		if token.Type == LeftBraceToken {
+			braceDepth++
+		}
+		if token.Type == RightBraceToken {
+			braceDepth--
+			if braceDepth <= 0 {
+				break
+			}
+		}
+	}
 }
 
 // parseRule parses a CSS rule.
@@ -195,6 +233,18 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 			token = p.tokenizer.Next()
 			if token.Type == IdentToken {
 				simple.Classes = append(simple.Classes, token.Value)
+			}
+		} else if token.Type == LeftBracketToken {
+			// Skip attribute selectors [attr=value]
+			// CSS 2.1 §5.8 Attribute selectors - not implementing for simplicity
+			// Note: Attribute selectors are part of CSS 2.1 but not core to basic rendering
+			p.tokenizer.Next() // consume '['
+			// Skip everything until ']'
+			for {
+				token = p.tokenizer.Next()
+				if token.Type == RightBracketToken || token.Type == EOFToken {
+					break
+				}
 			}
 		} else {
 			break

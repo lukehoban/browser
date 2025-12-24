@@ -37,10 +37,16 @@ const (
 	LeftParenToken
 	// RightParenToken represents ')'
 	RightParenToken
+	// LeftBracketToken represents '['
+	LeftBracketToken
+	// RightBracketToken represents ']'
+	RightBracketToken
 	// WhitespaceToken represents whitespace
 	WhitespaceToken
 	// DotToken represents '.'
 	DotToken
+	// AtKeywordToken represents an @-rule (e.g., @media, @import)
+	AtKeywordToken
 	// EOFToken represents end of input
 	EOFToken
 )
@@ -102,6 +108,13 @@ func (t *Tokenizer) Next() Token {
 		return Token{Type: DotToken, Value: "."}
 	}
 
+	// At-keyword (@media, @import, etc.) - CSS 2.1 §4.1.5 At-rules
+	if c == '@' {
+		t.pos++
+		name := t.readName()
+		return Token{Type: AtKeywordToken, Value: name}
+	}
+
 	// Single-character tokens
 	switch c {
 	case ':':
@@ -125,6 +138,12 @@ func (t *Tokenizer) Next() Token {
 	case ')':
 		t.pos++
 		return Token{Type: RightParenToken, Value: ")"}
+	case '[':
+		t.pos++
+		return Token{Type: LeftBracketToken, Value: "["}
+	case ']':
+		t.pos++
+		return Token{Type: RightBracketToken, Value: "]"}
 	}
 
 	// Comments

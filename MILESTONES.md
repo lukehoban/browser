@@ -303,9 +303,47 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ---
 
+## Milestone 9: Network Support ✅ COMPLETE
+**Goal**: Load and render web pages from HTTP/HTTPS URLs
+
+**Spec References**:
+- HTTP/HTTPS: Standard Go net/http implementation
+- HTML5 §2.5 URLs: Relative URL resolution
+
+### Tasks:
+- [x] HTTP/HTTPS URL fetching
+- [x] Detect URLs vs local file paths
+- [x] Fetch HTML content from network
+- [x] Fetch external stylesheets via `<link rel="stylesheet">`
+- [x] Load images from network URLs
+- [x] CSS parser robustness improvements
+  - [x] Handle attribute selectors gracefully (CSS 2.1 §5.8)
+  - [x] Handle @-rules gracefully (CSS 2.1 §4.1.5)
+
+### Deliverables:
+- ✅ Browser can load pages from URLs
+- ✅ External CSS files are fetched and applied
+- ✅ Network images are loaded and rendered
+- ✅ CSS parser doesn't crash on modern CSS features
+
+### Validation:
+- ✅ Successfully loads https://news.ycombinator.com/
+- ✅ Renders to PNG without crashing
+- ✅ External CSS (news.css) is fetched and parsed
+- ✅ Handles attribute selectors and @media queries gracefully
+
+### Known Limitations:
+- ⚠️ No HTTP caching (fetches on every request)
+- ⚠️ No connection pooling or timeouts
+- ⚠️ Attribute selectors are skipped (not applied)
+- ⚠️ @-rules are skipped (media queries, imports, etc.)
+- ⚠️ No support for relative URL resolution in CSS (e.g., background images)
+
+---
+
 ## Future Work: Full Hacker News Rendering
 
-To render the actual Hacker News homepage correctly (not just a simplified visual approximation), the following features are needed:
+The browser can now load Hacker News from the network and render basic content. However, full visual fidelity requires additional features:
 
 ### Required Features:
 - [ ] **Text Layout Improvements**
@@ -336,13 +374,13 @@ To render the actual Hacker News homepage correctly (not just a simplified visua
   - [ ] Inherit property values from parents
   - [ ] Computed value calculation
 
-- [ ] **Network Support**
-  - [ ] HTTP/HTTPS requests
-  - [ ] Load external stylesheets
-  - [ ] Load remote images
+- [x] **Network Support** ✅ COMPLETE
+  - [x] HTTP/HTTPS requests
+  - [x] Load external stylesheets
+  - [x] Load remote images
 
-### Current Workaround:
-The `test/hackernews.html` file is a simplified visual approximation that uses colored boxes to demonstrate layout capabilities without requiring full text layout or table support.
+### Current Status:
+The browser successfully loads and renders Hacker News from the network, displaying text content, navigation links, and story metadata. Layout is basic but functional.
 
 ---
 
@@ -357,6 +395,6 @@ The `test/hackernews.html` file is a simplified visual approximation that uses c
 ---
 
 ## Current Status
-**Completed**: Milestones 1-7.5 (Foundation through Basic Table Layout)  
+**Completed**: Milestones 1-7.5 (Foundation through Basic Table Layout), Milestone 9 (Network Support)  
 **In Progress**: Milestone 8 (Testing & Validation)  
 **Last Updated**: 2025-12-24
