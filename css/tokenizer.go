@@ -108,7 +108,7 @@ func (t *Tokenizer) Next() Token {
 		return Token{Type: DotToken, Value: "."}
 	}
 	
-	// At-keyword (@media, @import, etc.) - CSS 2.1 §4.1.1
+	// At-keyword (@media, @import, etc.) - CSS 2.1 §4.1.5 At-rules
 	if c == '@' {
 		t.pos++
 		name := t.readName()

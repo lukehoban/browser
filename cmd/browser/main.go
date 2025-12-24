@@ -84,13 +84,11 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Extracting CSS...\n")
 	cssContent := extractCSS(doc)
 	
-	// Fetch external stylesheets if we're loading from a URL
-	if isURL(input) {
-		fmt.Fprintf(os.Stderr, "Fetching external stylesheets...\n")
-		externalCSS := fetchExternalStylesheets(doc, baseURL)
-		cssContent = externalCSS + "\n" + cssContent
-		fmt.Fprintf(os.Stderr, "External stylesheets fetched\n")
-	}
+	// Fetch external stylesheets
+	fmt.Fprintf(os.Stderr, "Fetching external stylesheets...\n")
+	externalCSS := fetchExternalStylesheets(doc, baseURL)
+	cssContent = externalCSS + "\n" + cssContent
+	fmt.Fprintf(os.Stderr, "External stylesheets fetched\n")
 
 	// Parse CSS
 	fmt.Fprintf(os.Stderr, "Parsing CSS...\n")
@@ -223,17 +221,29 @@ func fetchExternalStylesheetsFromNode(node *dom.Node, baseURL string, builder *s
 		href := node.GetAttribute("href")
 		
 		if rel == "stylesheet" && href != "" {
-			// Resolve the CSS URL against the base URL
-			cssURL, err := resolveURL(baseURL, href)
+			// Resolve the CSS URL/path against the base URL/directory
+			cssPath, err := resolveURL(baseURL, href)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to resolve CSS URL %s: %v\n", href, err)
+				fmt.Fprintf(os.Stderr, "Warning: failed to resolve CSS path %s: %v\n", href, err)
 				return
 			}
 			
-			// Fetch the CSS file
-			cssContent, err := fetchURL(cssURL)
+			// Fetch the CSS file (from URL or file)
+			var cssContent string
+			if isURL(cssPath) {
+				cssContent, err = fetchURL(cssPath)
+			} else {
+				// Read from local file
+				data, fileErr := os.ReadFile(cssPath)
+				if fileErr != nil {
+					err = fileErr
+				} else {
+					cssContent = string(data)
+				}
+			}
+			
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to fetch CSS from %s: %v\n", cssURL, err)
+				fmt.Fprintf(os.Stderr, "Warning: failed to fetch CSS from %s: %v\n", cssPath, err)
 				return
 			}
 			

@@ -7,12 +7,12 @@
 package render
 
 import (
+	"fmt"
 	"image"
 	"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
-	"io"
 	"net/http"
 	"os"
 	"strconv"
@@ -235,7 +235,7 @@ func loadImageFromURL(urlStr string) (image.Image, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, io.EOF // Return a generic error
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
 	}
 
 	img, _, err := image.Decode(resp.Body)
