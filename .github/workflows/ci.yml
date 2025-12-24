@@ -92,7 +92,9 @@ jobs:
     - name: Run WPT tests
       run: |
         go test -v ./reftest -run TestWPTCSSReftests > wpt-report.txt 2>&1
-        echo "Exit code: $?" >> wpt-report.txt
+        exit_code=$?
+        echo "" >> wpt-report.txt
+        echo "Exit code: $exit_code" >> wpt-report.txt
       continue-on-error: true
 
     - name: Generate WPT summary
@@ -101,10 +103,10 @@ jobs:
         echo "# WPT Test Results" > wpt-summary.md
         echo "" >> wpt-summary.md
         echo "## Summary" >> wpt-summary.md
-        grep -A 5 "WPT CSS Reftest Results:" wpt-report.txt >> wpt-summary.md || echo "No results found" >> wpt-summary.md
+        grep -A 6 "WPT CSS Reftest Results:" wpt-report.txt >> wpt-summary.md || echo "No results found" >> wpt-summary.md
         echo "" >> wpt-summary.md
         echo "## Failed Tests" >> wpt-summary.md
-        grep -A 100 "Failed tests" wpt-report.txt | head -50 >> wpt-summary.md || echo "No failures listed" >> wpt-summary.md
+        grep -A 100 "Failed tests (expected, documenting gaps):" wpt-report.txt | head -50 >> wpt-summary.md || echo "No failures listed" >> wpt-summary.md
         echo "" >> wpt-summary.md
         echo "## Full Output" >> wpt-summary.md
         echo '```' >> wpt-summary.md
