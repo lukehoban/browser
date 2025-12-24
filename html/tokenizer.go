@@ -65,7 +65,7 @@ func (t *Tokenizer) Next() (Token, bool) {
 
 	// Start of tag
 	t.pos++ // consume '<'
-	
+
 	if t.pos >= len(t.input) {
 		return Token{Type: TextToken, Data: "<"}, true
 	}
@@ -83,12 +83,12 @@ func (t *Tokenizer) Next() (Token, bool) {
 		}
 		// Invalid, treat as text
 		return Token{Type: TextToken, Data: "<!"}, true
-	
+
 	case '/':
 		// End tag
 		t.pos++
 		return t.readEndTag(), true
-	
+
 	default:
 		// Start tag
 		return t.readStartTag(), true
@@ -113,23 +113,23 @@ func (t *Tokenizer) readText() Token {
 func (t *Tokenizer) readStartTag() Token {
 	tagName := t.readTagName()
 	attrs := t.readAttributes()
-	
+
 	selfClosing := false
 	if t.pos < len(t.input) && t.input[t.pos] == '/' {
 		selfClosing = true
 		t.pos++
 	}
-	
+
 	// Consume '>'
 	if t.pos < len(t.input) && t.input[t.pos] == '>' {
 		t.pos++
 	}
-	
+
 	tokenType := StartTagToken
 	if selfClosing {
 		tokenType = SelfClosingTagToken
 	}
-	
+
 	return Token{
 		Type:       tokenType,
 		Data:       strings.ToLower(tagName),
@@ -141,17 +141,17 @@ func (t *Tokenizer) readStartTag() Token {
 // HTML5 §12.2.5.9 End tag open state
 func (t *Tokenizer) readEndTag() Token {
 	tagName := t.readTagName()
-	
+
 	// Skip to '>'
 	for t.pos < len(t.input) && t.input[t.pos] != '>' {
 		t.pos++
 	}
-	
+
 	// Consume '>'
 	if t.pos < len(t.input) {
 		t.pos++
 	}
-	
+
 	return Token{
 		Type: EndTagToken,
 		Data: strings.ToLower(tagName),
@@ -175,27 +175,27 @@ func (t *Tokenizer) readTagName() string {
 // HTML5 §12.2.5.32 Before attribute name state
 func (t *Tokenizer) readAttributes() map[string]string {
 	attrs := make(map[string]string)
-	
+
 	for t.pos < len(t.input) {
 		t.skipWhitespace()
-		
+
 		if t.pos >= len(t.input) {
 			break
 		}
-		
+
 		c := t.input[t.pos]
 		if c == '>' || c == '/' {
 			break
 		}
-		
+
 		// Read attribute name
 		name := t.readAttrName()
 		if name == "" {
 			break
 		}
-		
+
 		t.skipWhitespace()
-		
+
 		// Check for '='
 		value := ""
 		if t.pos < len(t.input) && t.input[t.pos] == '=' {
@@ -203,10 +203,10 @@ func (t *Tokenizer) readAttributes() map[string]string {
 			t.skipWhitespace()
 			value = t.readAttrValue()
 		}
-		
+
 		attrs[strings.ToLower(name)] = value
 	}
-	
+
 	return attrs
 }
 
@@ -229,7 +229,7 @@ func (t *Tokenizer) readAttrValue() string {
 	if t.pos >= len(t.input) {
 		return ""
 	}
-	
+
 	quote := t.input[t.pos]
 	if quote == '"' || quote == '\'' {
 		// Quoted value
@@ -244,7 +244,7 @@ func (t *Tokenizer) readAttrValue() string {
 		}
 		return value
 	}
-	
+
 	// Unquoted value
 	start := t.pos
 	for t.pos < len(t.input) {
@@ -262,7 +262,7 @@ func (t *Tokenizer) readAttrValue() string {
 func (t *Tokenizer) readComment() Token {
 	t.pos += 2 // consume '--'
 	start := t.pos
-	
+
 	// Find end of comment
 	for t.pos < len(t.input)-2 {
 		if t.input[t.pos] == '-' && t.input[t.pos+1] == '-' && t.input[t.pos+2] == '>' {
@@ -272,7 +272,7 @@ func (t *Tokenizer) readComment() Token {
 		}
 		t.pos++
 	}
-	
+
 	// Unclosed comment
 	return Token{Type: CommentToken, Data: t.input[start:]}
 }
@@ -280,19 +280,19 @@ func (t *Tokenizer) readComment() Token {
 // readDoctype reads a DOCTYPE declaration.
 func (t *Tokenizer) readDoctype() Token {
 	start := t.pos
-	
+
 	// Skip to '>'
 	for t.pos < len(t.input) && t.input[t.pos] != '>' {
 		t.pos++
 	}
-	
+
 	data := t.input[start:t.pos]
-	
+
 	// Consume '>'
 	if t.pos < len(t.input) {
 		t.pos++
 	}
-	
+
 	return Token{Type: DoctypeToken, Data: data}
 }
 

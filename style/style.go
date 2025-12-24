@@ -65,7 +65,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
 	if node.Type == dom.ElementNode {
 		// Find all matching rules
 		matchedRules := matchRules(node, stylesheet)
-		
+
 		// Apply rules in order of specificity
 		for _, matched := range matchedRules {
 			for _, decl := range matched.Rule.Declarations {
