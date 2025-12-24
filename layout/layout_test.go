@@ -629,3 +629,115 @@ func TestLayoutText(t *testing.T) {
 		t.Errorf("expected Y position 20, got %v", box.Dimensions.Content.Y)
 	}
 }
+
+func TestTableLayout(t *testing.T) {
+	// Create a simple table: table > tr > td, td
+	table := dom.NewElement("table")
+tr := dom.NewElement("tr")
+td1 := dom.NewElement("td")
+td2 := dom.NewElement("td")
+text1 := dom.NewText("Cell 1")
+text2 := dom.NewText("Cell 2")
+
+td1.AppendChild(text1)
+td2.AppendChild(text2)
+tr.AppendChild(td1)
+tr.AppendChild(td2)
+table.AppendChild(tr)
+
+// Create styled nodes
+styledTable := &style.StyledNode{
+Node: table,
+Styles: map[string]string{
+"width": "400px",
+},
+Children: []*style.StyledNode{
+{
+Node:   tr,
+Styles: map[string]string{},
+Children: []*style.StyledNode{
+{
+Node: td1,
+Styles: map[string]string{
+"padding": "10px",
+},
+Children: []*style.StyledNode{
+{
+Node:     text1,
+Styles:   map[string]string{},
+Children: []*style.StyledNode{},
+},
+},
+},
+{
+Node: td2,
+Styles: map[string]string{
+"padding": "10px",
+},
+Children: []*style.StyledNode{
+{
+Node:     text2,
+Styles:   map[string]string{},
+Children: []*style.StyledNode{},
+},
+},
+},
+},
+},
+},
+}
+
+// Build layout tree
+containingBlock := Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+}
+layoutBox := buildLayoutTree(styledTable)
+
+// Verify box types
+if layoutBox.BoxType != TableBox {
+t.Errorf("Expected TableBox, got %v", layoutBox.BoxType)
+}
+if len(layoutBox.Children) != 1 {
+t.Fatalf("Expected 1 table row, got %d", len(layoutBox.Children))
+}
+if layoutBox.Children[0].BoxType != TableRowBox {
+t.Errorf("Expected TableRowBox, got %v", layoutBox.Children[0].BoxType)
+}
+if len(layoutBox.Children[0].Children) != 2 {
+t.Fatalf("Expected 2 table cells, got %d", len(layoutBox.Children[0].Children))
+}
+if layoutBox.Children[0].Children[0].BoxType != TableCellBox {
+t.Errorf("Expected TableCellBox, got %v", layoutBox.Children[0].Children[0].BoxType)
+}
+
+// Layout the table
+layoutBox.Layout(containingBlock)
+
+// Verify table width
+if layoutBox.Dimensions.Content.Width != 400.0 {
+t.Errorf("Expected table width 400, got %v", layoutBox.Dimensions.Content.Width)
+}
+
+// Verify cells are laid out horizontally
+row := layoutBox.Children[0]
+cell1 := row.Children[0]
+cell2 := row.Children[1]
+
+// Each cell should be approximately 200px wide (400 / 2)
+expectedCellWidth := 200.0
+if cell1.Dimensions.Content.Width < expectedCellWidth-20 || cell1.Dimensions.Content.Width > expectedCellWidth+20 {
+t.Errorf("Expected cell1 width around %v, got %v", expectedCellWidth, cell1.Dimensions.Content.Width)
+}
+
+// Cell 2 should be positioned to the right of cell 1
+if cell2.Dimensions.Content.X <= cell1.Dimensions.Content.X {
+t.Errorf("Cell 2 should be positioned to the right of cell 1. Cell1 X=%v, Cell2 X=%v",
+cell1.Dimensions.Content.X, cell2.Dimensions.Content.X)
+}
+
+// Cells should be on the same row (same Y position approximately)
+if cell1.Dimensions.Content.Y != cell2.Dimensions.Content.Y {
+t.Errorf("Cells should be on same row. Cell1 Y=%v, Cell2 Y=%v",
+cell1.Dimensions.Content.Y, cell2.Dimensions.Content.Y)
+}
+}

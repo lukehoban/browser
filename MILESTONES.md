@@ -230,6 +230,46 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ---
 
+## Milestone 7.5: Basic Table Layout ✅ COMPLETE
+**Goal**: Implement basic table layout support for `<table>`, `<tr>`, and `<td>` elements
+
+**Spec References**:
+- CSS 2.1 §17 Tables
+- CSS 2.1 §17.5 Visual layout of table contents
+- CSS 2.1 §17.5.2 Table width algorithms
+
+### Tasks:
+- [x] Add table box types (TableBox, TableRowBox, TableCellBox)
+- [x] Implement display property detection for table elements
+- [x] Implement table layout algorithm
+- [x] Distribute column widths evenly
+- [x] Position cells horizontally in rows
+- [x] Calculate row heights based on cell content
+- [x] Support padding and borders on table cells
+- [x] Add unit tests for table layout
+
+### Deliverables:
+- ✅ Table layout box types
+- ✅ Basic fixed table layout algorithm
+- ✅ Test files demonstrating table rendering
+- ✅ Unit tests for table layout
+
+### Validation:
+- ✅ Tables render with cells in correct positions
+- ✅ Cells arranged horizontally in rows
+- ✅ Multiple rows stack vertically
+- ✅ Cell borders and padding work correctly
+
+### Known Limitations:
+- ⚠️ Only fixed table layout (not auto layout)
+- ⚠️ No support for colspan/rowspan
+- ⚠️ No table headers (`<thead>`, `<tbody>`, `<tfoot>`)
+- ⚠️ No table captions
+- ⚠️ Equal column width distribution only
+- ⚠️ No border-collapse support
+
+---
+
 ## Milestone 8: Testing & Validation 🔄 IN PROGRESS
 **Goal**: Comprehensive testing with public test suites
 
@@ -319,9 +359,11 @@ The browser can now load Hacker News from the network and render basic content. 
   - [ ] Color for links
 
 - [ ] **Table Support**
-  - [ ] `<table>`, `<tr>`, `<td>` elements
-  - [ ] Table layout algorithm
-  - [ ] HN uses tables for layout
+  - [x] `<table>`, `<tr>`, `<td>`, `<th>` elements
+  - [x] Basic table layout algorithm (fixed layout)
+  - [ ] Auto table layout algorithm
+  - [ ] Table spanning (colspan, rowspan)
+  - [ ] Table captions and headers
 
 - [ ] **Additional Selectors**
   - [ ] Child combinator (`>`)
@@ -353,6 +395,6 @@ The browser successfully loads and renders Hacker News from the network, display
 ---
 
 ## Current Status
-**Completed**: Milestones 1-7 (Foundation through Image Rendering), Milestone 9 (Network Support)  
+**Completed**: Milestones 1-7.5 (Foundation through Basic Table Layout), Milestone 9 (Network Support)  
 **In Progress**: Milestone 8 (Testing & Validation)  
 **Last Updated**: 2025-12-24
