@@ -161,6 +161,12 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 		boxType = "Inline"
 	} else if box.BoxType == layout.AnonymousBox {
 		boxType = "Anonymous"
+	} else if box.BoxType == layout.TableBox {
+		boxType = "Table"
+	} else if box.BoxType == layout.TableRowBox {
+		boxType = "TableRow"
+	} else if box.BoxType == layout.TableCellBox {
+		boxType = "TableCell"
 	}
 
 	nodeName := "?"
