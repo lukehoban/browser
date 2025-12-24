@@ -206,6 +206,7 @@ func (c *Canvas) LoadImage(path string) (image.Image, error) {
 	return img, nil
 }
 
+
 // ToImage converts the canvas to an image.Image.
 func (c *Canvas) ToImage() *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, c.Width, c.Height))

@@ -14,6 +14,8 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - Image rendering (PNG, JPEG, GIF support)
 - Background and border rendering
 - PNG image output
+- Image rendering (PNG, JPEG, GIF support)
+- Basic rendering to PNG output
 
 ## Project Structure
 
@@ -85,6 +87,7 @@ go build ./cmd/browser
 ./browser -output output.png test/styled.html
 
 # View layout tree without rendering
+# Parse and display HTML with styles (text output)
 ./browser test/styled.html
 
 # Render to PNG image
