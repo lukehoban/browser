@@ -168,6 +168,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 **Spec References**:
 - CSS 2.1 §14 Colors and backgrounds
+- CSS 2.1 §15 Fonts
 - CSS 2.1 §16 Text
 
 ### Tasks:
@@ -175,23 +176,39 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Render backgrounds and borders
 - [x] Render text content
 - [x] Output to PNG image format
+- [x] Font size support (CSS 2.1 §15.7)
+- [x] Font weight support - bold (CSS 2.1 §15.6)
+- [x] Font style support - italic (CSS 2.1 §15.7)
+- [x] Text decoration support - underline (CSS 2.1 §16.3.1)
+- [x] CSS inheritance for font properties (CSS 2.1 §6.2)
 
 ### Deliverables:
 - ✅ Basic renderer with text support
 - ✅ Visual output of simple pages
 - ✅ Color support for text and backgrounds
 - ✅ Border rendering
+- ✅ Variable font sizes (scaled from base font)
+- ✅ Bold, italic, and underlined text rendering
+- ✅ Font property inheritance from parent to child elements
 
 ### Validation:
 - ✅ Rendered pages show text content
 - ✅ Colors and borders display correctly
 - ✅ Text is readable with proper color styling
 - ✅ PNG output works correctly
+- ✅ Different font sizes render correctly (10px, 14px, 20px, 28px)
+- ✅ Bold text appears bolder/thicker
+- ✅ Italic text appears slanted
+- ✅ Underlined text has line below it
+- ✅ Combined styles (bold + italic + underline) work correctly
+- ✅ Font properties inherit from parent elements to text nodes
 
 ### Known Limitations:
-- ⚠️ Basic font rendering only (no font selection)
+- ⚠️ No font-family support (uses single built-in font: basicfont.Face7x13)
+- ⚠️ Synthetic bold/italic (not true font variants)
 - ⚠️ Limited text layout (no text-align, line-height control)
 - ⚠️ No background-image support (CSS property)
+- ⚠️ No support for other text-decoration values (overline, line-through)
 
 ---
 
@@ -358,19 +375,25 @@ The browser can now load Hacker News from the network and render content with pr
   - Narrow columns (rank, votelinks) sized appropriately (~50px)
   - Wide columns (title) get remaining space
   - Maximum column width capping to prevent overflow
+- [x] **Basic Font Rendering** ✅ COMPLETE
+  - Variable font sizes (CSS font-size property)
+  - Bold text rendering (CSS font-weight property)
+  - Italic text rendering (CSS font-style property)
+  - Text underline (CSS text-decoration property)
+  - CSS inheritance for font properties
 
 ### Required Features for Full Fidelity:
 - [ ] **Text Layout Improvements**
   - [ ] Inline text layout (wrap text within line boxes)
-  - [ ] Font size support (not just default font)
+  - [x] Font size support ✅ COMPLETE
   - [ ] Text-align property (left, center, right)
   - [ ] Line-height property
   - [ ] Proper inline box model
 
 - [ ] **Link Rendering**
   - [ ] `<a>` element styling
-  - [ ] Text decoration (underline)
-  - [ ] Color for links
+  - [x] Text decoration (underline) ✅ COMPLETE
+  - [ ] Color for links (needs selector support for elements)
 
 - [ ] **Table Support**
   - [x] `<table>`, `<tr>`, `<td>`, `<th>` elements
@@ -386,9 +409,9 @@ The browser can now load Hacker News from the network and render content with pr
   - [ ] Sibling combinators (`+`, `~`)
   - [ ] Pseudo-classes (`:hover`, `:visited`)
 
-- [ ] **CSS Inheritance**
-  - [ ] Inherit property values from parents
-  - [ ] Computed value calculation
+- [x] **CSS Inheritance** ✅ COMPLETE
+  - [x] Inherit property values from parents
+  - [ ] Computed value calculation (partially complete)
 
 - [x] **Network Support** ✅ COMPLETE
   - [x] HTTP/HTTPS requests
@@ -396,7 +419,7 @@ The browser can now load Hacker News from the network and render content with pr
   - [x] Load remote images
 
 ### Current Status:
-The browser successfully loads and renders Hacker News from the network with improved table layout. Tables now use content-based column sizing, so narrow columns like rank numbers and vote arrows stay narrow, while title columns expand to fill available space. Colspan support allows subtext rows to properly span across multiple columns.
+The browser successfully loads and renders Hacker News from the network with improved table layout and font rendering. Tables use content-based column sizing. Text now supports variable font sizes, bold, italic, and underline styles, with proper CSS inheritance of font properties from parent to child elements.
 
 ---
 
