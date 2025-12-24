@@ -16,6 +16,21 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
+// Table layout constants
+const (
+	// maxColumnWidth is the maximum width any table column can have.
+	// This prevents extremely wide content from creating unusable layouts.
+	// CSS 2.1 §17.5.2.2 does not specify a maximum, but practical implementations
+	// need limits to prevent performance issues. Set to 400px as a reasonable maximum.
+	maxColumnWidth = 400.0
+	
+	// maxColspan is the maximum number of columns a cell can span.
+	// HTML5 §4.9.9 specifies that user agents may choose to limit colspan
+	// to prevent denial of service attacks. The recommended maximum is 1000.
+	// See: https://html.spec.whatwg.org/multipage/tables.html#attributes-common-to-td-and-th-elements
+	maxColspan = 1000
+)
+
 // LayoutBox represents a box in the layout tree.
 // CSS 2.1 §8.1 Box dimensions
 type LayoutBox struct {
@@ -396,10 +411,18 @@ func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 	box.calculateBlockWidth(containingBlock)
 	box.calculateBlockPosition(containingBlock)
 
-	// Layout table rows
+	// Calculate the number of columns in the table
+	// CSS 2.1 §17.2.1: The number of columns is determined by examining all rows
+	numColumns := box.calculateTableColumns()
+	
+	// Calculate column widths based on content
+	// CSS 2.1 §17.5.2.2: Auto table layout
+	columnWidths := box.calculateColumnWidths(numColumns, box.Dimensions.Content.Width)
+
+	// Layout table rows with column widths
 	for _, row := range box.Children {
 		if row.BoxType == TableRowBox {
-			row.Layout(box.Dimensions)
+			row.layoutWithColumnWidths(box.Dimensions, columnWidths)
 			box.Dimensions.Content.Height += row.marginBox().Height
 		}
 	}
@@ -408,9 +431,205 @@ func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 	box.calculateBlockHeight()
 }
 
+// calculateTableColumns calculates the number of columns in a table.
+// CSS 2.1 §17.2.1: The table column count is determined by examining all rows.
+// This implementation counts columns based on actual table cells and their colspan attributes.
+// Note: This is a simplified implementation that doesn't support column groups or explicit
+// column specifications via <col> elements, which are part of the full CSS 2.1 spec.
+func (box *LayoutBox) calculateTableColumns() int {
+	maxColumns := 0
+
+	// Examine each row to find the maximum column count
+	for _, row := range box.Children {
+		if row.BoxType == TableRowBox {
+			columnCount := 0
+			for _, cell := range row.Children {
+				if cell.BoxType == TableCellBox {
+					columnCount += getColspan(cell)
+				}
+			}
+			if columnCount > maxColumns {
+				maxColumns = columnCount
+			}
+		}
+	}
+
+	// Default to 1 if no columns found
+	if maxColumns == 0 {
+		maxColumns = 1
+	}
+
+	return maxColumns
+}
+
+// getColspan extracts the colspan attribute from a table cell.
+// Returns 1 if no colspan attribute is present or if the value is invalid.
+// CSS 2.1 §17.2.1: The colspan attribute specifies the number of columns spanned by a cell
+// HTML5 recommends a maximum colspan of 1000 to prevent performance issues
+func getColspan(cell *LayoutBox) int {
+	if cell.StyledNode == nil || cell.StyledNode.Node == nil {
+		return 1
+	}
+	
+	colspanStr := cell.StyledNode.Node.GetAttribute("colspan")
+	if colspanStr == "" {
+		return 1
+	}
+	
+	if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
+		// Cap at maxColspan as recommended by HTML specification
+		if val > maxColspan {
+			return maxColspan
+		}
+		return val
+	}
+	
+	return 1
+}
+
+// calculateColumnWidths calculates preferred widths for table columns.
+// This implements a simplified auto table layout algorithm
+// CSS 2.1 §17.5.2.2: Auto table layout
+func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) []float64 {
+	// Collect column content sizes from all rows
+	columnMinWidths := make([]float64, numColumns)
+	
+	// Examine each row to estimate minimum column widths
+	for _, row := range box.Children {
+		if row.BoxType == TableRowBox {
+			colIndex := 0
+			for _, cell := range row.Children {
+				if cell.BoxType == TableCellBox {
+					colspan := getColspan(cell)
+					
+					// Estimate content width based on text content
+					minWidth := box.estimateCellMinWidth(cell)
+					
+					// For single-column cells, update the column minimum
+					if colspan == 1 && colIndex < numColumns {
+						if minWidth > columnMinWidths[colIndex] {
+							columnMinWidths[colIndex] = minWidth
+						}
+					}
+					
+					colIndex += colspan
+				}
+			}
+		}
+	}
+	
+	// Calculate total minimum width
+	totalMinWidth := 0.0
+	for _, w := range columnMinWidths {
+		totalMinWidth += w
+	}
+	
+	// Allocate widths proportionally, ensuring minimums are met
+	columnWidths := make([]float64, numColumns)
+	if totalMinWidth > 0 && totalMinWidth < tableWidth {
+		// Distribute extra space proportionally
+		scale := tableWidth / totalMinWidth
+		for i := range columnWidths {
+			columnWidths[i] = columnMinWidths[i] * scale
+		}
+	} else if totalMinWidth > 0 {
+		// Use minimum widths if they exceed table width
+		for i := range columnWidths {
+			columnWidths[i] = columnMinWidths[i]
+		}
+	} else {
+		// Equal distribution if no content found
+		equalWidth := tableWidth / float64(numColumns)
+		for i := range columnWidths {
+			columnWidths[i] = equalWidth
+		}
+	}
+	
+	return columnWidths
+}
+
+// estimateCellMinWidth estimates the minimum width needed for a cell's content
+func (box *LayoutBox) estimateCellMinWidth(cell *LayoutBox) float64 {
+	minWidth := 30.0 // Default minimum
+	
+	// Check for explicit width style
+	if cell.StyledNode != nil {
+		if widthStr := cell.StyledNode.Styles["width"]; widthStr != "" {
+			if w := parseLength(widthStr, 0); w > 0 {
+				return w + 20 // Add some padding
+			}
+		}
+	}
+	
+	// Estimate based on content, but cap at reasonable maximum
+	contentWidth := box.estimateContentWidth(cell)
+	if contentWidth > minWidth {
+		minWidth = contentWidth
+	}
+	
+	// Cap at reasonable maximum to prevent extremely wide content from creating unusable layouts
+	if minWidth > maxColumnWidth {
+		minWidth = maxColumnWidth
+	}
+	
+	return minWidth
+}
+
+// estimateContentWidth estimates the width of content in a box
+func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
+	width := 0.0
+	
+	// Use the same character width as in layoutText
+	face := basicfont.Face7x13
+	charWidth := float64(face.Advance)
+	
+	// Recursively estimate width from children
+	for _, child := range layoutBox.Children {
+		if child.StyledNode != nil && child.StyledNode.Node != nil {
+			if child.StyledNode.Node.Type == dom.TextNode {
+				// Estimate text width
+				text := child.StyledNode.Node.Data
+				textWidth := float64(len(text)) * charWidth
+				width += textWidth
+			} else {
+				// Recursively estimate child width
+				childWidth := box.estimateContentWidth(child)
+				width += childWidth
+			}
+		}
+	}
+	
+	// Add padding if specified
+	if layoutBox.StyledNode != nil {
+		paddingLeft := parseLengthOr0(layoutBox.StyledNode.Styles["padding-left"], 0)
+		paddingRight := parseLengthOr0(layoutBox.StyledNode.Styles["padding-right"], 0)
+		width += paddingLeft + paddingRight
+	}
+	
+	return width
+}
+
 // layoutTableRow lays out a table row.
 // CSS 2.1 §17.5.3 Table height algorithms
 func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
+	// Calculate number of columns to maintain consistency with auto layout
+	// This ensures equal distribution is based on the correct column count
+	numColumns := 0
+	for _, cell := range box.Children {
+		if cell.BoxType == TableCellBox {
+			numColumns += getColspan(cell)
+		}
+	}
+	if numColumns == 0 {
+		numColumns = len(box.Children)
+	}
+	
+	box.layoutWithColumns(containingBlock, numColumns)
+}
+
+// layoutWithColumnWidths lays out a table row with pre-calculated column widths.
+// CSS 2.1 §17.5.2.2: Auto table layout
+func (box *LayoutBox) layoutWithColumnWidths(containingBlock Dimensions, columnWidths []float64) {
 	styles := box.StyledNode.Styles
 
 	// Calculate position
@@ -427,15 +646,84 @@ func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
 		box.Dimensions.Margin.Top + box.Dimensions.Border.Top + box.Dimensions.Padding.Top
 	box.Dimensions.Content.Width = containingBlock.Content.Width
 
-	// Calculate number of cells and distribute width
-	numCells := len(box.Children)
-	if numCells == 0 {
+	if len(box.Children) == 0 {
 		return
 	}
 
-	// Simple algorithm: distribute width equally among cells
+	// Layout each cell horizontally using calculated widths
+	currentX := box.Dimensions.Content.X
+	currentCol := 0
+	maxHeight := 0.0
+
+	for _, cell := range box.Children {
+		if cell.BoxType == TableCellBox {
+			colspan := getColspan(cell)
+
+			// Calculate cell width by summing column widths
+			cellWidth := 0.0
+			for i := 0; i < colspan && currentCol+i < len(columnWidths); i++ {
+				cellWidth += columnWidths[currentCol+i]
+			}
+
+			// Create a containing block for the cell with calculated width
+			cellContainingBlock := Dimensions{
+				Content: Rect{
+					X:      currentX,
+					Y:      box.Dimensions.Content.Y,
+					Width:  cellWidth,
+					Height: 0,
+				},
+			}
+			cell.Layout(cellContainingBlock)
+
+			// Update position for next cell
+			currentX += cell.marginBox().Width
+			currentCol += colspan
+
+			// Track maximum height
+			if cell.marginBox().Height > maxHeight {
+				maxHeight = cell.marginBox().Height
+			}
+		}
+	}
+
+	// Set row height to maximum cell height
+	box.Dimensions.Content.Height = maxHeight
+
+	// If row has explicit height, use that instead
+	if height := styles["height"]; height != "" {
+		if h := parseLength(height, 0); h >= 0 {
+			box.Dimensions.Content.Height = h
+		}
+	}
+}
+
+// layoutWithColumns lays out a table row with a specified column count.
+// CSS 2.1 §17.5.2: Table width algorithms
+func (box *LayoutBox) layoutWithColumns(containingBlock Dimensions, numColumns int) {
+	styles := box.StyledNode.Styles
+
+	// Calculate position
+	box.Dimensions.Margin.Top = parseLengthOr0(styles["margin-top"], containingBlock.Content.Width)
+	box.Dimensions.Margin.Bottom = parseLengthOr0(styles["margin-bottom"], containingBlock.Content.Width)
+	box.Dimensions.Padding.Top = parseLengthOr0(styles["padding-top"], containingBlock.Content.Width)
+	box.Dimensions.Padding.Bottom = parseLengthOr0(styles["padding-bottom"], containingBlock.Content.Width)
+	box.Dimensions.Border.Top = parseLengthOr0(styles["border-top-width"], containingBlock.Content.Width)
+	box.Dimensions.Border.Bottom = parseLengthOr0(styles["border-bottom-width"], containingBlock.Content.Width)
+
+	// Position row
+	box.Dimensions.Content.X = containingBlock.Content.X
+	box.Dimensions.Content.Y = containingBlock.Content.Y + containingBlock.Content.Height +
+		box.Dimensions.Margin.Top + box.Dimensions.Border.Top + box.Dimensions.Padding.Top
+	box.Dimensions.Content.Width = containingBlock.Content.Width
+
+	if len(box.Children) == 0 || numColumns == 0 {
+		return
+	}
+
+	// Calculate width per column
 	// CSS 2.1 §17.5.2.1: In the fixed table layout algorithm
-	cellWidth := containingBlock.Content.Width / float64(numCells)
+	columnWidth := containingBlock.Content.Width / float64(numColumns)
 
 	// Layout each cell horizontally
 	currentX := box.Dimensions.Content.X
@@ -443,6 +731,11 @@ func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
 
 	for _, cell := range box.Children {
 		if cell.BoxType == TableCellBox {
+			colspan := getColspan(cell)
+
+			// Calculate cell width based on colspan
+			cellWidth := columnWidth * float64(colspan)
+
 			// Create a containing block for the cell with calculated width
 			cellContainingBlock := Dimensions{
 				Content: Rect{
