@@ -589,3 +589,43 @@ func extractCSS(htmlContent string) string {
 	}
 	return result
 }
+
+func TestLayoutText(t *testing.T) {
+	// Create a text node
+	textNode := dom.NewText("Hello World")
+	styledNode := &style.StyledNode{
+		Node:     textNode,
+		Styles:   map[string]string{},
+		Children: []*style.StyledNode{},
+	}
+
+	// Build layout tree
+	box := buildLayoutTree(styledNode)
+
+	// Layout the text
+	containingBlock := Dimensions{
+		Content: Rect{
+			X:      10,
+			Y:      20,
+			Width:  800,
+			Height: 0,
+		},
+	}
+	box.Layout(containingBlock)
+
+	// Check that text dimensions were calculated
+	if box.Dimensions.Content.Width == 0 {
+		t.Errorf("expected non-zero width for text, got 0")
+	}
+	if box.Dimensions.Content.Height == 0 {
+		t.Errorf("expected non-zero height for text, got 0")
+	}
+
+	// Check position
+	if box.Dimensions.Content.X != 10 {
+		t.Errorf("expected X position 10, got %v", box.Dimensions.Content.X)
+	}
+	if box.Dimensions.Content.Y != 20 {
+		t.Errorf("expected Y position 20, got %v", box.Dimensions.Content.Y)
+	}
+}

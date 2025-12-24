@@ -14,7 +14,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/layout"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 )
 
 // Canvas represents the rendering surface.
@@ -70,6 +74,45 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 	c.FillRect(x+width-thickness, y, thickness, height, col)
 }
 
+// DrawText draws text at the given position with the given color.
+// CSS 2.1 §16 Text
+func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
+	// Use basicfont.Face7x13 as a simple built-in font
+	face := basicfont.Face7x13
+	
+	// Create a point for the starting position
+	// The point represents the baseline of the text
+	point := fixed.Point26_6{
+		X: fixed.Int26_6(x * 64),
+		Y: fixed.Int26_6(y * 64),
+	}
+	
+	// Create a drawer
+	drawer := &font.Drawer{
+		Dst:  c.ToImage(),
+		Src:  image.NewUniform(col),
+		Face: face,
+		Dot:  point,
+	}
+	
+	// Draw the text
+	drawer.DrawString(text)
+	
+	// Copy pixels back from the image to our pixel buffer
+	img := drawer.Dst.(*image.RGBA)
+	for py := 0; py < c.Height; py++ {
+		for px := 0; px < c.Width; px++ {
+			r, g, b, a := img.At(px, py).RGBA()
+			c.Pixels[py*c.Width+px] = color.RGBA{
+				R: uint8(r >> 8),
+				G: uint8(g >> 8),
+				B: uint8(b >> 8),
+				A: uint8(a >> 8),
+			}
+		}
+	}
+}
+
 // ToImage converts the canvas to an image.Image.
 func (c *Canvas) ToImage() *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, c.Width, c.Height))
@@ -115,6 +158,7 @@ func Render(root *layout.LayoutBox, width, height int) *Canvas {
 func renderLayoutBox(canvas *Canvas, box *layout.LayoutBox) {
 	renderBackground(canvas, box)
 	renderBorders(canvas, box)
+	renderText(canvas, box)
 
 	for _, child := range box.Children {
 		renderLayoutBox(canvas, child)
@@ -219,6 +263,38 @@ func renderBorders(canvas *Canvas, box *layout.LayoutBox) {
 			borderColor,
 		)
 	}
+}
+
+// renderText renders the text content of a layout box.
+// CSS 2.1 §16 Text
+func renderText(canvas *Canvas, box *layout.LayoutBox) {
+	if box.StyledNode == nil || box.StyledNode.Node == nil {
+		return
+	}
+
+	// Only render text for text nodes
+	if box.StyledNode.Node.Type != dom.TextNode {
+		return
+	}
+
+	// Get the text content
+	text := box.StyledNode.Node.Data
+	if text == "" {
+		return
+	}
+
+	// Get text color from styles (default to black)
+	textColor := parseColor(box.StyledNode.Styles["color"])
+	if textColor == (color.RGBA{0, 0, 0, 0}) {
+		textColor = color.RGBA{0, 0, 0, 255} // Default to black
+	}
+
+	// Render the text at the box's position
+	// Add a small vertical offset to position text at baseline
+	x := int(box.Dimensions.Content.X)
+	y := int(box.Dimensions.Content.Y) + 13 // basicfont.Face7x13 height is 13 pixels
+
+	canvas.DrawText(text, x, y, textColor)
 }
 
 // parseColor parses a CSS color value and returns a color.RGBA.
