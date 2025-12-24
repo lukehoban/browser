@@ -10,7 +10,9 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - HTML parsing with DOM tree construction
 - CSS 2.1 parsing and style computation
 - Visual formatting model (box model, block/inline layout)
-- Basic rendering capabilities
+- Text rendering with color support
+- Background and border rendering
+- PNG image output
 
 ## Project Structure
 
@@ -61,8 +63,7 @@ See [MILESTONES.md](MILESTONES.md) for detailed implementation milestones and pr
 ✅ **Milestone 3: CSS Parsing** - Complete
 ✅ **Milestone 4: Style Computation** - Complete
 ✅ **Milestone 5: Layout Engine** - Complete (Basic box model)
-
-🚧 **In Development** - Milestone 6: Rendering
+✅ **Milestone 6: Rendering** - Complete (Text, backgrounds, borders)
 
 ### What Works
 
@@ -70,6 +71,7 @@ See [MILESTONES.md](MILESTONES.md) for detailed implementation milestones and pr
 - **CSS Parsing**: Selectors (element, class, ID, descendant), declarations, multiple rules
 - **Style Computation**: Selector matching, specificity calculation, cascade
 - **Layout**: Box model (content, padding, border, margin), block layout, auto width calculation
+- **Rendering**: Text rendering with colors, backgrounds, borders, PNG output
 
 ### Example Usage
 
@@ -77,7 +79,10 @@ See [MILESTONES.md](MILESTONES.md) for detailed implementation milestones and pr
 # Build the browser
 go build ./cmd/browser
 
-# Parse and display HTML with styles
+# Render HTML to PNG
+./browser -output output.png test/styled.html
+
+# View layout tree without rendering
 ./browser test/styled.html
 ```
 

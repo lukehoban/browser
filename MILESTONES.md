@@ -135,27 +135,29 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ---
 
-## Milestone 6: Rendering
+## Milestone 6: Rendering ✓
 **Goal**: Render the laid-out page
 
 **Spec References**:
-- CSS 2.1 §17 Tables (future)
 - CSS 2.1 §14 Colors and backgrounds
+- CSS 2.1 §16 Text
 
 ### Tasks:
-- [ ] Implement display list generation
-- [ ] Render backgrounds and borders
-- [ ] Render text content
-- [ ] Output to image or terminal
+- [x] Implement display list generation
+- [x] Render backgrounds and borders
+- [x] Render text content
+- [x] Output to image (PNG)
 
 ### Deliverables:
-- Basic renderer
+- Basic renderer with text support
 - Visual output of simple pages
+- Color support for text and backgrounds
 
 ### Validation:
-- Rendered pages match expected layout
-- Colors and borders display correctly
-- Text is readable
+- ✓ Rendered pages show text content
+- ✓ Colors and borders display correctly
+- ✓ Text is readable with proper color styling
+- ✓ PNG output works correctly
 
 ---
 
