@@ -31,9 +31,9 @@ func TestNewText(t *testing.T) {
 func TestAppendChild(t *testing.T) {
 	parent := NewElement("div")
 	child := NewElement("p")
-	
+
 	parent.AppendChild(child)
-	
+
 	if len(parent.Children) != 1 {
 		t.Errorf("Expected 1 child, got %d", len(parent.Children))
 	}
@@ -49,7 +49,7 @@ func TestAttributes(t *testing.T) {
 	elem := NewElement("div")
 	elem.SetAttribute("id", "main")
 	elem.SetAttribute("class", "container")
-	
+
 	if elem.GetAttribute("id") != "main" {
 		t.Errorf("Expected id 'main', got %v", elem.GetAttribute("id"))
 	}
@@ -64,7 +64,7 @@ func TestAttributes(t *testing.T) {
 func TestID(t *testing.T) {
 	elem := NewElement("div")
 	elem.SetAttribute("id", "header")
-	
+
 	if elem.ID() != "header" {
 		t.Errorf("Expected ID 'header', got %v", elem.ID())
 	}
@@ -97,20 +97,20 @@ func TestClasses(t *testing.T) {
 			expected: []string{"container", "main"},
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			elem := NewElement("div")
 			if tt.class != "" {
 				elem.SetAttribute("class", tt.class)
 			}
-			
+
 			classes := elem.Classes()
 			if len(classes) != len(tt.expected) {
 				t.Errorf("Expected %d classes, got %d", len(tt.expected), len(classes))
 				return
 			}
-			
+
 			for i, class := range classes {
 				if class != tt.expected[i] {
 					t.Errorf("Expected class[%d] = %v, got %v", i, tt.expected[i], class)

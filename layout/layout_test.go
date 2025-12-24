@@ -65,7 +65,7 @@ func TestLayoutSimpleBlock(t *testing.T) {
 	containingBlock := Dimensions{
 		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
 	}
-	
+
 	box := buildLayoutTree(styledNode)
 	box.Layout(containingBlock)
 
@@ -87,12 +87,12 @@ func TestLayoutNestedBlocks(t *testing.T) {
 	styledParent := &style.StyledNode{
 		Node: parent,
 		Styles: map[string]string{
-			"width":                "200px",
-			"height":               "auto",
-			"padding-top":          "0",
-			"padding-bottom":       "0",
-			"border-top-width":     "0",
-			"border-bottom-width":  "0",
+			"width":               "200px",
+			"height":              "auto",
+			"padding-top":         "0",
+			"padding-bottom":      "0",
+			"border-top-width":    "0",
+			"border-bottom-width": "0",
 		},
 		Children: []*style.StyledNode{
 			{
@@ -118,7 +118,7 @@ func TestLayoutNestedBlocks(t *testing.T) {
 	containingBlock := Dimensions{
 		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
 	}
-	
+
 	box := buildLayoutTree(styledParent)
 	box.Layout(containingBlock)
 
@@ -131,7 +131,7 @@ func TestLayoutNestedBlocks(t *testing.T) {
 	if len(box.Children) != 1 {
 		t.Fatalf("Expected 1 child, got %d", len(box.Children))
 	}
-	
+
 	childBox := box.Children[0]
 	if childBox.Dimensions.Content.Width != 100.0 {
 		t.Errorf("Expected child width 100, got %v", childBox.Dimensions.Content.Width)
@@ -155,7 +155,7 @@ func TestLayoutWithMarginPadding(t *testing.T) {
 	containingBlock := Dimensions{
 		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
 	}
-	
+
 	box := buildLayoutTree(styledNode)
 	box.Layout(containingBlock)
 
@@ -181,13 +181,13 @@ func TestLayoutAutoWidth(t *testing.T) {
 	styledNode := &style.StyledNode{
 		Node: node,
 		Styles: map[string]string{
-			"width":                "auto",
-			"margin-left":          "10px",
-			"margin-right":         "10px",
-			"padding-left":         "0",
-			"padding-right":        "0",
-			"border-left-width":    "0",
-			"border-right-width":   "0",
+			"width":              "auto",
+			"margin-left":        "10px",
+			"margin-right":       "10px",
+			"padding-left":       "0",
+			"padding-right":      "0",
+			"border-left-width":  "0",
+			"border-right-width": "0",
 		},
 		Children: []*style.StyledNode{},
 	}
@@ -195,7 +195,7 @@ func TestLayoutAutoWidth(t *testing.T) {
 	containingBlock := Dimensions{
 		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
 	}
-	
+
 	box := buildLayoutTree(styledNode)
 	box.Layout(containingBlock)
 

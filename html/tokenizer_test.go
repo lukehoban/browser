@@ -5,7 +5,7 @@ import "testing"
 func TestTokenizerText(t *testing.T) {
 	input := "Hello, World!"
 	tokenizer := NewTokenizer(input)
-	
+
 	token, ok := tokenizer.Next()
 	if !ok {
 		t.Fatal("Expected token")
@@ -21,7 +21,7 @@ func TestTokenizerText(t *testing.T) {
 func TestTokenizerSimpleTag(t *testing.T) {
 	input := "<div>"
 	tokenizer := NewTokenizer(input)
-	
+
 	token, ok := tokenizer.Next()
 	if !ok {
 		t.Fatal("Expected token")
@@ -37,7 +37,7 @@ func TestTokenizerSimpleTag(t *testing.T) {
 func TestTokenizerEndTag(t *testing.T) {
 	input := "</div>"
 	tokenizer := NewTokenizer(input)
-	
+
 	token, ok := tokenizer.Next()
 	if !ok {
 		t.Fatal("Expected token")
@@ -53,7 +53,7 @@ func TestTokenizerEndTag(t *testing.T) {
 func TestTokenizerSelfClosingTag(t *testing.T) {
 	input := "<br />"
 	tokenizer := NewTokenizer(input)
-	
+
 	token, ok := tokenizer.Next()
 	if !ok {
 		t.Fatal("Expected token")
@@ -68,36 +68,36 @@ func TestTokenizerSelfClosingTag(t *testing.T) {
 
 func TestTokenizerAttributes(t *testing.T) {
 	tests := []struct {
-		name       string
-		input      string
-		expectedID string
+		name          string
+		input         string
+		expectedID    string
 		expectedClass string
 	}{
 		{
-			name:       "double quoted attributes",
-			input:      `<div id="main" class="container">`,
-			expectedID: "main",
+			name:          "double quoted attributes",
+			input:         `<div id="main" class="container">`,
+			expectedID:    "main",
 			expectedClass: "container",
 		},
 		{
-			name:       "single quoted attributes",
-			input:      `<div id='main' class='container'>`,
-			expectedID: "main",
+			name:          "single quoted attributes",
+			input:         `<div id='main' class='container'>`,
+			expectedID:    "main",
 			expectedClass: "container",
 		},
 		{
-			name:       "unquoted attributes",
-			input:      `<div id=main class=container>`,
-			expectedID: "main",
+			name:          "unquoted attributes",
+			input:         `<div id=main class=container>`,
+			expectedID:    "main",
 			expectedClass: "container",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tokenizer := NewTokenizer(tt.input)
 			token, ok := tokenizer.Next()
-			
+
 			if !ok {
 				t.Fatal("Expected token")
 			}
@@ -117,7 +117,7 @@ func TestTokenizerAttributes(t *testing.T) {
 func TestTokenizerComment(t *testing.T) {
 	input := "<!-- This is a comment -->"
 	tokenizer := NewTokenizer(input)
-	
+
 	token, ok := tokenizer.Next()
 	if !ok {
 		t.Fatal("Expected token")
@@ -133,7 +133,7 @@ func TestTokenizerComment(t *testing.T) {
 func TestTokenizerDoctype(t *testing.T) {
 	input := "<!DOCTYPE html>"
 	tokenizer := NewTokenizer(input)
-	
+
 	token, ok := tokenizer.Next()
 	if !ok {
 		t.Fatal("Expected token")
@@ -146,7 +146,7 @@ func TestTokenizerDoctype(t *testing.T) {
 func TestTokenizerMultipleTokens(t *testing.T) {
 	input := "<html><body>Hello</body></html>"
 	tokenizer := NewTokenizer(input)
-	
+
 	expectedTokens := []struct {
 		tokenType TokenType
 		data      string
@@ -157,7 +157,7 @@ func TestTokenizerMultipleTokens(t *testing.T) {
 		{EndTagToken, "body"},
 		{EndTagToken, "html"},
 	}
-	
+
 	for i, expected := range expectedTokens {
 		token, ok := tokenizer.Next()
 		if !ok {

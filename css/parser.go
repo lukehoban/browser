@@ -77,7 +77,7 @@ func (p *Parser) parseRule() *Rule {
 	}
 
 	p.tokenizer.SkipWhitespace()
-	
+
 	// Expect '{'
 	token := p.tokenizer.Next()
 	if token.Type != LeftBraceToken {
@@ -87,7 +87,7 @@ func (p *Parser) parseRule() *Rule {
 	declarations := p.parseDeclarations()
 
 	p.tokenizer.SkipWhitespace()
-	
+
 	// Expect '}'
 	token = p.tokenizer.Next()
 	if token.Type != RightBraceToken {
@@ -110,7 +110,7 @@ func (p *Parser) parseSelectors() []*Selector {
 
 	for {
 		p.tokenizer.SkipWhitespace()
-		
+
 		selector := p.parseSelector()
 		if selector != nil {
 			selectors = append(selectors, selector)
@@ -118,12 +118,12 @@ func (p *Parser) parseSelectors() []*Selector {
 
 		p.tokenizer.SkipWhitespace()
 		token := p.tokenizer.Peek()
-		
+
 		if token.Type == CommaToken {
 			p.tokenizer.Next() // consume comma
 			continue
 		}
-		
+
 		break
 	}
 
@@ -140,19 +140,19 @@ func (p *Parser) parseSelector() *Selector {
 
 	for {
 		p.tokenizer.SkipWhitespace()
-		
+
 		simple := p.parseSimpleSelector()
 		if simple == nil {
 			break
 		}
-		
+
 		selector.Simple = append(selector.Simple, simple)
-		
+
 		// Check for descendant combinator (whitespace followed by another selector)
 		savedPos := p.tokenizer.pos
 		p.tokenizer.SkipWhitespace()
 		next := p.tokenizer.Peek()
-		
+
 		// If next is not a selector start, restore position
 		if next.Type != IdentToken && next.Type != HashToken && next.Type != DotToken {
 			p.tokenizer.pos = savedPos
@@ -175,7 +175,7 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 	}
 
 	token := p.tokenizer.Peek()
-	
+
 	// Type selector
 	if token.Type == IdentToken {
 		p.tokenizer.Next()
@@ -185,7 +185,7 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 	// ID and class selectors
 	for {
 		token = p.tokenizer.Peek()
-		
+
 		if token.Type == HashToken {
 			p.tokenizer.Next()
 			simple.ID = token.Value
@@ -216,7 +216,7 @@ func (p *Parser) parseDeclarations() []*Declaration {
 
 	for {
 		p.tokenizer.SkipWhitespace()
-		
+
 		token := p.tokenizer.Peek()
 		if token.Type == RightBraceToken || token.Type == EOFToken {
 			break
@@ -228,7 +228,7 @@ func (p *Parser) parseDeclarations() []*Declaration {
 		}
 
 		p.tokenizer.SkipWhitespace()
-		
+
 		// Expect ';' or '}'
 		token = p.tokenizer.Peek()
 		if token.Type == SemicolonToken {
@@ -245,7 +245,7 @@ func (p *Parser) parseDeclarations() []*Declaration {
 // CSS 2.1 §4.1.8 Declarations and properties
 func (p *Parser) parseDeclaration() *Declaration {
 	p.tokenizer.SkipWhitespace()
-	
+
 	// Property name
 	token := p.tokenizer.Next()
 	if token.Type != IdentToken {
@@ -254,7 +254,7 @@ func (p *Parser) parseDeclaration() *Declaration {
 	property := token.Value
 
 	p.tokenizer.SkipWhitespace()
-	
+
 	// Expect ':'
 	token = p.tokenizer.Next()
 	if token.Type != ColonToken {
@@ -262,7 +262,7 @@ func (p *Parser) parseDeclaration() *Declaration {
 	}
 
 	p.tokenizer.SkipWhitespace()
-	
+
 	// Parse value (simplified - just concatenate tokens until ';' or '}')
 	value := ""
 	for {
@@ -270,9 +270,9 @@ func (p *Parser) parseDeclaration() *Declaration {
 		if token.Type == SemicolonToken || token.Type == RightBraceToken || token.Type == EOFToken {
 			break
 		}
-		
+
 		p.tokenizer.Next()
-		
+
 		if token.Type == WhitespaceToken {
 			if value != "" {
 				value += " "

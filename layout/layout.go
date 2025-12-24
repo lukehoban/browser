@@ -41,13 +41,13 @@ const (
 type Dimensions struct {
 	// Content area
 	Content Rect
-	
+
 	// Padding edge
 	Padding EdgeSizes
-	
+
 	// Border edge
 	Border EdgeSizes
-	
+
 	// Margin edge
 	Margin EdgeSizes
 }
@@ -73,7 +73,7 @@ type EdgeSizes struct {
 func LayoutTree(styledNode *style.StyledNode, containingBlock Dimensions) *LayoutBox {
 	// Set initial containing block dimensions
 	containingBlock.Content.Width = 800.0 // Default viewport width
-	
+
 	root := buildLayoutTree(styledNode)
 	root.Layout(containingBlock)
 	return root
@@ -88,21 +88,21 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 	} else if display == "none" {
 		return nil // Don't create a box
 	}
-	
+
 	box := &LayoutBox{
 		BoxType:    boxType,
 		StyledNode: styledNode,
 		Dimensions: Dimensions{},
 		Children:   make([]*LayoutBox, 0),
 	}
-	
+
 	// Build children
 	for _, child := range styledNode.Children {
 		if childBox := buildLayoutTree(child); childBox != nil {
 			box.Children = append(box.Children, childBox)
 		}
 	}
-	
+
 	return box
 }
 
@@ -124,13 +124,13 @@ func (box *LayoutBox) Layout(containingBlock Dimensions) {
 func (box *LayoutBox) layoutBlock(containingBlock Dimensions) {
 	// Calculate width
 	box.calculateBlockWidth(containingBlock)
-	
+
 	// Calculate position
 	box.calculateBlockPosition(containingBlock)
-	
+
 	// Layout children
 	box.layoutBlockChildren()
-	
+
 	// Calculate height
 	box.calculateBlockHeight()
 }
@@ -139,33 +139,33 @@ func (box *LayoutBox) layoutBlock(containingBlock Dimensions) {
 // CSS 2.1 §10.3.3 Block-level, non-replaced elements in normal flow
 func (box *LayoutBox) calculateBlockWidth(containingBlock Dimensions) {
 	styles := box.StyledNode.Styles
-	
+
 	// Default to auto
 	width := parseLength(styles["width"], containingBlock.Content.Width)
-	
+
 	// Margins (default to 0 if not specified)
 	marginLeft := parseLengthOr0(styles["margin-left"], containingBlock.Content.Width)
 	marginRight := parseLengthOr0(styles["margin-right"], containingBlock.Content.Width)
-	
+
 	// Padding (default to 0)
 	paddingLeft := parseLengthOr0(styles["padding-left"], containingBlock.Content.Width)
 	paddingRight := parseLengthOr0(styles["padding-right"], containingBlock.Content.Width)
-	
+
 	// Border (default to 0)
 	borderLeft := parseLengthOr0(styles["border-left-width"], containingBlock.Content.Width)
 	borderRight := parseLengthOr0(styles["border-right-width"], containingBlock.Content.Width)
-	
+
 	// Calculate total width
 	total := marginLeft + marginRight + borderLeft + borderRight +
 		paddingLeft + paddingRight + width
-	
+
 	// If width is not auto and total is greater than container, treat auto margins as 0
 	// CSS 2.1 §10.3.3: over-constrained, solve for margin-right
 	if width >= 0 && total > containingBlock.Content.Width {
 		marginRight = containingBlock.Content.Width - width - marginLeft -
 			borderLeft - borderRight - paddingLeft - paddingRight
 	}
-	
+
 	// If width is auto, calculate it
 	if width < 0 {
 		width = containingBlock.Content.Width - marginLeft - marginRight -
@@ -174,7 +174,7 @@ func (box *LayoutBox) calculateBlockWidth(containingBlock Dimensions) {
 			width = 0
 		}
 	}
-	
+
 	box.Dimensions.Content.Width = width
 	box.Dimensions.Padding.Left = paddingLeft
 	box.Dimensions.Padding.Right = paddingRight
@@ -188,25 +188,25 @@ func (box *LayoutBox) calculateBlockWidth(containingBlock Dimensions) {
 // CSS 2.1 §10.6.3 Block-level non-replaced elements in normal flow
 func (box *LayoutBox) calculateBlockPosition(containingBlock Dimensions) {
 	styles := box.StyledNode.Styles
-	
+
 	// Margin (default to 0)
 	box.Dimensions.Margin.Top = parseLengthOr0(styles["margin-top"], containingBlock.Content.Width)
 	box.Dimensions.Margin.Bottom = parseLengthOr0(styles["margin-bottom"], containingBlock.Content.Width)
-	
+
 	// Padding (default to 0)
 	box.Dimensions.Padding.Top = parseLengthOr0(styles["padding-top"], containingBlock.Content.Width)
 	box.Dimensions.Padding.Bottom = parseLengthOr0(styles["padding-bottom"], containingBlock.Content.Width)
-	
+
 	// Border (default to 0)
 	box.Dimensions.Border.Top = parseLengthOr0(styles["border-top-width"], containingBlock.Content.Width)
 	box.Dimensions.Border.Bottom = parseLengthOr0(styles["border-bottom-width"], containingBlock.Content.Width)
-	
+
 	// Position box below previous sibling or at top of container
 	box.Dimensions.Content.X = containingBlock.Content.X +
 		box.Dimensions.Margin.Left +
 		box.Dimensions.Border.Left +
 		box.Dimensions.Padding.Left
-	
+
 	box.Dimensions.Content.Y = containingBlock.Content.Y +
 		containingBlock.Content.Height +
 		box.Dimensions.Margin.Top +
@@ -240,11 +240,11 @@ func (box *LayoutBox) calculateBlockHeight() {
 // CSS 2.1 §4.3.2 Lengths
 func parseLength(value string, referenceLength float64) float64 {
 	value = strings.TrimSpace(value)
-	
+
 	if value == "" || value == "auto" {
 		return -1
 	}
-	
+
 	// Parse percentage
 	if strings.HasSuffix(value, "%") {
 		if pct, err := strconv.ParseFloat(value[:len(value)-1], 64); err == nil {
@@ -252,7 +252,7 @@ func parseLength(value string, referenceLength float64) float64 {
 		}
 		return -1
 	}
-	
+
 	// Parse pixels
 	if strings.HasSuffix(value, "px") {
 		if px, err := strconv.ParseFloat(value[:len(value)-2], 64); err == nil {
@@ -260,12 +260,12 @@ func parseLength(value string, referenceLength float64) float64 {
 		}
 		return -1
 	}
-	
+
 	// Try parsing as a number (assume px)
 	if num, err := strconv.ParseFloat(value, 64); err == nil {
 		return num
 	}
-	
+
 	return -1
 }
 

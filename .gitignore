@@ -1,5 +1,5 @@
 # Binaries and executables
-browser
+/browser
 *.exe
 *.exe~
 *.dll
