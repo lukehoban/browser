@@ -4,6 +4,19 @@
 
 This is a simple web browser implementation in Go that parses HTML and CSS, computes styles, calculates layout, and renders to PNG images.
 
+## Milestones Document
+
+**When implementing new features or making significant changes, always update MILESTONES.md:**
+
+1. Mark tasks as complete with `[x]` when they are implemented
+2. Update validation status (✅/⚠️/❌) to reflect current state
+3. Add new milestones if implementing features not yet tracked
+4. Update "Known Limitations" when fixing or discovering issues
+5. Keep "Last Updated" date current
+6. Update "Current Status" section to reflect active work
+
+The MILESTONES.md document is the source of truth for project progress and should always reflect the actual implementation state.
+
 ## Screenshot Requirements
 
 **When making changes that affect visual output, always attach a screenshot of the rendered result.**
@@ -45,6 +58,7 @@ go build ./cmd/browser
 - `test/simple.html` - Basic HTML structure
 - `test/styled.html` - HTML with CSS styling
 - `test/render_test.html` - Visual rendering test with colored boxes
+- `test/hackernews.html` - HN-inspired layout test with image
 
 ## Code Guidelines
 
@@ -52,3 +66,4 @@ go build ./cmd/browser
 - Add spec references for CSS/HTML implementations (see existing code for examples)
 - Write unit tests for new functionality
 - Run `go test ./...` before submitting changes
+- Update MILESTONES.md when completing tasks or discovering limitations
