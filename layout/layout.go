@@ -20,8 +20,15 @@ import (
 const (
 	// maxColumnWidth is the maximum width any table column can have.
 	// This prevents extremely wide content from creating unusable layouts.
-	// Set to 400px as a reasonable maximum for typical table columns.
+	// CSS 2.1 §17.5.2.2 does not specify a maximum, but practical implementations
+	// need limits to prevent performance issues. Set to 400px as a reasonable maximum.
 	maxColumnWidth = 400.0
+	
+	// maxColspan is the maximum number of columns a cell can span.
+	// HTML5 §4.9.9 specifies that user agents may choose to limit colspan
+	// to prevent denial of service attacks. The recommended maximum is 1000.
+	// See: https://html.spec.whatwg.org/multipage/tables.html#attributes-common-to-td-and-th-elements
+	maxColspan = 1000
 )
 
 // LayoutBox represents a box in the layout tree.
@@ -470,9 +477,9 @@ func getColspan(cell *LayoutBox) int {
 	}
 	
 	if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
-		// Cap at 1000 as recommended by HTML specification
-		if val > 1000 {
-			return 1000
+		// Cap at maxColspan as recommended by HTML specification
+		if val > maxColspan {
+			return maxColspan
 		}
 		return val
 	}
