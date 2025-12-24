@@ -285,6 +285,8 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Integrate WPT reftest harness
 - [x] Add CSS 2.1 reference tests
 - [x] Document test results
+- [x] Verify reftest status and document requirements for failing tests
+- [ ] Implement CSS shorthand property expansion
 - [ ] Expand test coverage
 - [ ] Fix failing tests
 
@@ -292,18 +294,58 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - **WPT CSS Tests**: 81.8% pass rate (9/11 tests)
 - **Unit Test Coverage**: 90%+ across all modules
 - **Test Categories Passing**:
-  - ✅ css-box (longhand properties): 100%
-  - ✅ css-cascade: 100%
-  - ✅ css-display: 100%
-  - ✅ css-selectors: 100%
+  - ✅ css-box (longhand properties): 100% (3/3 tests)
+  - ✅ css-cascade: 100% (2/2 tests)
+  - ✅ css-display: 100% (1/1 test)
+  - ✅ css-selectors: 100% (3/3 tests)
 - **Test Categories Failing**:
-  - ❌ css-box (shorthand properties): 0% (not implemented)
+  - ❌ css-box (shorthand properties): 0% (2/2 tests) - **shorthand property expansion not implemented**
+
+### Failing Tests and Required Features:
+
+#### 1. css-box/margin-shorthand-001.html
+**Status**: FAIL - layouts do not match  
+**Requirement**: Expand `margin: 20px` to individual longhand properties
+- CSS 2.1 §8.3 Margin properties: margin shorthand
+- Must expand to: `margin-top: 20px`, `margin-right: 20px`, `margin-bottom: 20px`, `margin-left: 20px`
+- Implementation needed in `css/parser.go` or `style/style.go`
+
+#### 2. css-box/padding-shorthand-001.html
+**Status**: FAIL - layouts do not match  
+**Requirement**: Expand `padding: 10px` to individual longhand properties
+- CSS 2.1 §8.4 Padding properties: padding shorthand
+- Must expand to: `padding-top: 10px`, `padding-right: 10px`, `padding-bottom: 10px`, `padding-left: 10px`
+- Implementation needed in `css/parser.go` or `style/style.go`
+
+### Implementation Strategy for Shorthand Properties:
+
+To pass the failing tests, implement CSS shorthand property expansion:
+
+1. **Add shorthand expansion function** in `css/parser.go` or `style/style.go`
+   - Detect shorthand properties during parsing or style computation
+   - Expand based on CSS 2.1 specification:
+     - 1 value: all sides (e.g., `margin: 10px` → all 10px)
+     - 2 values: vertical | horizontal (e.g., `margin: 10px 20px` → top/bottom 10px, left/right 20px)
+     - 3 values: top | horizontal | bottom (e.g., `margin: 10px 20px 30px`)
+     - 4 values: top | right | bottom | left (e.g., `margin: 10px 20px 30px 40px`)
+
+2. **Properties to implement**:
+   - `margin` → `margin-top`, `margin-right`, `margin-bottom`, `margin-left`
+   - `padding` → `padding-top`, `padding-right`, `padding-bottom`, `padding-left`
+   - (Future) `border` → individual border properties
+   - (Future) `border-width`, `border-style`, `border-color`
+
+3. **Where to implement**:
+   - **Option A**: In `css/parser.go` - expand during parsing before creating Declaration objects
+   - **Option B**: In `style/style.go` - expand during style computation when applying declarations
+   - **Recommended**: Option B (style computation) for cleaner separation of concerns
 
 ### Deliverables:
 - ✅ Test coverage report
 - ✅ Documentation of spec compliance
 - ✅ Known limitations documented
 - ✅ CI integration with WPT tests
+- ✅ Detailed requirements for failing tests documented
 
 ---
 
