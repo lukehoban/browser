@@ -84,14 +84,14 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
 	// Use basicfont.Face7x13 as a simple built-in font
 	face := basicfont.Face7x13
-	
+
 	// Calculate the bounding box for the text
 	width := len(text) * face.Advance
 	height := face.Height
-	
+
 	// Create a temporary image for just the text
 	textImg := image.NewRGBA(image.Rect(0, 0, width, height))
-	
+
 	// Create a drawer for the text
 	drawer := &font.Drawer{
 		Dst:  textImg,
@@ -99,10 +99,10 @@ func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
 		Face: face,
 		Dot:  fixed.Point26_6{X: 0, Y: fixed.I(face.Ascent)},
 	}
-	
+
 	// Draw the text
 	drawer.DrawString(text)
-	
+
 	// Copy only the text pixels to the canvas
 	for dy := 0; dy < height; dy++ {
 		for dx := 0; dx < width; dx++ {
@@ -142,11 +142,11 @@ func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
 			// Map destination pixel to source pixel
 			srcX := bounds.Min.X + (dx * srcWidth / width)
 			srcY := bounds.Min.Y + (dy * srcHeight / height)
-			
+
 			// Get source color and convert to RGBA
 			col := img.At(srcX, srcY)
 			r, g, b, a := col.RGBA()
-			
+
 			// Convert from 16-bit to 8-bit color
 			rgba := color.RGBA{
 				R: uint8(r >> 8),
@@ -154,11 +154,11 @@ func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
 				B: uint8(b >> 8),
 				A: uint8(a >> 8),
 			}
-			
+
 			// Handle alpha blending with existing pixel
 			destX := x + dx
 			destY := y + dy
-			
+
 			if rgba.A == 255 {
 				c.SetPixel(destX, destY, rgba)
 			} else if rgba.A > 0 {
@@ -209,7 +209,6 @@ func (c *Canvas) LoadImage(path string) (image.Image, error) {
 
 	return img, nil
 }
-
 
 // ToImage converts the canvas to an image.Image.
 func (c *Canvas) ToImage() *image.RGBA {
@@ -303,7 +302,7 @@ func renderBorders(canvas *Canvas, box *layout.LayoutBox) {
 	}
 
 	styles := box.StyledNode.Styles
-	
+
 	// CSS 2.1 §8.5.3: Check if border-style is set and not 'none'
 	borderStyle := styles["border-style"]
 	if borderStyle == "" || borderStyle == "none" {
@@ -505,4 +504,3 @@ func renderImage(canvas *Canvas, box *layout.LayoutBox) {
 		int(box.Dimensions.Content.Height),
 	)
 }
-

@@ -107,7 +107,7 @@ func (t *Tokenizer) Next() Token {
 		t.pos++
 		return Token{Type: DotToken, Value: "."}
 	}
-	
+
 	// At-keyword (@media, @import, etc.) - CSS 2.1 §4.1.5 At-rules
 	if c == '@' {
 		t.pos++

@@ -7,64 +7,64 @@
 package dom
 
 import (
-"fmt"
-"io"
-"net/http"
-"os"
-"strings"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"strings"
 )
 
 // ResourceLoader handles loading resources from URLs or file paths.
 type ResourceLoader struct {
-BaseURL string
+	BaseURL string
 }
 
 // NewResourceLoader creates a new resource loader with the given base URL.
 func NewResourceLoader(baseURL string) *ResourceLoader {
-return &ResourceLoader{
-BaseURL: baseURL,
-}
+	return &ResourceLoader{
+		BaseURL: baseURL,
+	}
 }
 
 // LoadResource loads content from a URL or file path.
 // HTML5 §2.5: Resources are identified by URLs and can be fetched over network or from filesystem.
 func (rl *ResourceLoader) LoadResource(path string) ([]byte, error) {
-if isURL(path) {
-return loadFromURL(path)
-}
-return os.ReadFile(path)
+	if isURL(path) {
+		return loadFromURL(path)
+	}
+	return os.ReadFile(path)
 }
 
 // LoadResourceAsString loads content as a string.
 func (rl *ResourceLoader) LoadResourceAsString(path string) (string, error) {
-data, err := rl.LoadResource(path)
-if err != nil {
-return "", err
-}
-return string(data), nil
+	data, err := rl.LoadResource(path)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 // isURL checks if the input string is a URL (http:// or https://).
 func isURL(input string) bool {
-return strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://")
+	return strings.HasPrefix(input, "http://") || strings.HasPrefix(input, "https://")
 }
 
 // loadFromURL fetches content from a URL.
 func loadFromURL(urlStr string) ([]byte, error) {
-resp, err := http.Get(urlStr)
-if err != nil {
-return nil, fmt.Errorf("failed to fetch URL: %w", err)
-}
-defer resp.Body.Close()
+	resp, err := http.Get(urlStr)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch URL: %w", err)
+	}
+	defer resp.Body.Close()
 
-if resp.StatusCode != http.StatusOK {
-return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
-}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
+	}
 
-body, err := io.ReadAll(resp.Body)
-if err != nil {
-return nil, fmt.Errorf("failed to read response body: %w", err)
-}
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
 
-return body, nil
+	return body, nil
 }

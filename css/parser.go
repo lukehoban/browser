@@ -58,7 +58,7 @@ func (p *Parser) Parse() *Stylesheet {
 		if token.Type == EOFToken {
 			break
 		}
-		
+
 		// Skip @-rules (media queries, imports, etc.)
 		// CSS 2.1 §4.1.5 At-rules - not implementing for simplicity
 		if token.Type == AtKeywordToken {
@@ -82,7 +82,7 @@ func (p *Parser) Parse() *Stylesheet {
 func (p *Parser) skipAtRule() {
 	// Consume the @keyword token
 	p.tokenizer.Next()
-	
+
 	// Skip tokens until we find either a semicolon (for simple @rules like @import)
 	// or a block (for complex @rules like @media)
 	braceDepth := 0

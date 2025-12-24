@@ -82,7 +82,7 @@ func main() {
 	// Extract CSS from <style> tags and <link> tags
 	fmt.Fprintf(os.Stderr, "Extracting CSS...\n")
 	cssContent := extractCSS(doc)
-	
+
 	// Fetch external stylesheets
 	// HTML5 §4.2.4: External stylesheets are fetched via <link rel="stylesheet">
 	fmt.Fprintf(os.Stderr, "Fetching external stylesheets...\n")

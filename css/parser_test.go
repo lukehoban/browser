@@ -215,70 +215,70 @@ func TestParseComplexValue(t *testing.T) {
 // TestParseAttributeSelector tests that attribute selectors are skipped gracefully.
 // CSS 2.1 §5.8 Attribute selectors
 func TestParseAttributeSelector(t *testing.T) {
-input := `
+	input := `
 input[type='submit'] { font-family: Verdana; }
 .class { color: red; }
 `
-stylesheet := Parse(input)
+	stylesheet := Parse(input)
 
-// Should parse successfully and have at least the .class rule
-if len(stylesheet.Rules) < 1 {
-t.Errorf("Expected at least 1 rule, got %d", len(stylesheet.Rules))
-}
+	// Should parse successfully and have at least the .class rule
+	if len(stylesheet.Rules) < 1 {
+		t.Errorf("Expected at least 1 rule, got %d", len(stylesheet.Rules))
+	}
 
-// The .class rule should be parsed correctly
-foundClassRule := false
-for _, rule := range stylesheet.Rules {
-if len(rule.Selectors) > 0 && len(rule.Selectors[0].Simple) > 0 {
-simple := rule.Selectors[0].Simple[0]
-if len(simple.Classes) > 0 && simple.Classes[0] == "class" {
-foundClassRule = true
-break
-}
-}
-}
+	// The .class rule should be parsed correctly
+	foundClassRule := false
+	for _, rule := range stylesheet.Rules {
+		if len(rule.Selectors) > 0 && len(rule.Selectors[0].Simple) > 0 {
+			simple := rule.Selectors[0].Simple[0]
+			if len(simple.Classes) > 0 && simple.Classes[0] == "class" {
+				foundClassRule = true
+				break
+			}
+		}
+	}
 
-if !foundClassRule {
-t.Error("Expected .class rule to be parsed")
-}
+	if !foundClassRule {
+		t.Error("Expected .class rule to be parsed")
+	}
 }
 
 // TestParseAtRule tests that @-rules are skipped gracefully.
 // CSS 2.1 §4.1.5 At-rules
 func TestParseAtRule(t *testing.T) {
-input := `
+	input := `
 body { color: black; }
 @media screen and (max-width: 600px) {
 body { color: blue; }
 }
 .test { color: red; }
 `
-stylesheet := Parse(input)
+	stylesheet := Parse(input)
 
-// Should parse successfully and have the body and .test rules
-if len(stylesheet.Rules) < 2 {
-t.Errorf("Expected at least 2 rules, got %d", len(stylesheet.Rules))
-}
+	// Should parse successfully and have the body and .test rules
+	if len(stylesheet.Rules) < 2 {
+		t.Errorf("Expected at least 2 rules, got %d", len(stylesheet.Rules))
+	}
 
-// Check that we have body and .test rules
-foundBody := false
-foundTest := false
-for _, rule := range stylesheet.Rules {
-if len(rule.Selectors) > 0 && len(rule.Selectors[0].Simple) > 0 {
-simple := rule.Selectors[0].Simple[0]
-if simple.TagName == "body" {
-foundBody = true
-}
-if len(simple.Classes) > 0 && simple.Classes[0] == "test" {
-foundTest = true
-}
-}
-}
+	// Check that we have body and .test rules
+	foundBody := false
+	foundTest := false
+	for _, rule := range stylesheet.Rules {
+		if len(rule.Selectors) > 0 && len(rule.Selectors[0].Simple) > 0 {
+			simple := rule.Selectors[0].Simple[0]
+			if simple.TagName == "body" {
+				foundBody = true
+			}
+			if len(simple.Classes) > 0 && simple.Classes[0] == "test" {
+				foundTest = true
+			}
+		}
+	}
 
-if !foundBody {
-t.Error("Expected body rule to be parsed")
-}
-if !foundTest {
-t.Error("Expected .test rule to be parsed")
-}
+	if !foundBody {
+		t.Error("Expected body rule to be parsed")
+	}
+	if !foundTest {
+		t.Error("Expected .test rule to be parsed")
+	}
 }
