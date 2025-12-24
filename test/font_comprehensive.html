@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Comprehensive Font Test</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            background: white;
+            margin: 20px;
+            padding: 0;
+        }
+        
+        h1 {
+            font-size: 32px;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        
+        h2 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        
+        h3 {
+            font-size: 18px;
+            color: #7f8c8d;
+        }
+        
+        p {
+            font-size: 14px;
+            color: #2c3e50;
+            margin: 10px 0;
+        }
+        
+        .serif {
+            font-family: serif;
+            font-size: 16px;
+            color: #e74c3c;
+            padding: 10px;
+            background: #ffeaa7;
+        }
+        
+        .monospace {
+            font-family: monospace;
+            font-size: 14px;
+            color: #16a085;
+            padding: 10px;
+            background: #dfe6e9;
+        }
+        
+        .small-text {
+            font-size: 10px;
+            color: #95a5a6;
+        }
+        
+        .large-text {
+            font-size: 20px;
+            color: #9b59b6;
+        }
+        
+        .bold {
+            font-weight: bold;
+            font-size: 16px;
+            color: #e67e22;
+        }
+        
+        .colored {
+            color: #3498db;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Font Rendering in Go Browser</h1>
+    <h2>Multiple Font Sizes</h2>
+    <p>This is regular paragraph text at 14px.</p>
+    <p class="small-text">This is small text at 10px.</p>
+    <p class="large-text">This is large text at 20px.</p>
+    
+    <h2>Font Families</h2>
+    <div class="serif">Serif font family (fallback to sans-serif)</div>
+    <div class="monospace">Monospace font family for code</div>
+    
+    <h2>Font Weights</h2>
+    <p>This is normal weight text.</p>
+    <p class="bold">This is bold weight text.</p>
+    
+    <h2>Colors</h2>
+    <p class="colored">Text can be displayed in different colors!</p>
+    
+    <h3>CSS 2.1 Font Properties Supported:</h3>
+    <p>font-family: sans-serif, monospace, serif</p>
+    <p>font-size: px, pt, em, named sizes</p>
+    <p>font-weight: normal, bold</p>
+    <p>color: named colors, hex colors</p>
+</body>
+</html>

@@ -13,7 +13,13 @@ import (
 
 	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/style"
+	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/gofont/gomono"
+	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/font/opentype"
+	"golang.org/x/image/math/fixed"
 )
 
 // Table layout constants
@@ -379,7 +385,7 @@ func expandRect(rect Rect, edges EdgeSizes) Rect {
 }
 
 // layoutText lays out a text node.
-// CSS 2.1 §16 Text
+// CSS 2.1 §15 Fonts and §16 Text
 func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	// Get the text content
 	text := box.StyledNode.Node.Data
@@ -389,13 +395,16 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 		return
 	}
 
-	// Calculate text dimensions using basicfont.Face7x13
-	// Note: For basicfont.Face7x13, all characters have fixed width (Advance)
-	// For more accurate measurement, we could use font.Drawer.MeasureString()
-	// but basicfont is monospaced so character count * Advance is accurate
-	face := basicfont.Face7x13
-	width := float64(len(text) * face.Advance)
-	height := float64(face.Height)
+	// Get the font face based on styles
+	face := getFontFace(box.StyledNode.Styles)
+	
+	// Calculate text dimensions using the actual font
+	// CSS 2.1 §10.3.1: Inline content width
+	width := float64(measureString(face, text).Ceil())
+	
+	// CSS 2.1 §10.6.1: Inline content height
+	metrics := face.Metrics()
+	height := float64(metrics.Height.Ceil())
 
 	// Position the text node
 	box.Dimensions.Content.X = containingBlock.Content.X
@@ -579,17 +588,14 @@ func (box *LayoutBox) estimateCellMinWidth(cell *LayoutBox) float64 {
 func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 	width := 0.0
 	
-	// Use the same character width as in layoutText
-	face := basicfont.Face7x13
-	charWidth := float64(face.Advance)
-	
 	// Recursively estimate width from children
 	for _, child := range layoutBox.Children {
 		if child.StyledNode != nil && child.StyledNode.Node != nil {
 			if child.StyledNode.Node.Type == dom.TextNode {
-				// Estimate text width
+				// Estimate text width using font metrics
 				text := child.StyledNode.Node.Data
-				textWidth := float64(len(text)) * charWidth
+				face := getFontFace(child.StyledNode.Styles)
+				textWidth := float64(measureString(face, text).Ceil())
 				width += textWidth
 			} else {
 				// Recursively estimate child width
@@ -837,4 +843,129 @@ func (box *LayoutBox) layoutTableCell(containingBlock Dimensions) {
 			box.Dimensions.Content.Height = h
 		}
 	}
+}
+
+// getFontFace returns a font face for the given styles.
+// This is used for accurate text measurement during layout.
+// CSS 2.1 §15 Fonts
+func getFontFace(styles map[string]string) font.Face {
+	// Get font properties
+	fontFamily := styles["font-family"]
+	if fontFamily == "" {
+		fontFamily = "sans-serif"
+	}
+	fontFamily = strings.ToLower(strings.TrimSpace(fontFamily))
+
+	fontSizeStr := styles["font-size"]
+	fontSize := parseFontSize(fontSizeStr, 16.0)
+
+	fontWeight := styles["font-weight"]
+	if fontWeight == "" {
+		fontWeight = "normal"
+	}
+
+	// Select appropriate TTF data based on family and weight
+	var ttfData []byte
+	switch fontFamily {
+	case "sans-serif", "arial", "helvetica", "":
+		if fontWeight == "bold" || fontWeight == "700" || fontWeight == "800" || fontWeight == "900" {
+			ttfData = gobold.TTF
+		} else {
+			ttfData = goregular.TTF
+		}
+	case "monospace", "courier", "courier new":
+		ttfData = gomono.TTF
+	case "serif", "times", "times new roman":
+		ttfData = goregular.TTF // Fallback to sans-serif
+	default:
+		ttfData = goregular.TTF
+	}
+
+	// Parse and create face
+	f, err := opentype.Parse(ttfData)
+	if err != nil {
+		return basicfont.Face7x13 // Fallback
+	}
+
+	face, err := opentype.NewFace(f, &opentype.FaceOptions{
+		Size: fontSize,
+		DPI:  72,
+	})
+	if err != nil {
+		return basicfont.Face7x13 // Fallback
+	}
+
+	return face
+}
+
+// parseFontSize parses CSS font-size value.
+// CSS 2.1 §15.7 Font size
+func parseFontSize(value string, parentSize float64) float64 {
+	value = strings.TrimSpace(strings.ToLower(value))
+
+	if value == "" || value == "medium" {
+		return 16.0
+	}
+
+	// Named sizes
+	switch value {
+	case "xx-small":
+		return 9.0
+	case "x-small":
+		return 10.0
+	case "small":
+		return 13.0
+	case "large":
+		return 18.0
+	case "x-large":
+		return 24.0
+	case "xx-large":
+		return 32.0
+	case "smaller":
+		return parentSize * 0.83
+	case "larger":
+		return parentSize * 1.2
+	}
+
+	// Pixel values
+	if strings.HasSuffix(value, "px") {
+		if size, err := strconv.ParseFloat(value[:len(value)-2], 64); err == nil {
+			return size
+		}
+	}
+
+	// Point values
+	if strings.HasSuffix(value, "pt") {
+		if size, err := strconv.ParseFloat(value[:len(value)-2], 64); err == nil {
+			return size * 96.0 / 72.0
+		}
+	}
+
+	// Em values
+	if strings.HasSuffix(value, "em") {
+		if size, err := strconv.ParseFloat(value[:len(value)-2], 64); err == nil {
+			return size * parentSize
+		}
+	}
+
+	// Plain number
+	if size, err := strconv.ParseFloat(value, 64); err == nil {
+		return size
+	}
+
+	return 16.0
+}
+
+// measureString measures the width of a string in the given font face.
+// CSS 2.1 §16.2: Alignment properties
+func measureString(face font.Face, text string) fixed.Int26_6 {
+	var width fixed.Int26_6
+	for _, r := range text {
+		advance, ok := face.GlyphAdvance(r)
+		if !ok {
+			advance = face.Metrics().Height / 2
+		}
+		width += advance
+	}
+	return width
 }

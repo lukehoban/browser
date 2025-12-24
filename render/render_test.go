@@ -203,8 +203,8 @@ func TestDrawText(t *testing.T) {
 	black := color.RGBA{0, 0, 0, 255}
 	c.Clear(white)
 
-	// Draw text "Hello"
-	c.DrawText("Hello", 10, 20, black)
+	// Draw text "Hello" with default font
+	c.DrawText("Hello", 10, 20, black, "sans-serif", 16.0, "normal")
 
 	// Check that some pixels are black (text was drawn)
 	// We can't check exact positions since font rendering is complex,

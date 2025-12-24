@@ -26,19 +26,21 @@ import (
 
 // Canvas represents the rendering surface.
 type Canvas struct {
-	Width      int
-	Height     int
-	Pixels     []color.RGBA
-	ImageCache map[string]image.Image // Cache for loaded images
+	Width       int
+	Height      int
+	Pixels      []color.RGBA
+	ImageCache  map[string]image.Image // Cache for loaded images
+	FontManager *FontManager           // Font manager for loading and caching fonts
 }
 
 // NewCanvas creates a new canvas with the given dimensions.
 func NewCanvas(width, height int) *Canvas {
 	return &Canvas{
-		Width:      width,
-		Height:     height,
-		Pixels:     make([]color.RGBA, width*height),
-		ImageCache: make(map[string]image.Image),
+		Width:       width,
+		Height:      height,
+		Pixels:      make([]color.RGBA, width*height),
+		ImageCache:  make(map[string]image.Image),
+		FontManager: NewFontManager(),
 	}
 }
 
@@ -79,35 +81,43 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 	c.FillRect(x+width-thickness, y, thickness, height, col)
 }
 
-// DrawText draws text at the given position with the given color.
-// CSS 2.1 §16 Text
-func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
-	// Use basicfont.Face7x13 as a simple built-in font
-	face := basicfont.Face7x13
+// DrawText draws text at the given position with the given color and font properties.
+// CSS 2.1 §15 Fonts and §16 Text
+func (c *Canvas) DrawText(text string, x, y int, col color.RGBA, family string, size float64, weight string) {
+	// Get the appropriate font face
+	face := c.FontManager.GetFace(family, size, weight)
+	if face == nil {
+		// Fallback to basicfont if font loading fails
+		face = basicfont.Face7x13
+	}
 
-	// Calculate the bounding box for the text
-	width := len(text) * face.Advance
-	height := face.Height
+	// Get font metrics
+	metrics := face.Metrics()
+	ascent := metrics.Ascent.Ceil()
+	
+	// Measure the text width
+	textWidth := MeasureString(face, text).Ceil()
+	textHeight := metrics.Height.Ceil()
 
-	// Create a temporary image for just the text
-	textImg := image.NewRGBA(image.Rect(0, 0, width, height))
+	// Create a temporary image for the text with some padding
+	textImg := image.NewRGBA(image.Rect(0, 0, textWidth+10, textHeight+10))
 
 	// Create a drawer for the text
 	drawer := &font.Drawer{
 		Dst:  textImg,
 		Src:  image.NewUniform(col),
 		Face: face,
-		Dot:  fixed.Point26_6{X: 0, Y: fixed.I(face.Ascent)},
+		Dot:  fixed.Point26_6{X: 0, Y: metrics.Ascent},
 	}
 
 	// Draw the text
 	drawer.DrawString(text)
 
 	// Copy only the text pixels to the canvas
-	for dy := 0; dy < height; dy++ {
-		for dx := 0; dx < width; dx++ {
+	for dy := 0; dy < textHeight+10; dy++ {
+		for dx := 0; dx < textWidth+10; dx++ {
 			px := x + dx
-			py := y - face.Ascent + dy // Adjust for baseline
+			py := y - ascent + dy // Adjust for baseline
 			if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
 				r, g, b, a := textImg.At(dx, dy).RGBA()
 				// Only copy non-transparent pixels (text)
@@ -364,7 +374,7 @@ func renderBorders(canvas *Canvas, box *layout.LayoutBox) {
 }
 
 // renderText renders the text content of a layout box.
-// CSS 2.1 §16 Text
+// CSS 2.1 §15 Fonts and §16 Text
 func renderText(canvas *Canvas, box *layout.LayoutBox) {
 	if box.StyledNode == nil || box.StyledNode.Node == nil {
 		return
@@ -387,12 +397,37 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 		textColor = color.RGBA{0, 0, 0, 255} // Default to black
 	}
 
-	// Render the text at the box's position
-	// Add a small vertical offset to position text at baseline
-	x := int(box.Dimensions.Content.X)
-	y := int(box.Dimensions.Content.Y) + 13 // basicfont.Face7x13 height is 13 pixels
+	// Get font properties from styles
+	// CSS 2.1 §15.3 Font family
+	fontFamily := box.StyledNode.Styles["font-family"]
+	if fontFamily == "" {
+		fontFamily = "sans-serif" // Default to sans-serif
+	}
 
-	canvas.DrawText(text, x, y, textColor)
+	// CSS 2.1 §15.7 Font size
+	fontSizeStr := box.StyledNode.Styles["font-size"]
+	fontSize := ParseFontSize(fontSizeStr, 16.0) // Default parent size is 16px
+
+	// CSS 2.1 §15.6 Font weight
+	fontWeight := box.StyledNode.Styles["font-weight"]
+	if fontWeight == "" {
+		fontWeight = "normal"
+	}
+
+	// Calculate text metrics for positioning
+	face := canvas.FontManager.GetFace(fontFamily, fontSize, fontWeight)
+	if face == nil {
+		// Fallback to basicfont metrics
+		face = basicfont.Face7x13
+	}
+	metrics := face.Metrics()
+	
+	// Render the text at the box's position
+	// Position at baseline (y + ascent)
+	x := int(box.Dimensions.Content.X)
+	y := int(box.Dimensions.Content.Y) + metrics.Ascent.Ceil()
+
+	canvas.DrawText(text, x, y, textColor, fontFamily, fontSize, fontWeight)
 }
 
 // parseColor parses a CSS color value and returns a color.RGBA.
