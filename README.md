@@ -10,6 +10,7 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - HTML parsing with DOM tree construction
 - CSS 2.1 parsing and style computation
 - Visual formatting model (box model, block layout)
+- **Font rendering**: Multiple font families (sans-serif, monospace), sizes (px, pt, em), and weights (normal, bold)
 - Text rendering with color support
 - Image rendering (PNG, JPEG, GIF support)
 - Background and border rendering
@@ -79,6 +80,7 @@ go test ./...
 - **[MILESTONES.md](MILESTONES.md)** - Implementation milestones and progress tracking
 - **[IMPLEMENTATION.md](IMPLEMENTATION.md)** - Detailed implementation summary and architecture
 - **[IMAGE_RENDERING.md](IMAGE_RENDERING.md)** - Image rendering capabilities and usage
+- **[FONT_RENDERING.md](FONT_RENDERING.md)** - Font rendering capabilities and CSS font properties
 - **[TESTING.md](TESTING.md)** - Testing strategy and public test suite integration
 
 ## Current Status
