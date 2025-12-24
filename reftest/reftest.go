@@ -20,6 +20,17 @@ import (
 	"github.com/lukehoban/browser/style"
 )
 
+// Pre-compiled regular expressions for performance.
+var (
+	styleRe        = regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
+	refLinkRelRe   = regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["'][^>]+href\s*=\s*["']([^"']+)["']`)
+	refLinkHrefRe  = regexp.MustCompile(`(?i)<link[^>]+href\s*=\s*["']([^"']+)["'][^>]+rel\s*=\s*["'](match|mismatch)["']`)
+	hasRefLinkRe   = regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["']`)
+)
+
+// Default viewport dimensions for layout comparison.
+const defaultViewportWidth = 800.0
+
 // Result represents the outcome of a single reftest.
 type Result struct {
 	TestFile      string
@@ -247,7 +258,8 @@ func renderDocument(htmlContent string) (*layout.LayoutBox, error) {
 	// Compute styles
 	styledTree := style.StyleTree(doc, stylesheet)
 
-	// Layout
+	// Layout - use default viewport dimensions for consistent comparison
+	// The layout.LayoutTree function sets the default viewport width internally
 	containingBlock := layout.Dimensions{}
 	layoutTree := layout.LayoutTree(styledTree, containingBlock)
 
@@ -256,10 +268,9 @@ func renderDocument(htmlContent string) (*layout.LayoutBox, error) {
 
 // extractCSS extracts CSS content from <style> elements in HTML.
 func extractCSS(htmlContent string) string {
-	// Simple regex to extract style content
+	// Use pre-compiled regex to extract style content
 	// This is a simplified approach - a full implementation would use the DOM
-	re := regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
-	matches := re.FindAllStringSubmatch(htmlContent, -1)
+	matches := styleRe.FindAllStringSubmatch(htmlContent, -1)
 
 	var css strings.Builder
 	for _, match := range matches {
@@ -275,13 +286,11 @@ func extractCSS(htmlContent string) string {
 // findReferenceLink finds the <link rel="match|mismatch" href="..."> in the HTML.
 func findReferenceLink(htmlContent, testPath string) (string, string, error) {
 	// Look for <link rel="match" href="..."> or <link rel="mismatch" href="...">
-	re := regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["'][^>]+href\s*=\s*["']([^"']+)["']`)
-	matches := re.FindStringSubmatch(htmlContent)
+	matches := refLinkRelRe.FindStringSubmatch(htmlContent)
 
 	if len(matches) < 3 {
 		// Try alternative order: href before rel
-		re = regexp.MustCompile(`(?i)<link[^>]+href\s*=\s*["']([^"']+)["'][^>]+rel\s*=\s*["'](match|mismatch)["']`)
-		matches = re.FindStringSubmatch(htmlContent)
+		matches = refLinkHrefRe.FindStringSubmatch(htmlContent)
 		if len(matches) < 3 {
 			return "", "", fmt.Errorf("no reference link found")
 		}
@@ -301,8 +310,7 @@ func findReferenceLink(htmlContent, testPath string) (string, string, error) {
 
 // hasReferenceLink checks if HTML content contains a reference link.
 func hasReferenceLink(htmlContent string) bool {
-	re := regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["']`)
-	return re.MatchString(htmlContent)
+	return hasRefLinkRe.MatchString(htmlContent)
 }
 
 // compareLayoutTrees compares two layout trees for visual equality.
