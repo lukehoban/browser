@@ -9,13 +9,11 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 
 - HTML parsing with DOM tree construction
 - CSS 2.1 parsing and style computation
-- Visual formatting model (box model, block/inline layout)
+- Visual formatting model (box model, block layout)
 - Text rendering with color support
 - Image rendering (PNG, JPEG, GIF support)
 - Background and border rendering
 - PNG image output
-- Image rendering (PNG, JPEG, GIF support)
-- Basic rendering to PNG output
 
 ## Project Structure
 
@@ -43,61 +41,46 @@ This browser implementation follows these W3C specifications:
   - [CSS 2.1 §8 Box Model](https://www.w3.org/TR/CSS21/box.html)
   - [CSS 2.1 §9 Visual Formatting Model](https://www.w3.org/TR/CSS21/visuren.html)
 
-## Building
+## Quick Start
+
+### Building
 
 ```bash
 go build ./cmd/browser
 ```
 
-## Testing
+### Running
+
+```bash
+# Render HTML to PNG with text and images
+./browser -output output.png test/styled.html
+
+# View layout tree without rendering (text output)
+./browser test/styled.html
+
+# Custom viewport size
+./browser -output output.png -width 1024 -height 768 test/hackernews.html
+```
+
+### Testing
 
 ```bash
 go test ./...
 ```
 
-## Milestones
+## Documentation
 
-See [MILESTONES.md](MILESTONES.md) for detailed implementation milestones and progress tracking.
+- **[MILESTONES.md](MILESTONES.md)** - Implementation milestones and progress tracking
+- **[IMPLEMENTATION.md](IMPLEMENTATION.md)** - Detailed implementation summary and architecture
+- **[IMAGE_RENDERING.md](IMAGE_RENDERING.md)** - Image rendering capabilities and usage
+- **[TESTING.md](TESTING.md)** - Testing strategy and public test suite integration
 
 ## Current Status
 
-✅ **Milestone 1: Foundation** - Complete
-✅ **Milestone 2: HTML Parsing** - Complete  
-✅ **Milestone 3: CSS Parsing** - Complete
-✅ **Milestone 4: Style Computation** - Complete
-✅ **Milestone 5: Layout Engine** - Complete (Basic box model)
-✅ **Milestone 6: Rendering** - Complete (Text, backgrounds, borders)
+✅ Milestones 1-7 Complete: Foundation, HTML Parsing, CSS Parsing, Style Computation, Layout Engine, Rendering, Image Rendering  
+🔄 Milestone 8 In Progress: Testing & Validation (81.8% WPT pass rate)
 
-### What Works
-
-- **HTML Parsing**: Tokenization, tree construction, nested elements, attributes
-- **CSS Parsing**: Selectors (element, class, ID, descendant), declarations, multiple rules
-- **Style Computation**: Selector matching, specificity calculation, cascade
-- **Layout**: Box model (content, padding, border, margin), block layout, auto width calculation
-- **Rendering**: Text rendering with colors, backgrounds, borders, PNG output
-- **Image Rendering**: Load and render PNG, JPEG, and GIF images in `<img>` elements
-
-### Example Usage
-
-```bash
-# Build the browser
-go build ./cmd/browser
-
-# Render HTML to PNG (with text and images)
-./browser -output output.png test/styled.html
-
-# View layout tree without rendering
-# Parse and display HTML with styles (text output)
-./browser test/styled.html
-
-# Render to PNG image
-./browser -output output.png test/hackernews.html
-
-# View with custom viewport
-./browser -output output.png -width 1024 -height 768 test/hackernews.html
-```
-
-See [IMAGE_RENDERING.md](IMAGE_RENDERING.md) for details on image rendering capabilities.
+See [MILESTONES.md](MILESTONES.md) for detailed progress and known limitations.
 
 ## License
 
