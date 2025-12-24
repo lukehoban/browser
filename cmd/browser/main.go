@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/lukehoban/browser/css"
@@ -43,6 +44,10 @@ func main() {
 
 	// Parse HTML
 	doc := html.Parse(string(content))
+
+	// Resolve relative URLs (e.g., image paths) against the document's base directory
+	// HTML5 §2.5: URLs in documents are resolved against a base URL
+	dom.ResolveURLs(doc, filepath.Dir(inputFile))
 
 	// Extract CSS from <style> tags
 	cssContent := extractCSS(doc)
