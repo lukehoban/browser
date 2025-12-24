@@ -242,15 +242,17 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Add table box types (TableBox, TableRowBox, TableCellBox)
 - [x] Implement display property detection for table elements
 - [x] Implement table layout algorithm
-- [x] Distribute column widths evenly
+- [x] Distribute column widths based on content (auto layout)
 - [x] Position cells horizontally in rows
 - [x] Calculate row heights based on cell content
 - [x] Support padding and borders on table cells
+- [x] Support colspan attribute
 - [x] Add unit tests for table layout
 
 ### Deliverables:
 - ✅ Table layout box types
-- ✅ Basic fixed table layout algorithm
+- ✅ Auto table layout algorithm with content-based column sizing
+- ✅ Colspan support for cells spanning multiple columns
 - ✅ Test files demonstrating table rendering
 - ✅ Unit tests for table layout
 
@@ -259,14 +261,16 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Cells arranged horizontally in rows
 - ✅ Multiple rows stack vertically
 - ✅ Cell borders and padding work correctly
+- ✅ Colspan attribute correctly spans columns
+- ✅ Column widths sized based on content (narrow columns stay narrow)
+- ✅ Hacker News table layout renders with proper proportions
 
 ### Known Limitations:
-- ⚠️ Only fixed table layout (not auto layout)
-- ⚠️ No support for colspan/rowspan
+- ⚠️ No support for rowspan
 - ⚠️ No table headers (`<thead>`, `<tbody>`, `<tfoot>`)
 - ⚠️ No table captions
-- ⚠️ Equal column width distribution only
 - ⚠️ No border-collapse support
+- ⚠️ Simple content-width estimation (doesn't account for line wrapping)
 
 ---
 
@@ -343,9 +347,19 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ## Future Work: Full Hacker News Rendering
 
-The browser can now load Hacker News from the network and render basic content. However, full visual fidelity requires additional features:
+The browser can now load Hacker News from the network and render content with proper table layout. Column widths are automatically sized based on content, with narrow columns (rank, vote links) staying narrow and the title column taking up the remaining space. Colspan is supported for subtext rows.
 
-### Required Features:
+### Recent Improvements:
+- [x] **Colspan Support** ✅ COMPLETE
+  - Table cells can span multiple columns using colspan attribute
+  - Column count calculated correctly across all rows
+- [x] **Auto Table Layout** ✅ COMPLETE
+  - Content-based column width calculation
+  - Narrow columns (rank, votelinks) sized appropriately (~50px)
+  - Wide columns (title) get remaining space
+  - Maximum column width capping to prevent overflow
+
+### Required Features for Full Fidelity:
 - [ ] **Text Layout Improvements**
   - [ ] Inline text layout (wrap text within line boxes)
   - [ ] Font size support (not just default font)
@@ -360,10 +374,12 @@ The browser can now load Hacker News from the network and render basic content. 
 
 - [ ] **Table Support**
   - [x] `<table>`, `<tr>`, `<td>`, `<th>` elements
-  - [x] Basic table layout algorithm (fixed layout)
-  - [ ] Auto table layout algorithm
-  - [ ] Table spanning (colspan, rowspan)
+  - [x] Basic table layout algorithm (auto layout)
+  - [x] Colspan attribute support
+  - [ ] Auto table layout algorithm (full implementation with min/max widths)
+  - [ ] Table spanning (rowspan)
   - [ ] Table captions and headers
+  - [ ] Border-collapse property
 
 - [ ] **Additional Selectors**
   - [ ] Child combinator (`>`)
@@ -380,7 +396,7 @@ The browser can now load Hacker News from the network and render basic content. 
   - [x] Load remote images
 
 ### Current Status:
-The browser successfully loads and renders Hacker News from the network, displaying text content, navigation links, and story metadata. Layout is basic but functional.
+The browser successfully loads and renders Hacker News from the network with improved table layout. Tables now use content-based column sizing, so narrow columns like rank numbers and vote arrows stay narrow, while title columns expand to fill available space. Colspan support allows subtext rows to properly span across multiple columns.
 
 ---
 
