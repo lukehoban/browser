@@ -39,5 +39,6 @@ Thumbs.db
 # Test output
 testdata/output/
 
-# Generated PNG files (except those in test/ directory)
+# Generated PNG files (except test fixtures and screenshots)
 /*.png
+!/*_screenshot.png

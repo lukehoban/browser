@@ -3,11 +3,8 @@
 <head>
     <title>Hacker News</title>
     <style>
-        /* Hacker News Visual Test
-         * This test uses explicit heights and colored divs to demonstrate
-         * the browser's rendering capabilities with a HN-inspired layout.
-         * Text rendering is not yet implemented, so we use colored boxes
-         * to represent the visual structure of the page.
+        /* Hacker News Visual Test with Image Support
+         * This test demonstrates image rendering in the HN-inspired layout.
          */
         body {
             margin: 0;
@@ -15,7 +12,7 @@
             background: white;
         }
         
-        /* Orange header bar - signature HN element */
+        /* Orange header bar with logo */
         #header {
             background: orange;
             height: 24px;
@@ -40,7 +37,7 @@
             height: 400px;
         }
         
-        /* Story item rows - gray boxes representing story entries */
+        /* Story item rows */
         .story {
             background: gray;
             height: 18px;
@@ -48,7 +45,7 @@
             margin: 8px;
         }
         
-        /* Subtext rows - lighter gray for metadata */
+        /* Subtext rows */
         .subtext {
             background: silver;
             height: 12px;
@@ -56,7 +53,7 @@
             margin: 0 0 15px 30px;
         }
         
-        /* Rank numbers column - small orange squares */
+        /* Rank numbers */
         .rank {
             background: orange;
             width: 20px;
@@ -84,16 +81,6 @@
         <div class="subtext"></div>
         
         <!-- Story 3 -->
-        <div class="rank"></div>
-        <div class="story"></div>
-        <div class="subtext"></div>
-        
-        <!-- Story 4 -->
-        <div class="rank"></div>
-        <div class="story"></div>
-        <div class="subtext"></div>
-        
-        <!-- Story 5 -->
         <div class="rank"></div>
         <div class="story"></div>
         <div class="subtext"></div>

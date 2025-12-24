@@ -9,6 +9,8 @@ package render
 import (
 	"image"
 	"image/color"
+	_ "image/gif"
+	_ "image/jpeg"
 	"image/png"
 	"os"
 	"strconv"
@@ -23,17 +25,19 @@ import (
 
 // Canvas represents the rendering surface.
 type Canvas struct {
-	Width  int
-	Height int
-	Pixels []color.RGBA
+	Width      int
+	Height     int
+	Pixels     []color.RGBA
+	ImageCache map[string]image.Image // Cache for loaded images
 }
 
 // NewCanvas creates a new canvas with the given dimensions.
 func NewCanvas(width, height int) *Canvas {
 	return &Canvas{
-		Width:  width,
-		Height: height,
-		Pixels: make([]color.RGBA, width*height),
+		Width:      width,
+		Height:     height,
+		Pixels:     make([]color.RGBA, width*height),
+		ImageCache: make(map[string]image.Image),
 	}
 }
 
@@ -119,6 +123,89 @@ func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
 	}
 }
 
+// DrawImage draws an image onto the canvas at the specified position.
+// HTML5 §4.8.2 The img element
+func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
+	// Validate dimensions to prevent division by zero
+	if width <= 0 || height <= 0 {
+		return
+	}
+
+	bounds := img.Bounds()
+	srcWidth := bounds.Dx()
+	srcHeight := bounds.Dy()
+
+	// Draw the image with simple nearest-neighbor scaling
+	for dy := 0; dy < height; dy++ {
+		for dx := 0; dx < width; dx++ {
+			// Map destination pixel to source pixel
+			srcX := bounds.Min.X + (dx * srcWidth / width)
+			srcY := bounds.Min.Y + (dy * srcHeight / height)
+			
+			// Get source color and convert to RGBA
+			col := img.At(srcX, srcY)
+			r, g, b, a := col.RGBA()
+			
+			// Convert from 16-bit to 8-bit color
+			rgba := color.RGBA{
+				R: uint8(r >> 8),
+				G: uint8(g >> 8),
+				B: uint8(b >> 8),
+				A: uint8(a >> 8),
+			}
+			
+			// Handle alpha blending with existing pixel
+			destX := x + dx
+			destY := y + dy
+			
+			if rgba.A == 255 {
+				c.SetPixel(destX, destY, rgba)
+			} else if rgba.A > 0 {
+				// Check bounds before accessing pixel array directly
+				if destX >= 0 && destX < c.Width && destY >= 0 && destY < c.Height {
+					// Simple alpha blending
+					existing := c.Pixels[destY*c.Width+destX]
+					alpha := float64(rgba.A) / 255.0
+					blended := color.RGBA{
+						R: uint8(float64(rgba.R)*alpha + float64(existing.R)*(1-alpha)),
+						G: uint8(float64(rgba.G)*alpha + float64(existing.G)*(1-alpha)),
+						B: uint8(float64(rgba.B)*alpha + float64(existing.B)*(1-alpha)),
+						A: 255,
+					}
+					c.SetPixel(destX, destY, blended)
+				}
+			}
+		}
+	}
+}
+
+// LoadImage loads an image from an absolute file path.
+// Supports PNG, JPEG, and GIF formats.
+// The path should be already resolved (absolute) before calling this method.
+func (c *Canvas) LoadImage(path string) (image.Image, error) {
+	// Check cache first
+	if img, ok := c.ImageCache[path]; ok {
+		return img, nil
+	}
+
+	// Open and decode the image
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	img, _, err := image.Decode(file)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the image
+	c.ImageCache[path] = img
+
+	return img, nil
+}
+
 // ToImage converts the canvas to an image.Image.
 func (c *Canvas) ToImage() *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, c.Width, c.Height))
@@ -165,6 +252,7 @@ func renderLayoutBox(canvas *Canvas, box *layout.LayoutBox) {
 	renderBackground(canvas, box)
 	renderBorders(canvas, box)
 	renderText(canvas, box)
+	renderImage(canvas, box)
 
 	for _, child := range box.Children {
 		renderLayoutBox(canvas, child)
@@ -377,3 +465,39 @@ func parseHexColor(hex string) color.RGBA {
 
 	return color.RGBA{r, g, b, 255}
 }
+
+// renderImage renders an image element if present.
+// HTML5 §4.8.2 The img element
+func renderImage(canvas *Canvas, box *layout.LayoutBox) {
+	if box.StyledNode == nil || box.StyledNode.Node == nil {
+		return
+	}
+
+	// Check if this is an img element
+	if box.StyledNode.Node.Data != "img" {
+		return
+	}
+
+	// Get the src attribute
+	src := box.StyledNode.Node.GetAttribute("src")
+	if src == "" {
+		return
+	}
+
+	// Load the image
+	img, err := canvas.LoadImage(src)
+	if err != nil {
+		// Silently fail if image can't be loaded
+		return
+	}
+
+	// Render the image in the content box
+	canvas.DrawImage(
+		img,
+		int(box.Dimensions.Content.X),
+		int(box.Dimensions.Content.Y),
+		int(box.Dimensions.Content.Width),
+		int(box.Dimensions.Content.Height),
+	)
+}
+
