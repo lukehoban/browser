@@ -121,7 +121,7 @@ Integration tests use complete HTML documents with embedded CSS:
 
 ## Future Testing Goals
 
-1. **Integrate CSS 2.1 Test Suite**
+1. ~~**Integrate CSS 2.1 Test Suite**~~ ✅ **Done**
    - Create test runner for official W3C tests
    - Track pass/fail rates by category
    - Document compliance level
@@ -140,6 +140,70 @@ Integration tests use complete HTML documents with embedded CSS:
    - Parse large documents
    - Style computation performance
    - Memory usage profiling
+
+## WPT Reftest Harness
+
+The browser includes a WPT (Web Platform Tests) reference test harness for benchmarking CSS compliance.
+
+### Running the WPT Reftest Suite
+
+```bash
+# Build and run the test runner
+go build -o wptrunner ./cmd/wptrunner
+./wptrunner -v test/wpt/css/
+
+# Or run as Go tests
+go test ./reftest/... -v
+```
+
+### Current WPT CSS Reftest Results
+
+| Category | Tests | Passed | Failed | Pass Rate |
+|----------|-------|--------|--------|-----------|
+| css-box (longhand) | 3 | 3 | 0 | 100% |
+| css-box (shorthand) | 2 | 0 | 2 | 0% |
+| css-cascade | 2 | 2 | 0 | 100% |
+| css-display | 1 | 1 | 0 | 100% |
+| css-selectors | 3 | 3 | 0 | 100% |
+| **Total** | **11** | **9** | **2** | **81.8%** |
+
+### Test Categories
+
+1. **css-box**: Box model tests (width, height, padding, margin)
+   - Longhand properties: ✅ Passing
+   - Shorthand properties: ❌ Not implemented
+
+2. **css-cascade**: Cascade and specificity tests
+   - Specificity calculation: ✅ Passing
+   - ID vs class priority: ✅ Passing
+
+3. **css-display**: Display property tests
+   - Block display: ✅ Passing
+
+4. **css-selectors**: Selector tests
+   - Class selector: ✅ Passing
+   - ID selector: ✅ Passing
+   - Descendant combinator: ✅ Passing
+
+### Adding New Tests
+
+To add new WPT-style reference tests:
+
+1. Create a test HTML file with `<link rel="match" href="reference.html">`
+2. Create a reference HTML file that produces the expected layout
+3. Place both files in `test/wpt/css/<category>/`
+4. Run `./wptrunner test/wpt/css/` to verify
+
+### Gaps Identified
+
+Based on the reftest benchmark, the following features need implementation:
+
+1. **Shorthand property expansion** (margin, padding, border, etc.)
+2. **CSS inheritance**
+3. **!important support**
+4. **Computed value calculation**
+5. **Child/sibling combinators** (>, +, ~)
+6. **Pseudo-classes and pseudo-elements**
 
 ## Running Tests
 
