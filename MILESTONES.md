@@ -97,7 +97,6 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ⚠️ No pseudo-elements (`::before`, `::after`)
 - ⚠️ No attribute selectors (`[attr="value"]`)
 - ⚠️ No child/adjacent sibling combinators (`>`, `+`, `~`)
-- ⚠️ No shorthand property expansion (e.g., `margin: 10px` → individual sides)
 
 ---
 
@@ -274,7 +273,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ---
 
-## Milestone 8: Testing & Validation 🔄 IN PROGRESS
+## Milestone 8: Testing & Validation ✅ COMPLETE
 **Goal**: Comprehensive testing with public test suites
 
 **Spec References**:
@@ -286,66 +285,43 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Add CSS 2.1 reference tests
 - [x] Document test results
 - [x] Verify reftest status and document requirements for failing tests
-- [ ] Implement CSS shorthand property expansion
-- [ ] Expand test coverage
-- [ ] Fix failing tests
+- [x] Implement CSS shorthand property expansion
+- [x] Fix failing tests
 
 ### Current Test Results:
-- **WPT CSS Tests**: 81.8% pass rate (9/11 tests)
+- **WPT CSS Tests**: 100% pass rate (11/11 tests) 🎉
 - **Unit Test Coverage**: 90%+ across all modules
 - **Test Categories Passing**:
   - ✅ css-box (longhand properties): 100% (3/3 tests)
+  - ✅ css-box (shorthand properties): 100% (2/2 tests)
   - ✅ css-cascade: 100% (2/2 tests)
   - ✅ css-display: 100% (1/1 test)
   - ✅ css-selectors: 100% (3/3 tests)
-- **Test Categories Failing**:
-  - ❌ css-box (shorthand properties): 0% (2/2 tests) - **shorthand property expansion not implemented**
 
-### Failing Tests and Required Features:
+### Completed Features:
 
-#### 1. css-box/margin-shorthand-001.html
-**Status**: FAIL - layouts do not match  
-**Requirement**: Expand `margin: 20px` to individual longhand properties
-- CSS 2.1 §8.3 Margin properties: margin shorthand
-- Must expand to: `margin-top: 20px`, `margin-right: 20px`, `margin-bottom: 20px`, `margin-left: 20px`
-- Implementation needed in `css/parser.go` or `style/style.go`
+#### CSS Shorthand Property Expansion ✅
+**Implementation**: CSS 2.1 §8.3 Margin properties, §8.4 Padding properties
 
-#### 2. css-box/padding-shorthand-001.html
-**Status**: FAIL - layouts do not match  
-**Requirement**: Expand `padding: 10px` to individual longhand properties
-- CSS 2.1 §8.4 Padding properties: padding shorthand
-- Must expand to: `padding-top: 10px`, `padding-right: 10px`, `padding-bottom: 10px`, `padding-left: 10px`
-- Implementation needed in `css/parser.go` or `style/style.go`
+Shorthand properties are now automatically expanded to their longhand equivalents during style computation:
 
-### Implementation Strategy for Shorthand Properties:
+- **Margin shorthand**: `margin: 20px` → `margin-top`, `margin-right`, `margin-bottom`, `margin-left`
+- **Padding shorthand**: `padding: 10px` → `padding-top`, `padding-right`, `padding-bottom`, `padding-left`
 
-To pass the failing tests, implement CSS shorthand property expansion:
+**Supported value patterns** (CSS 2.1 specification):
+- 1 value: applies to all sides (e.g., `margin: 10px`)
+- 2 values: vertical | horizontal (e.g., `margin: 10px 20px`)
+- 3 values: top | horizontal | bottom (e.g., `margin: 10px 20px 30px`)
+- 4 values: top | right | bottom | left (e.g., `margin: 10px 20px 30px 40px`)
 
-1. **Add shorthand expansion function** in `css/parser.go` or `style/style.go`
-   - Detect shorthand properties during parsing or style computation
-   - Expand based on CSS 2.1 specification:
-     - 1 value: all sides (e.g., `margin: 10px` → all 10px)
-     - 2 values: vertical | horizontal (e.g., `margin: 10px 20px` → top/bottom 10px, left/right 20px)
-     - 3 values: top | horizontal | bottom (e.g., `margin: 10px 20px 30px`)
-     - 4 values: top | right | bottom | left (e.g., `margin: 10px 20px 30px 40px`)
-
-2. **Properties to implement**:
-   - `margin` → `margin-top`, `margin-right`, `margin-bottom`, `margin-left`
-   - `padding` → `padding-top`, `padding-right`, `padding-bottom`, `padding-left`
-   - (Future) `border` → individual border properties
-   - (Future) `border-width`, `border-style`, `border-color`
-
-3. **Where to implement**:
-   - **Option A**: In `css/parser.go` - expand during parsing before creating Declaration objects
-   - **Option B**: In `style/style.go` - expand during style computation when applying declarations
-   - **Recommended**: Option B (style computation) for cleaner separation of concerns
+**Implementation location**: `style/style.go` - expansion occurs during style computation for clean separation of concerns
 
 ### Deliverables:
 - ✅ Test coverage report
 - ✅ Documentation of spec compliance
 - ✅ Known limitations documented
 - ✅ CI integration with WPT tests
-- ✅ Detailed requirements for failing tests documented
+- ✅ All WPT CSS reftests passing
 
 ---
 
@@ -453,6 +429,5 @@ The browser successfully loads and renders Hacker News from the network with imp
 ---
 
 ## Current Status
-**Completed**: Milestones 1-7.5 (Foundation through Basic Table Layout), Milestone 9 (Network Support)  
-**In Progress**: Milestone 8 (Testing & Validation)  
+**Completed**: Milestones 1-9 (Foundation through Network Support, including Testing & Validation)  
 **Last Updated**: 2025-12-24

@@ -176,17 +176,17 @@ To view WPT test results from CI:
 | Category | Tests | Passed | Failed | Pass Rate |
 |----------|-------|--------|--------|-----------|
 | css-box (longhand) | 3 | 3 | 0 | 100% |
-| css-box (shorthand) | 2 | 0 | 2 | 0% |
+| css-box (shorthand) | 2 | 2 | 0 | 100% |
 | css-cascade | 2 | 2 | 0 | 100% |
 | css-display | 1 | 1 | 0 | 100% |
 | css-selectors | 3 | 3 | 0 | 100% |
-| **Total** | **11** | **9** | **2** | **81.8%** |
+| **Total** | **11** | **11** | **0** | **100%** 🎉 |
 
 ### Test Categories
 
 1. **css-box**: Box model tests (width, height, padding, margin)
    - Longhand properties: ✅ Passing
-   - Shorthand properties: ❌ Not implemented
+   - Shorthand properties: ✅ Passing (implemented!)
 
 2. **css-cascade**: Cascade and specificity tests
    - Specificity calculation: ✅ Passing
@@ -209,49 +209,45 @@ To add new WPT-style reference tests:
 3. Place both files in `test/wpt/css/<category>/`
 4. Run `./wptrunner test/wpt/css/` to verify
 
-### Failing Tests (Expected)
+### Recently Implemented Features
 
-The following tests are currently failing and are documented as expected failures in `reftest/wpt_test.go`:
+#### CSS Shorthand Property Expansion ✅
+**Status**: Implemented in `style/style.go`
 
-1. **css-box/margin-shorthand-001.html**
-   - **Issue**: Shorthand property `margin: 20px` not expanded to longhand properties
-   - **Required**: Implement shorthand expansion: `margin: 20px` → `margin-top`, `margin-right`, `margin-bottom`, `margin-left`
-   - **Spec**: CSS 2.1 §8.3 Margin properties
+Shorthand properties are now automatically expanded to their longhand equivalents:
+- **Margin**: `margin: 20px` → `margin-top`, `margin-right`, `margin-bottom`, `margin-left`
+- **Padding**: `padding: 10px` → `padding-top`, `padding-right`, `padding-bottom`, `padding-left`
 
-2. **css-box/padding-shorthand-001.html**
-   - **Issue**: Shorthand property `padding: 10px` not expanded to longhand properties
-   - **Required**: Implement shorthand expansion: `padding: 10px` → `padding-top`, `padding-right`, `padding-bottom`, `padding-left`
-   - **Spec**: CSS 2.1 §8.4 Padding properties
+**Supported patterns** (CSS 2.1 §8.3, §8.4):
+- 1 value: all sides (e.g., `margin: 10px`)
+- 2 values: vertical | horizontal (e.g., `margin: 10px 20px`)
+- 3 values: top | horizontal | bottom (e.g., `margin: 10px 20px 30px`)
+- 4 values: top | right | bottom | left (e.g., `margin: 10px 20px 30px 40px`)
 
 ### Gaps Identified
 
-Based on the reftest benchmark, the following features need implementation to improve test coverage:
+Based on the reftest benchmark, the following features could improve test coverage in the future:
 
-1. **Shorthand property expansion** (margin, padding, border, etc.) - **Blocks 2 tests**
-   - Needed for: css-box/margin-shorthand-001.html, css-box/padding-shorthand-001.html
-   - Implementation approach: Expand during style computation in `style/style.go`
-   - CSS 2.1 shorthand syntax: 1-4 values (all | vertical+horizontal | top+horizontal+bottom | top+right+bottom+left)
-
-2. **CSS inheritance** - **Not currently tested**
+1. **CSS inheritance** - **Not currently tested**
    - Inheritable properties should cascade from parent to child
    - Affects: color, font properties, line-height, text-align, etc.
    - CSS 2.1 §6.2 Inheritance
 
-3. **!important support** - **Not currently tested**
+2. **!important support** - **Not currently tested**
    - Override cascade based on !important declarations
    - CSS 2.1 §6.4.2 !important rules
 
-4. **Computed value calculation** - **Not currently tested**
+3. **Computed value calculation** - **Not currently tested**
    - Convert relative values to absolute (e.g., em to px)
    - CSS 2.1 §6.1.2 Computed values
 
-5. **Child/sibling combinators** (>, +, ~) - **Not currently tested**
+4. **Child/sibling combinators** (>, +, ~) - **Not currently tested**
    - Child combinator: `parent > child`
    - Adjacent sibling: `element + sibling`
    - General sibling: `element ~ sibling`
    - CSS 2.1 §5.5 Child selectors, §5.7 Adjacent sibling selectors
 
-6. **Pseudo-classes and pseudo-elements** - **Not currently tested**
+5. **Pseudo-classes and pseudo-elements** - **Not currently tested**
    - :hover, :focus, :first-child, :last-child, etc.
    - ::before, ::after
    - CSS 2.1 §5.11 Pseudo-classes, §5.12 Pseudo-elements
