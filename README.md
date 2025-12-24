@@ -14,6 +14,9 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - Image rendering (PNG, JPEG, GIF support)
 - Background and border rendering
 - PNG image output
+- **Network support**: Load pages via HTTP/HTTPS
+- **External CSS**: Fetch and apply stylesheets from `<link>` tags
+- **Network images**: Load images from remote URLs
 
 ## Project Structure
 
@@ -52,8 +55,11 @@ go build ./cmd/browser
 ### Running
 
 ```bash
-# Render HTML to PNG with text and images
+# Render local HTML file to PNG
 ./browser -output output.png test/styled.html
+
+# Load and render a web page from URL
+./browser -output hn.png https://news.ycombinator.com/
 
 # View layout tree without rendering (text output)
 ./browser test/styled.html
@@ -78,6 +84,7 @@ go test ./...
 ## Current Status
 
 ✅ Milestones 1-7 Complete: Foundation, HTML Parsing, CSS Parsing, Style Computation, Layout Engine, Rendering, Image Rendering  
+✅ Milestone 9 Complete: Network Support (HTTP/HTTPS, external CSS, remote images)  
 🔄 Milestone 8 In Progress: Testing & Validation (81.8% WPT pass rate)
 
 See [MILESTONES.md](MILESTONES.md) for detailed progress and known limitations.
