@@ -53,7 +53,30 @@ See [MILESTONES.md](MILESTONES.md) for detailed implementation milestones and pr
 
 ## Current Status
 
-🚧 **In Development** - Currently implementing Milestone 1: Foundation
+✅ **Milestone 1: Foundation** - Complete
+✅ **Milestone 2: HTML Parsing** - Complete  
+✅ **Milestone 3: CSS Parsing** - Complete
+✅ **Milestone 4: Style Computation** - Complete
+✅ **Milestone 5: Layout Engine** - Complete (Basic box model)
+
+🚧 **In Development** - Milestone 6: Rendering
+
+### What Works
+
+- **HTML Parsing**: Tokenization, tree construction, nested elements, attributes
+- **CSS Parsing**: Selectors (element, class, ID, descendant), declarations, multiple rules
+- **Style Computation**: Selector matching, specificity calculation, cascade
+- **Layout**: Box model (content, padding, border, margin), block layout, auto width calculation
+
+### Example Usage
+
+```bash
+# Build the browser
+go build ./cmd/browser
+
+# Parse and display HTML with styles
+./browser test/styled.html
+```
 
 ## License
 
