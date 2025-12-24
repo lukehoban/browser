@@ -1,6 +1,14 @@
+// Package layout implements the CSS 2.1 visual formatting model.
+// It converts styled nodes into a tree of layout boxes with computed dimensions.
+//
+// Spec references:
+// - CSS 2.1 §8 Box model: https://www.w3.org/TR/CSS21/box.html
+// - CSS 2.1 §9 Visual formatting model: https://www.w3.org/TR/CSS21/visuren.html
+// - CSS 2.1 §10 Visual formatting model details: https://www.w3.org/TR/CSS21/visudet.html
 package layout
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/lukehoban/browser/css"
@@ -275,4 +283,309 @@ func TestIntegrationLayoutFromHTML(t *testing.T) {
 	if layoutTree == nil {
 		t.Fatal("Expected layout tree to be created")
 	}
+}
+
+func TestIntegrationLayoutHackerNews(t *testing.T) {
+	// Test that we can parse and layout the Hacker News test file
+	// This is a simplified static version of the Hacker News homepage
+	htmlContent := `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Hacker News</title>
+    <style>
+        body {
+            font-family: Verdana;
+            margin: 0;
+            padding: 0;
+            background: #f6f6ef;
+        }
+        #hnmain {
+            width: 85%;
+            background: #f6f6ef;
+        }
+        #header {
+            background: #ff6600;
+            padding: 2px;
+        }
+        .rank {
+            color: #828282;
+        }
+    </style>
+</head>
+<body>
+    <center>
+        <table id="hnmain">
+            <tr>
+                <td id="header">
+                    <span class="pagetop">
+                        <b class="hnname"><a href="news">Hacker News</a></b>
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <table>
+                        <tr class="athing" id="item1">
+                            <td class="title">
+                                <span class="rank">1.</span>
+                            </td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://example.com">Example Article</a>
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </center>
+</body>
+</html>`
+
+	// Parse the HTML
+	doc := parseHTML(htmlContent)
+	if doc == nil {
+		t.Fatal("Failed to parse HTML")
+	}
+
+	// Extract CSS and create stylesheet
+	cssContent := extractCSS(htmlContent)
+	stylesheet := css.Parse(cssContent)
+	if stylesheet == nil {
+		t.Fatal("Failed to parse CSS")
+	}
+
+	// Compute styles
+	styledTree := style.StyleTree(doc, stylesheet)
+	if styledTree == nil {
+		t.Fatal("Failed to compute styled tree")
+	}
+
+	// Create layout
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	layoutTree := LayoutTree(styledTree, containingBlock)
+
+	// Verify layout was created
+	if layoutTree == nil {
+		t.Fatal("Expected layout tree to be created")
+	}
+
+	// Verify some basic structure
+	if layoutTree.StyledNode == nil {
+		t.Fatal("Layout tree should have a styled node")
+	}
+
+	// Verify width was calculated correctly for body
+	if layoutTree.Dimensions.Content.Width != 800.0 {
+		t.Errorf("Expected body width 800, got %v", layoutTree.Dimensions.Content.Width)
+	}
+}
+
+// parseHTML is a helper that parses HTML using the html package
+func parseHTML(input string) *dom.Node {
+	tokenizer := newHTMLTokenizer(input)
+	doc := dom.NewDocument()
+	stack := []*dom.Node{doc}
+
+	for {
+		token, ok := tokenizer.Next()
+		if !ok {
+			break
+		}
+
+		switch token.Type {
+		case startTagToken, selfClosingTagToken:
+			elem := dom.NewElement(token.Data)
+			for name, value := range token.Attributes {
+				elem.SetAttribute(name, value)
+			}
+			current := stack[len(stack)-1]
+			current.AppendChild(elem)
+			if token.Type != selfClosingTagToken && !isVoidElement(token.Data) {
+				stack = append(stack, elem)
+			}
+		case endTagToken:
+			for i := len(stack) - 1; i >= 0; i-- {
+				if stack[i].Type == dom.ElementNode && stack[i].Data == token.Data {
+					stack = stack[:i]
+					break
+				}
+			}
+		case textToken:
+			if len(stack) > 1 {
+				text := dom.NewText(token.Data)
+				current := stack[len(stack)-1]
+				current.AppendChild(text)
+			}
+		}
+	}
+
+	return doc
+}
+
+// Token types for test helper
+const (
+	textToken = iota
+	startTagToken
+	endTagToken
+	selfClosingTagToken
+)
+
+// tokenForTest is a simplified token for testing
+type tokenForTest struct {
+	Type       int
+	Data       string
+	Attributes map[string]string
+}
+
+// newHTMLTokenizer creates a simple tokenizer for testing
+func newHTMLTokenizer(input string) *testTokenizer {
+	return &testTokenizer{input: input, pos: 0}
+}
+
+type testTokenizer struct {
+	input string
+	pos   int
+}
+
+func (t *testTokenizer) Next() (tokenForTest, bool) {
+	for t.pos < len(t.input) && (t.input[t.pos] == ' ' || t.input[t.pos] == '\n' || t.input[t.pos] == '\t' || t.input[t.pos] == '\r') {
+		t.pos++
+	}
+
+	if t.pos >= len(t.input) {
+		return tokenForTest{}, false
+	}
+
+	if t.input[t.pos] == '<' {
+		return t.scanTag()
+	}
+	return t.scanText()
+}
+
+func (t *testTokenizer) scanText() (tokenForTest, bool) {
+	start := t.pos
+	for t.pos < len(t.input) && t.input[t.pos] != '<' {
+		t.pos++
+	}
+	return tokenForTest{Type: textToken, Data: t.input[start:t.pos]}, true
+}
+
+func (t *testTokenizer) scanTag() (tokenForTest, bool) {
+	t.pos++ // skip '<'
+
+	// DOCTYPE
+	if t.pos+8 <= len(t.input) && t.input[t.pos:t.pos+8] == "!DOCTYPE" {
+		for t.pos < len(t.input) && t.input[t.pos] != '>' {
+			t.pos++
+		}
+		t.pos++ // skip '>'
+		return t.Next()
+	}
+
+	// Comment
+	if t.pos+3 <= len(t.input) && t.input[t.pos:t.pos+3] == "!--" {
+		for t.pos < len(t.input) {
+			if t.pos+3 <= len(t.input) && t.input[t.pos:t.pos+3] == "-->" {
+				t.pos += 3
+				break
+			}
+			t.pos++
+		}
+		return t.Next()
+	}
+
+	// End tag
+	if t.input[t.pos] == '/' {
+		t.pos++
+		start := t.pos
+		for t.pos < len(t.input) && t.input[t.pos] != '>' {
+			t.pos++
+		}
+		tagName := t.input[start:t.pos]
+		t.pos++ // skip '>'
+		return tokenForTest{Type: endTagToken, Data: tagName}, true
+	}
+
+	// Start tag
+	start := t.pos
+	for t.pos < len(t.input) && t.input[t.pos] != ' ' && t.input[t.pos] != '>' && t.input[t.pos] != '/' {
+		t.pos++
+	}
+	tagName := t.input[start:t.pos]
+
+	attrs := make(map[string]string)
+	for t.pos < len(t.input) && t.input[t.pos] != '>' && t.input[t.pos] != '/' {
+		for t.pos < len(t.input) && (t.input[t.pos] == ' ' || t.input[t.pos] == '\n' || t.input[t.pos] == '\t') {
+			t.pos++
+		}
+		if t.pos >= len(t.input) || t.input[t.pos] == '>' || t.input[t.pos] == '/' {
+			break
+		}
+
+		// Read attribute name
+		attrStart := t.pos
+		for t.pos < len(t.input) && t.input[t.pos] != '=' && t.input[t.pos] != ' ' && t.input[t.pos] != '>' && t.input[t.pos] != '/' {
+			t.pos++
+		}
+		attrName := t.input[attrStart:t.pos]
+
+		if t.pos < len(t.input) && t.input[t.pos] == '=' {
+			t.pos++
+			var attrValue string
+			if t.pos < len(t.input) && (t.input[t.pos] == '"' || t.input[t.pos] == '\'') {
+				quote := t.input[t.pos]
+				t.pos++
+				valueStart := t.pos
+				for t.pos < len(t.input) && t.input[t.pos] != quote {
+					t.pos++
+				}
+				attrValue = t.input[valueStart:t.pos]
+				t.pos++ // skip closing quote
+			}
+			attrs[attrName] = attrValue
+		}
+	}
+
+	selfClosing := false
+	if t.pos < len(t.input) && t.input[t.pos] == '/' {
+		selfClosing = true
+		t.pos++
+	}
+	if t.pos < len(t.input) && t.input[t.pos] == '>' {
+		t.pos++
+	}
+
+	tokenType := startTagToken
+	if selfClosing {
+		tokenType = selfClosingTagToken
+	}
+	return tokenForTest{Type: tokenType, Data: tagName, Attributes: attrs}, true
+}
+
+func isVoidElement(tagName string) bool {
+	voidElements := map[string]bool{
+		"area": true, "base": true, "br": true, "col": true, "embed": true,
+		"hr": true, "img": true, "input": true, "link": true, "meta": true,
+		"param": true, "source": true, "track": true, "wbr": true,
+	}
+	return voidElements[tagName]
+}
+
+// cssStyleRegexp is a pre-compiled regex for extracting CSS from style tags
+var cssStyleRegexp = regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
+
+func extractCSS(htmlContent string) string {
+	// Use regex for efficient CSS extraction from <style> tags
+	matches := cssStyleRegexp.FindAllStringSubmatch(htmlContent, -1)
+	result := ""
+	for _, match := range matches {
+		if len(match) > 1 {
+			result += match[1]
+		}
+	}
+	return result
 }
