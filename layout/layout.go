@@ -83,6 +83,22 @@ func LayoutTree(styledNode *style.StyledNode, containingBlock Dimensions) *Layou
 
 // buildLayoutTree constructs the layout tree.
 func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
+	// Skip whitespace-only text nodes
+	// CSS 2.1 §16.6.1: Whitespace-only text nodes should not affect layout
+	if styledNode.Node != nil && styledNode.Node.Type == dom.TextNode {
+		text := styledNode.Node.Data
+		isWhitespaceOnly := true
+		for _, ch := range text {
+			if ch != ' ' && ch != '\t' && ch != '\n' && ch != '\r' {
+				isWhitespaceOnly = false
+				break
+			}
+		}
+		if isWhitespaceOnly {
+			return nil // Don't create a box for whitespace-only text
+		}
+	}
+
 	// Determine box type based on display property
 	boxType := BlockBox
 	if display := styledNode.Styles["display"]; display == "inline" {
