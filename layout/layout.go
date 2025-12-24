@@ -396,10 +396,14 @@ func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 	box.calculateBlockWidth(containingBlock)
 	box.calculateBlockPosition(containingBlock)
 
-	// Layout table rows
+	// Calculate the number of columns in the table
+	// CSS 2.1 §17.2.1: The number of columns is determined by examining all rows
+	numColumns := box.calculateTableColumns()
+
+	// Layout table rows with column count
 	for _, row := range box.Children {
 		if row.BoxType == TableRowBox {
-			row.Layout(box.Dimensions)
+			row.layoutWithColumns(box.Dimensions, numColumns)
 			box.Dimensions.Content.Height += row.marginBox().Height
 		}
 	}
@@ -408,9 +412,54 @@ func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 	box.calculateBlockHeight()
 }
 
+// calculateTableColumns calculates the number of columns in a table.
+// CSS 2.1 §17.2.1: The table column count is determined by examining all rows
+func (box *LayoutBox) calculateTableColumns() int {
+	maxColumns := 0
+
+	// Examine each row to find the maximum column count
+	for _, row := range box.Children {
+		if row.BoxType == TableRowBox {
+			columnCount := 0
+			for _, cell := range row.Children {
+				if cell.BoxType == TableCellBox {
+					// Get colspan attribute
+					colspan := 1
+					if cell.StyledNode != nil && cell.StyledNode.Node != nil {
+						if colspanStr := cell.StyledNode.Node.GetAttribute("colspan"); colspanStr != "" {
+							if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
+								colspan = val
+							}
+						}
+					}
+					columnCount += colspan
+				}
+			}
+			if columnCount > maxColumns {
+				maxColumns = columnCount
+			}
+		}
+	}
+
+	// Default to 1 if no columns found
+	if maxColumns == 0 {
+		maxColumns = 1
+	}
+
+	return maxColumns
+}
+
 // layoutTableRow lays out a table row.
 // CSS 2.1 §17.5.3 Table height algorithms
 func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
+	// Use default layout with column count = number of cells (old behavior)
+	numColumns := len(box.Children)
+	box.layoutWithColumns(containingBlock, numColumns)
+}
+
+// layoutWithColumns lays out a table row with a specified column count.
+// CSS 2.1 §17.5.2: Table width algorithms
+func (box *LayoutBox) layoutWithColumns(containingBlock Dimensions, numColumns int) {
 	styles := box.StyledNode.Styles
 
 	// Calculate position
@@ -427,15 +476,13 @@ func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
 		box.Dimensions.Margin.Top + box.Dimensions.Border.Top + box.Dimensions.Padding.Top
 	box.Dimensions.Content.Width = containingBlock.Content.Width
 
-	// Calculate number of cells and distribute width
-	numCells := len(box.Children)
-	if numCells == 0 {
+	if len(box.Children) == 0 || numColumns == 0 {
 		return
 	}
 
-	// Simple algorithm: distribute width equally among cells
+	// Calculate width per column
 	// CSS 2.1 §17.5.2.1: In the fixed table layout algorithm
-	cellWidth := containingBlock.Content.Width / float64(numCells)
+	columnWidth := containingBlock.Content.Width / float64(numColumns)
 
 	// Layout each cell horizontally
 	currentX := box.Dimensions.Content.X
@@ -443,6 +490,20 @@ func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
 
 	for _, cell := range box.Children {
 		if cell.BoxType == TableCellBox {
+			// Get colspan attribute from the DOM node
+			// CSS 2.1 §17.2.1: The colspan attribute defines the number of columns spanned
+			colspan := 1
+			if cell.StyledNode != nil && cell.StyledNode.Node != nil {
+				if colspanStr := cell.StyledNode.Node.GetAttribute("colspan"); colspanStr != "" {
+					if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
+						colspan = val
+					}
+				}
+			}
+
+			// Calculate cell width based on colspan
+			cellWidth := columnWidth * float64(colspan)
+
 			// Create a containing block for the cell with calculated width
 			cellContainingBlock := Dimensions{
 				Content: Rect{
