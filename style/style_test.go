@@ -296,3 +296,64 @@ func TestDescendantSelector(t *testing.T) {
 		t.Error("Expected div not to match 'div span' selector")
 	}
 }
+
+func TestStyleInheritance(t *testing.T) {
+	// Create DOM: div > p > text
+	// CSS 2.1 §6.2: Certain properties (font properties, color, etc.) are inherited
+	div := dom.NewElement("div")
+	p := dom.NewElement("p")
+	text := dom.NewText("Hello")
+	div.AppendChild(p)
+	p.AppendChild(text)
+
+	// Create stylesheet with font properties on div
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-size", Value: "20px"},
+					{Property: "color", Value: "red"},
+					{Property: "font-weight", Value: "bold"},
+				},
+			},
+		},
+	}
+
+	// Style the tree
+	doc := dom.NewDocument()
+	doc.AppendChild(div)
+	styledTree := StyleTree(doc, stylesheet)
+
+	// Check that div has the styles
+	divStyled := styledTree.Children[0]
+	if divStyled.Styles["font-size"] != "20px" {
+		t.Errorf("Expected div font-size '20px', got %v", divStyled.Styles["font-size"])
+	}
+	if divStyled.Styles["color"] != "red" {
+		t.Errorf("Expected div color 'red', got %v", divStyled.Styles["color"])
+	}
+
+	// Check that p inherits the styles
+	pStyled := divStyled.Children[0]
+	if pStyled.Styles["font-size"] != "20px" {
+		t.Errorf("Expected p to inherit font-size '20px', got %v", pStyled.Styles["font-size"])
+	}
+	if pStyled.Styles["color"] != "red" {
+		t.Errorf("Expected p to inherit color 'red', got %v", pStyled.Styles["color"])
+	}
+
+	// Check that text node inherits the styles
+	textStyled := pStyled.Children[0]
+	if textStyled.Styles["font-size"] != "20px" {
+		t.Errorf("Expected text to inherit font-size '20px', got %v", textStyled.Styles["font-size"])
+	}
+	if textStyled.Styles["color"] != "red" {
+		t.Errorf("Expected text to inherit color 'red', got %v", textStyled.Styles["color"])
+	}
+	if textStyled.Styles["font-weight"] != "bold" {
+		t.Errorf("Expected text to inherit font-weight 'bold', got %v", textStyled.Styles["font-weight"])
+	}
+}

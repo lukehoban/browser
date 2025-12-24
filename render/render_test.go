@@ -221,3 +221,173 @@ func TestDrawText(t *testing.T) {
 		t.Errorf("expected text to be drawn (some non-white pixels), but canvas is all white")
 	}
 }
+
+func TestDrawStyledText(t *testing.T) {
+	c := NewCanvas(200, 100)
+	white := color.RGBA{255, 255, 255, 255}
+	black := color.RGBA{0, 0, 0, 255}
+	c.Clear(white)
+
+	// Test normal text
+	c.DrawStyledText("Normal", 10, 20, black, FontStyle{
+		Size:       13.0,
+		Weight:     "normal",
+		Style:      "normal",
+		Decoration: "none",
+	})
+
+	// Test large text
+	c.DrawStyledText("Large", 10, 40, black, FontStyle{
+		Size:       26.0,
+		Weight:     "normal",
+		Style:      "normal",
+		Decoration: "none",
+	})
+
+	// Test bold text
+	c.DrawStyledText("Bold", 10, 60, black, FontStyle{
+		Size:       13.0,
+		Weight:     "bold",
+		Style:      "normal",
+		Decoration: "none",
+	})
+
+	// Test italic text
+	c.DrawStyledText("Italic", 10, 80, black, FontStyle{
+		Size:       13.0,
+		Weight:     "normal",
+		Style:      "italic",
+		Decoration: "none",
+	})
+
+	// Verify text was drawn
+	hasBlackPixels := false
+	for _, px := range c.Pixels {
+		if px.R < 255 || px.G < 255 || px.B < 255 {
+			hasBlackPixels = true
+			break
+		}
+	}
+
+	if !hasBlackPixels {
+		t.Errorf("expected text to be drawn")
+	}
+}
+
+func TestExtractFontStyle(t *testing.T) {
+	tests := []struct {
+		name     string
+		styles   map[string]string
+		expected FontStyle
+	}{
+		{
+			name:   "default styles",
+			styles: map[string]string{},
+			expected: FontStyle{
+				Size:       13.0,
+				Weight:     "normal",
+				Style:      "normal",
+				Decoration: "none",
+			},
+		},
+		{
+			name: "font-size 20px",
+			styles: map[string]string{
+				"font-size": "20px",
+			},
+			expected: FontStyle{
+				Size:       20.0,
+				Weight:     "normal",
+				Style:      "normal",
+				Decoration: "none",
+			},
+		},
+		{
+			name: "bold weight",
+			styles: map[string]string{
+				"font-weight": "bold",
+			},
+			expected: FontStyle{
+				Size:       13.0,
+				Weight:     "bold",
+				Style:      "normal",
+				Decoration: "none",
+			},
+		},
+		{
+			name: "italic style",
+			styles: map[string]string{
+				"font-style": "italic",
+			},
+			expected: FontStyle{
+				Size:       13.0,
+				Weight:     "normal",
+				Style:      "italic",
+				Decoration: "none",
+			},
+		},
+		{
+			name: "underline decoration",
+			styles: map[string]string{
+				"text-decoration": "underline",
+			},
+			expected: FontStyle{
+				Size:       13.0,
+				Weight:     "normal",
+				Style:      "normal",
+				Decoration: "underline",
+			},
+		},
+		{
+			name: "combined styles",
+			styles: map[string]string{
+				"font-size":       "18px",
+				"font-weight":     "bold",
+				"font-style":      "italic",
+				"text-decoration": "underline",
+			},
+			expected: FontStyle{
+				Size:       18.0,
+				Weight:     "bold",
+				Style:      "italic",
+				Decoration: "underline",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := extractFontStyle(tt.styles)
+			if result != tt.expected {
+				t.Errorf("extractFontStyle() = %+v, expected %+v", result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestParseFontSize(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected float64
+	}{
+		{"14px", 14.0},
+		{"20px", 20.0},
+		{"10", 10.0},
+		{"24", 24.0},
+		{"medium", 13.0},
+		{"large", 16.0},
+		{"x-large", 20.0},
+		{"small", 12.0},
+		{"invalid", 0.0},
+		{"", 0.0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := parseFontSize(tt.input)
+			if result != tt.expected {
+				t.Errorf("parseFontSize(%q) = %v, expected %v", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
