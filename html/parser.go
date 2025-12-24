@@ -28,16 +28,16 @@ func NewParser(input string) *Parser {
 func (p *Parser) Parse() *dom.Node {
 	// Start with document on stack
 	p.stack = append(p.stack, p.doc)
-	
+
 	for {
 		token, ok := p.tokenizer.Next()
 		if !ok {
 			break
 		}
-		
+
 		p.processToken(token)
 	}
-	
+
 	return p.doc
 }
 
@@ -62,16 +62,16 @@ func (p *Parser) processToken(token Token) {
 // HTML5 §12.2.6.4.7 "in body" insertion mode (simplified)
 func (p *Parser) handleStartTag(token Token) {
 	elem := dom.NewElement(token.Data)
-	
+
 	// Set attributes
 	for name, value := range token.Attributes {
 		elem.SetAttribute(name, value)
 	}
-	
+
 	// Append to current node
 	current := p.currentNode()
 	current.AppendChild(elem)
-	
+
 	// Push to stack unless self-closing or void element
 	if token.Type != SelfClosingTagToken && !isVoidElement(token.Data) {
 		p.stack = append(p.stack, elem)
@@ -107,7 +107,7 @@ func (p *Parser) handleText(token Token) {
 			return
 		}
 	}
-	
+
 	text := dom.NewText(token.Data)
 	current := p.currentNode()
 	current.AppendChild(text)

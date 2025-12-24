@@ -5,30 +5,30 @@ import "testing"
 func TestParseSimpleRule(t *testing.T) {
 	input := "div { color: red; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	rule := stylesheet.Rules[0]
 	if len(rule.Selectors) != 1 {
 		t.Fatalf("Expected 1 selector, got %d", len(rule.Selectors))
 	}
-	
+
 	selector := rule.Selectors[0]
 	if len(selector.Simple) != 1 {
 		t.Fatalf("Expected 1 simple selector, got %d", len(selector.Simple))
 	}
-	
+
 	simple := selector.Simple[0]
 	if simple.TagName != "div" {
 		t.Errorf("Expected tag 'div', got %v", simple.TagName)
 	}
-	
+
 	if len(rule.Declarations) != 1 {
 		t.Fatalf("Expected 1 declaration, got %d", len(rule.Declarations))
 	}
-	
+
 	decl := rule.Declarations[0]
 	if decl.Property != "color" {
 		t.Errorf("Expected property 'color', got %v", decl.Property)
@@ -41,11 +41,11 @@ func TestParseSimpleRule(t *testing.T) {
 func TestParseIDSelector(t *testing.T) {
 	input := "#header { font-size: 20px; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	simple := stylesheet.Rules[0].Selectors[0].Simple[0]
 	if simple.ID != "header" {
 		t.Errorf("Expected ID 'header', got %v", simple.ID)
@@ -55,11 +55,11 @@ func TestParseIDSelector(t *testing.T) {
 func TestParseClassSelector(t *testing.T) {
 	input := ".container { width: 100px; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	simple := stylesheet.Rules[0].Selectors[0].Simple[0]
 	if len(simple.Classes) != 1 {
 		t.Fatalf("Expected 1 class, got %d", len(simple.Classes))
@@ -72,11 +72,11 @@ func TestParseClassSelector(t *testing.T) {
 func TestParseCombinedSelector(t *testing.T) {
 	input := "div#main.container { margin: 10px; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	simple := stylesheet.Rules[0].Selectors[0].Simple[0]
 	if simple.TagName != "div" {
 		t.Errorf("Expected tag 'div', got %v", simple.TagName)
@@ -92,11 +92,11 @@ func TestParseCombinedSelector(t *testing.T) {
 func TestParseMultipleClasses(t *testing.T) {
 	input := ".container.active { display: block; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	simple := stylesheet.Rules[0].Selectors[0].Simple[0]
 	if len(simple.Classes) != 2 {
 		t.Fatalf("Expected 2 classes, got %d", len(simple.Classes))
@@ -112,16 +112,16 @@ func TestParseMultipleClasses(t *testing.T) {
 func TestParseDescendantSelector(t *testing.T) {
 	input := "div p { color: blue; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	selector := stylesheet.Rules[0].Selectors[0]
 	if len(selector.Simple) != 2 {
 		t.Fatalf("Expected 2 simple selectors (descendant), got %d", len(selector.Simple))
 	}
-	
+
 	if selector.Simple[0].TagName != "div" {
 		t.Errorf("Expected first selector 'div', got %v", selector.Simple[0].TagName)
 	}
@@ -133,16 +133,16 @@ func TestParseDescendantSelector(t *testing.T) {
 func TestParseMultipleSelectors(t *testing.T) {
 	input := "h1, h2, h3 { font-weight: bold; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	rule := stylesheet.Rules[0]
 	if len(rule.Selectors) != 3 {
 		t.Fatalf("Expected 3 selectors, got %d", len(rule.Selectors))
 	}
-	
+
 	tags := []string{"h1", "h2", "h3"}
 	for i, tag := range tags {
 		if rule.Selectors[i].Simple[0].TagName != tag {
@@ -154,22 +154,22 @@ func TestParseMultipleSelectors(t *testing.T) {
 func TestParseMultipleDeclarations(t *testing.T) {
 	input := "div { color: red; background: blue; margin: 10px; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	rule := stylesheet.Rules[0]
 	if len(rule.Declarations) != 3 {
 		t.Fatalf("Expected 3 declarations, got %d", len(rule.Declarations))
 	}
-	
+
 	expected := map[string]string{
 		"color":      "red",
 		"background": "blue",
 		"margin":     "10px",
 	}
-	
+
 	for _, decl := range rule.Declarations {
 		expectedValue, ok := expected[decl.Property]
 		if !ok {
@@ -189,7 +189,7 @@ func TestParseMultipleRules(t *testing.T) {
 		.container { width: 100%; }
 	`
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 3 {
 		t.Fatalf("Expected 3 rules, got %d", len(stylesheet.Rules))
 	}
@@ -198,11 +198,11 @@ func TestParseMultipleRules(t *testing.T) {
 func TestParseComplexValue(t *testing.T) {
 	input := "div { border: 1px solid black; }"
 	stylesheet := Parse(input)
-	
+
 	if len(stylesheet.Rules) != 1 {
 		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
 	}
-	
+
 	decl := stylesheet.Rules[0].Declarations[0]
 	if decl.Property != "border" {
 		t.Errorf("Expected property 'border', got %v", decl.Property)
