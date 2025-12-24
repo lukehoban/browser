@@ -95,7 +95,6 @@ jobs:
         exit_code=$?
         echo "" >> wpt-report.txt
         echo "Exit code: $exit_code" >> wpt-report.txt
-      continue-on-error: true
 
     - name: Generate WPT summary
       if: always()
@@ -106,7 +105,7 @@ jobs:
         grep -A 6 "WPT CSS Reftest Results:" wpt-report.txt >> wpt-summary.md || echo "No results found" >> wpt-summary.md
         echo "" >> wpt-summary.md
         echo "## Failed Tests" >> wpt-summary.md
-        grep -A 100 "Failed tests (expected, documenting gaps):" wpt-report.txt | head -50 >> wpt-summary.md || echo "No failures listed" >> wpt-summary.md
+        grep -A 50 "Failed tests (expected, documenting gaps):" wpt-report.txt >> wpt-summary.md || echo "No failures listed" >> wpt-summary.md
         echo "" >> wpt-summary.md
         echo "## Full Output" >> wpt-summary.md
         echo '```' >> wpt-summary.md
