@@ -465,6 +465,8 @@ func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
 	}
 
 	// Set row height to maximum cell height
+	// Note: maxHeight includes cell margins, padding, and borders since we use marginBox()
+	// The row's content height encompasses the full height of its cells
 	box.Dimensions.Content.Height = maxHeight
 
 	// If row has explicit height, use that instead

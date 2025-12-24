@@ -631,8 +631,8 @@ func TestLayoutText(t *testing.T) {
 }
 
 func TestTableLayout(t *testing.T) {
-// Create a simple table: table > tr > td, td
-table := dom.NewElement("table")
+	// Create a simple table: table > tr > td, td
+	table := dom.NewElement("table")
 tr := dom.NewElement("tr")
 td1 := dom.NewElement("td")
 td2 := dom.NewElement("td")
