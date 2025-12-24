@@ -16,6 +16,13 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
+// Table layout constants
+const (
+	// maxColumnWidth is the maximum width any table column can have
+	// This prevents extremely wide columns from causing layout issues
+	maxColumnWidth = 400.0
+)
+
 // LayoutBox represents a box in the layout tree.
 // CSS 2.1 §8.1 Box dimensions
 type LayoutBox struct {
@@ -427,16 +434,7 @@ func (box *LayoutBox) calculateTableColumns() int {
 			columnCount := 0
 			for _, cell := range row.Children {
 				if cell.BoxType == TableCellBox {
-					// Get colspan attribute
-					colspan := 1
-					if cell.StyledNode != nil && cell.StyledNode.Node != nil {
-						if colspanStr := cell.StyledNode.Node.GetAttribute("colspan"); colspanStr != "" {
-							if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
-								colspan = val
-							}
-						}
-					}
-					columnCount += colspan
+					columnCount += getColspan(cell)
 				}
 			}
 			if columnCount > maxColumns {
@@ -453,6 +451,26 @@ func (box *LayoutBox) calculateTableColumns() int {
 	return maxColumns
 }
 
+// getColspan extracts the colspan attribute from a table cell.
+// Returns 1 if no colspan attribute is present or if the value is invalid.
+// CSS 2.1 §17.2.1: The colspan attribute specifies the number of columns spanned by a cell
+func getColspan(cell *LayoutBox) int {
+	if cell.StyledNode == nil || cell.StyledNode.Node == nil {
+		return 1
+	}
+	
+	colspanStr := cell.StyledNode.Node.GetAttribute("colspan")
+	if colspanStr == "" {
+		return 1
+	}
+	
+	if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
+		return val
+	}
+	
+	return 1
+}
+
 // calculateColumnWidths calculates preferred widths for table columns.
 // This implements a simplified auto table layout algorithm
 // CSS 2.1 §17.5.2.2: Auto table layout
@@ -466,15 +484,7 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 			colIndex := 0
 			for _, cell := range row.Children {
 				if cell.BoxType == TableCellBox {
-					// Get colspan
-					colspan := 1
-					if cell.StyledNode != nil && cell.StyledNode.Node != nil {
-						if colspanStr := cell.StyledNode.Node.GetAttribute("colspan"); colspanStr != "" {
-							if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
-								colspan = val
-							}
-						}
-					}
+					colspan := getColspan(cell)
 					
 					// Estimate content width based on text content
 					minWidth := box.estimateCellMinWidth(cell)
@@ -542,9 +552,8 @@ func (box *LayoutBox) estimateCellMinWidth(cell *LayoutBox) float64 {
 	}
 	
 	// Cap at reasonable maximum (don't let any column be more than 50% of typical table width)
-	maxWidth := 400.0
-	if minWidth > maxWidth {
-		minWidth = maxWidth
+	if minWidth > maxColumnWidth {
+		minWidth = maxColumnWidth
 	}
 	
 	return minWidth
@@ -554,14 +563,17 @@ func (box *LayoutBox) estimateCellMinWidth(cell *LayoutBox) float64 {
 func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 	width := 0.0
 	
+	// Use the same character width as in layoutText
+	face := basicfont.Face7x13
+	charWidth := float64(face.Advance)
+	
 	// Recursively estimate width from children
 	for _, child := range layoutBox.Children {
 		if child.StyledNode != nil && child.StyledNode.Node != nil {
 			if child.StyledNode.Node.Type == dom.TextNode {
 				// Estimate text width
 				text := child.StyledNode.Node.Data
-				// Using basicfont.Face7x13, each character is 7px wide
-				textWidth := float64(len(text) * 7)
+				textWidth := float64(len(text)) * charWidth
 				width += textWidth
 			} else {
 				// Recursively estimate child width
@@ -619,15 +631,7 @@ func (box *LayoutBox) layoutWithColumnWidths(containingBlock Dimensions, columnW
 
 	for _, cell := range box.Children {
 		if cell.BoxType == TableCellBox {
-			// Get colspan attribute
-			colspan := 1
-			if cell.StyledNode != nil && cell.StyledNode.Node != nil {
-				if colspanStr := cell.StyledNode.Node.GetAttribute("colspan"); colspanStr != "" {
-					if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
-						colspan = val
-					}
-				}
-			}
+			colspan := getColspan(cell)
 
 			// Calculate cell width by summing column widths
 			cellWidth := 0.0
@@ -701,16 +705,7 @@ func (box *LayoutBox) layoutWithColumns(containingBlock Dimensions, numColumns i
 
 	for _, cell := range box.Children {
 		if cell.BoxType == TableCellBox {
-			// Get colspan attribute from the DOM node
-			// CSS 2.1 §17.2.1: The colspan attribute defines the number of columns spanned
-			colspan := 1
-			if cell.StyledNode != nil && cell.StyledNode.Node != nil {
-				if colspanStr := cell.StyledNode.Node.GetAttribute("colspan"); colspanStr != "" {
-					if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
-						colspan = val
-					}
-				}
-			}
+			colspan := getColspan(cell)
 
 			// Calculate cell width based on colspan
 			cellWidth := columnWidth * float64(colspan)
