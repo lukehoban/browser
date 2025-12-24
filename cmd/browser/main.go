@@ -22,7 +22,6 @@ func main() {
 	width := flag.Int("width", 800, "Viewport width in pixels")
 	height := flag.Int("height", 600, "Viewport height in pixels")
 	flag.Parse()
-
 	// Check for input file
 	args := flag.Args()
 	if len(args) < 1 {
