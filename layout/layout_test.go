@@ -1,6 +1,14 @@
+// Package layout implements the CSS 2.1 visual formatting model.
+// It converts styled nodes into a tree of layout boxes with computed dimensions.
+//
+// Spec references:
+// - CSS 2.1 §8 Box model: https://www.w3.org/TR/CSS21/box.html
+// - CSS 2.1 §9 Visual formatting model: https://www.w3.org/TR/CSS21/visuren.html
+// - CSS 2.1 §10 Visual formatting model details: https://www.w3.org/TR/CSS21/visudet.html
 package layout
 
 import (
+	"regexp"
 	"testing"
 
 	"github.com/lukehoban/browser/css"
@@ -567,41 +575,17 @@ func isVoidElement(tagName string) bool {
 	return voidElements[tagName]
 }
 
+// cssStyleRegexp is a pre-compiled regex for extracting CSS from style tags
+var cssStyleRegexp = regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
+
 func extractCSS(htmlContent string) string {
-	// Simple extraction of CSS from <style> tags
+	// Use regex for efficient CSS extraction from <style> tags
+	matches := cssStyleRegexp.FindAllStringSubmatch(htmlContent, -1)
 	result := ""
-	for {
-		start := -1
-		for i := 0; i < len(htmlContent)-6; i++ {
-			if htmlContent[i:i+6] == "<style" {
-				start = i
-				break
-			}
+	for _, match := range matches {
+		if len(match) > 1 {
+			result += match[1]
 		}
-		if start == -1 {
-			break
-		}
-
-		// Find closing >
-		closeTag := start
-		for closeTag < len(htmlContent) && htmlContent[closeTag] != '>' {
-			closeTag++
-		}
-		if closeTag >= len(htmlContent) {
-			break
-		}
-
-		// Find </style>
-		endTag := closeTag
-		for endTag < len(htmlContent)-8 {
-			if htmlContent[endTag:endTag+8] == "</style>" {
-				break
-			}
-			endTag++
-		}
-
-		result += htmlContent[closeTag+1 : endTag]
-		htmlContent = htmlContent[endTag+8:]
 	}
 	return result
 }

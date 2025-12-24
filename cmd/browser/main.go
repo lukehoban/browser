@@ -15,6 +15,9 @@ import (
 	"github.com/lukehoban/browser/style"
 )
 
+// cssStyleRegexp is a pre-compiled regex for extracting CSS from style tags
+var cssStyleRegexp = regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
+
 func main() {
 	if len(os.Args) < 2 {
 		fmt.Println("Usage: browser <html-file>")
@@ -154,8 +157,7 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 
 // extractCSS extracts CSS content from <style> tags in HTML.
 func extractCSS(htmlContent string) string {
-	re := regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
-	matches := re.FindAllStringSubmatch(htmlContent, -1)
+	matches := cssStyleRegexp.FindAllStringSubmatch(htmlContent, -1)
 
 	var cssContent strings.Builder
 	for _, match := range matches {
