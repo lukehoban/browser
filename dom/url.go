@@ -3,7 +3,9 @@
 package dom
 
 import (
+	"net/url"
 	"path/filepath"
+	"strings"
 )
 
 // ResolveURLs resolves all relative URLs in a DOM tree against a base URL.
@@ -27,14 +29,21 @@ func resolveNode(node *Node, baseDir string) {
 		// Handle img elements - resolve the src attribute
 		if node.Data == "img" {
 			if src := node.GetAttribute("src"); src != "" {
-				// Resolve relative path to absolute path
-				resolvedPath := filepath.Join(baseDir, src)
+				resolvedPath := resolveURL(baseDir, src)
 				node.SetAttribute("src", resolvedPath)
 			}
 		}
 
+		// Handle link elements - resolve the href attribute
+		// HTML5 §4.2.4: The link element allows authors to link their document to other resources
+		if node.Data == "link" {
+			if href := node.GetAttribute("href"); href != "" {
+				resolvedPath := resolveURL(baseDir, href)
+				node.SetAttribute("href", resolvedPath)
+			}
+		}
+
 		// Future: Handle other elements with URL attributes
-		// - <link href="...">
 		// - <script src="...">
 		// - <a href="...">
 		// - CSS background-image
@@ -43,5 +52,69 @@ func resolveNode(node *Node, baseDir string) {
 	// Recursively process children
 	for _, child := range node.Children {
 		resolveNode(child, baseDir)
+	}
+}
+
+// resolveURL resolves a potentially relative URL against a base URL.
+// HTML5 §2.5: URLs in documents are resolved against a base URL.
+func resolveURL(baseURL, relativeURL string) string {
+	// If the URL is already absolute (http:// or https://), return as-is
+	if strings.HasPrefix(relativeURL, "http://") || strings.HasPrefix(relativeURL, "https://") {
+		return relativeURL
+	}
+
+	// If base is a URL, do proper URL resolution
+	if strings.HasPrefix(baseURL, "http://") || strings.HasPrefix(baseURL, "https://") {
+		base, err := url.Parse(baseURL)
+		if err != nil {
+			return relativeURL
+		}
+		rel, err := url.Parse(relativeURL)
+		if err != nil {
+			return relativeURL
+		}
+		return base.ResolveReference(rel).String()
+	}
+
+	// Otherwise, treat as file paths
+	return filepath.Join(baseURL, relativeURL)
+}
+
+// FetchExternalStylesheets finds all <link rel="stylesheet"> elements in the DOM tree
+// and fetches their CSS content.
+// HTML5 §4.2.4: The link element allows authors to link their document to other resources.
+// This should ideally be done during HTML parsing, but for simplicity we do it post-parse.
+func FetchExternalStylesheets(root *Node) string {
+	loader := NewResourceLoader("")
+	var cssBuilder strings.Builder
+	fetchStylesheetsFromNode(root, loader, &cssBuilder)
+	return cssBuilder.String()
+}
+
+// fetchStylesheetsFromNode recursively finds and fetches external stylesheets.
+func fetchStylesheetsFromNode(node *Node, loader *ResourceLoader, builder *strings.Builder) {
+	if node == nil {
+		return
+	}
+
+	if node.Type == ElementNode && node.Data == "link" {
+		rel := node.GetAttribute("rel")
+		href := node.GetAttribute("href")
+
+		// HTML5 §4.2.4: rel="stylesheet" indicates the linked resource is a stylesheet
+		if rel == "stylesheet" && href != "" {
+			// The href should already be resolved by ResolveURLs
+			cssContent, err := loader.LoadResourceAsString(href)
+			if err != nil {
+				// Silently skip failed stylesheets (non-blocking per HTML5 spec)
+				return
+			}
+			builder.WriteString(cssContent)
+			builder.WriteString("\n")
+		}
+	}
+
+	for _, child := range node.Children {
+		fetchStylesheetsFromNode(child, loader, builder)
 	}
 }

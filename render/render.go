@@ -7,13 +7,12 @@
 package render
 
 import (
-	"fmt"
+	"bytes"
 	"image"
 	"image/color"
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
-	"net/http"
 	"os"
 	"strconv"
 	"strings"
@@ -185,25 +184,22 @@ func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
 // Supports PNG, JPEG, and GIF formats.
 // The path should be already resolved (absolute) before calling this method.
 //
-// Network loading follows standard HTTP/HTTPS protocols for remote images.
+// Uses dom.ResourceLoader for consistent resource fetching across the browser.
 func (c *Canvas) LoadImage(path string) (image.Image, error) {
 	// Check cache first
 	if img, ok := c.ImageCache[path]; ok {
 		return img, nil
 	}
 
-	var img image.Image
-	var err error
-
-	// Check if path is a URL
-	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
-		// Fetch from network
-		img, err = loadImageFromURL(path)
-	} else {
-		// Load from file
-		img, err = loadImageFromFile(path)
+	// Use DOM resource loader to fetch the image data
+	loader := dom.NewResourceLoader("")
+	data, err := loader.LoadResource(path)
+	if err != nil {
+		return nil, err
 	}
 
+	// Decode the image from the loaded data
+	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -212,34 +208,6 @@ func (c *Canvas) LoadImage(path string) (image.Image, error) {
 	c.ImageCache[path] = img
 
 	return img, nil
-}
-
-// loadImageFromFile loads an image from a local file
-func loadImageFromFile(path string) (image.Image, error) {
-	file, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	img, _, err := image.Decode(file)
-	return img, err
-}
-
-// loadImageFromURL loads an image from a URL
-func loadImageFromURL(urlStr string) (image.Image, error) {
-	resp, err := http.Get(urlStr)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, resp.Status)
-	}
-
-	img, _, err := image.Decode(resp.Body)
-	return img, err
 }
 
 

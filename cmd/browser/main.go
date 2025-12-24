@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -85,8 +84,9 @@ func main() {
 	cssContent := extractCSS(doc)
 	
 	// Fetch external stylesheets
+	// HTML5 §4.2.4: External stylesheets are fetched via <link rel="stylesheet">
 	fmt.Fprintf(os.Stderr, "Fetching external stylesheets...\n")
-	externalCSS := fetchExternalStylesheets(doc, baseURL)
+	externalCSS := dom.FetchExternalStylesheets(doc)
 	cssContent = externalCSS + "\n" + cssContent
 	fmt.Fprintf(os.Stderr, "External stylesheets fetched\n")
 
@@ -204,70 +204,4 @@ func fetchURL(urlStr string) (string, error) {
 	}
 
 	return string(body), nil
-}
-
-// fetchExternalStylesheets fetches external CSS files referenced by <link> tags
-func fetchExternalStylesheets(doc *dom.Node, baseURL string) string {
-	var cssBuilder strings.Builder
-	fetchExternalStylesheetsFromNode(doc, baseURL, &cssBuilder)
-	return cssBuilder.String()
-}
-
-// fetchExternalStylesheetsFromNode recursively finds and fetches external stylesheets
-func fetchExternalStylesheetsFromNode(node *dom.Node, baseURL string, builder *strings.Builder) {
-	if node.Type == dom.ElementNode && node.Data == "link" {
-		// Check if this is a stylesheet link
-		rel := node.GetAttribute("rel")
-		href := node.GetAttribute("href")
-		
-		if rel == "stylesheet" && href != "" {
-			// Resolve the CSS URL/path against the base URL/directory
-			cssPath, err := resolveURL(baseURL, href)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to resolve CSS path %s: %v\n", href, err)
-				return
-			}
-			
-			// Fetch the CSS file (from URL or file)
-			var cssContent string
-			if isURL(cssPath) {
-				cssContent, err = fetchURL(cssPath)
-			} else {
-				// Read from local file
-				data, fileErr := os.ReadFile(cssPath)
-				if fileErr != nil {
-					err = fileErr
-				} else {
-					cssContent = string(data)
-				}
-			}
-			
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Warning: failed to fetch CSS from %s: %v\n", cssPath, err)
-				return
-			}
-			
-			builder.WriteString(cssContent)
-			builder.WriteString("\n")
-		}
-	}
-
-	for _, child := range node.Children {
-		fetchExternalStylesheetsFromNode(child, baseURL, builder)
-	}
-}
-
-// resolveURL resolves a potentially relative URL against a base URL
-func resolveURL(baseURL, relativeURL string) (string, error) {
-	base, err := url.Parse(baseURL)
-	if err != nil {
-		return "", err
-	}
-	
-	rel, err := url.Parse(relativeURL)
-	if err != nil {
-		return "", err
-	}
-	
-	return base.ResolveReference(rel).String(), nil
 }
