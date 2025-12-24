@@ -18,8 +18,9 @@ import (
 
 // Table layout constants
 const (
-	// maxColumnWidth is the maximum width any table column can have
-	// This prevents extremely wide columns from causing layout issues
+	// maxColumnWidth is the maximum width any table column can have.
+	// This prevents extremely wide content from creating unusable layouts.
+	// Set to 400px as a reasonable maximum for typical table columns.
 	maxColumnWidth = 400.0
 )
 
@@ -424,7 +425,10 @@ func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 }
 
 // calculateTableColumns calculates the number of columns in a table.
-// CSS 2.1 §17.2.1: The table column count is determined by examining all rows
+// CSS 2.1 §17.2.1: The table column count is determined by examining all rows.
+// This implementation counts columns based on actual table cells and their colspan attributes.
+// Note: This is a simplified implementation that doesn't support column groups or explicit
+// column specifications via <col> elements, which are part of the full CSS 2.1 spec.
 func (box *LayoutBox) calculateTableColumns() int {
 	maxColumns := 0
 
@@ -454,6 +458,7 @@ func (box *LayoutBox) calculateTableColumns() int {
 // getColspan extracts the colspan attribute from a table cell.
 // Returns 1 if no colspan attribute is present or if the value is invalid.
 // CSS 2.1 §17.2.1: The colspan attribute specifies the number of columns spanned by a cell
+// HTML5 recommends a maximum colspan of 1000 to prevent performance issues
 func getColspan(cell *LayoutBox) int {
 	if cell.StyledNode == nil || cell.StyledNode.Node == nil {
 		return 1
@@ -465,6 +470,10 @@ func getColspan(cell *LayoutBox) int {
 	}
 	
 	if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
+		// Cap at 1000 as recommended by HTML specification
+		if val > 1000 {
+			return 1000
+		}
 		return val
 	}
 	
@@ -551,7 +560,7 @@ func (box *LayoutBox) estimateCellMinWidth(cell *LayoutBox) float64 {
 		minWidth = contentWidth
 	}
 	
-	// Cap at reasonable maximum (don't let any column be more than 50% of typical table width)
+	// Cap at reasonable maximum to prevent extremely wide content from creating unusable layouts
 	if minWidth > maxColumnWidth {
 		minWidth = maxColumnWidth
 	}
@@ -596,8 +605,18 @@ func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 // layoutTableRow lays out a table row.
 // CSS 2.1 §17.5.3 Table height algorithms
 func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
-	// Use default layout with column count = number of cells (old behavior)
-	numColumns := len(box.Children)
+	// Calculate number of columns to maintain consistency with auto layout
+	// This ensures equal distribution is based on the correct column count
+	numColumns := 0
+	for _, cell := range box.Children {
+		if cell.BoxType == TableCellBox {
+			numColumns += getColspan(cell)
+		}
+	}
+	if numColumns == 0 {
+		numColumns = len(box.Children)
+	}
+	
 	box.layoutWithColumns(containingBlock, numColumns)
 }
 
