@@ -7,7 +7,7 @@ This implementation adds support for rendering `<img>` elements in the browser, 
 
 ### 1. Image Loading
 - **File Format Support**: PNG, JPEG, and GIF formats via Go's standard image decoders
-- **Path Resolution**: Relative paths are resolved based on the HTML file's directory
+- **URL Resolution**: Relative URLs are resolved in the DOM layer per HTML5 §2.5 URLs
 - **Caching**: Images are cached after first load to avoid redundant file I/O
 - **Error Handling**: Gracefully handles missing or invalid images
 
@@ -18,28 +18,41 @@ This implementation adds support for rendering `<img>` elements in the browser, 
 - **Integration**: Seamlessly integrates with existing layout and rendering pipeline
 
 ### 3. Architecture
-The implementation follows the existing browser architecture:
+The implementation follows the existing browser architecture and HTML5 specifications:
 
 ```
-HTML Parser → DOM Tree → Style Computation → Layout → Rendering
-                                                          ↓
-                                                    Image Loading
-                                                          ↓
-                                                    Image Drawing
+HTML Parser → DOM Tree → URL Resolution (dom.ResolveURLs) → Style → Layout → Rendering
+                            ↓
+                    Resolves relative URLs
+                    to absolute file paths
+                            ↓
+                      Render loads images
+                      from absolute paths
 ```
+
+URL resolution follows HTML5 §2.5 URLs, which states that relative URLs in documents
+should be resolved against the document's base URL. In this implementation, the base
+URL is the directory of the HTML file being rendered.
 
 ## Code Changes
 
+### `dom/url.go` (NEW)
+- **ResolveURLs()**: Resolves relative URLs in the DOM tree against a base directory
+- Follows HTML5 §2.5 URLs specification for URL resolution
+- Currently handles file system paths; designed for future URL support
+
 ### `render/render.go`
-- **Canvas**: Added `BaseDir` and `ImageCache` fields for path resolution and caching
-- **LoadImage()**: Loads images from disk with caching
+- **Canvas**: Added `ImageCache` field for caching loaded images
+- **LoadImage()**: Loads images from absolute file paths with caching
 - **DrawImage()**: Draws images with scaling and alpha blending
 - **renderImage()**: Renders img elements in the layout tree
 
 ### `cmd/browser/main.go`
-- Updated to pass the HTML file's directory to the Render function for path resolution
+- Calls `dom.ResolveURLs()` after parsing to resolve image paths in the DOM
+- URL resolution happens in the DOM layer, not the render layer
 
 ### Tests
+- **dom/url_test.go**: Tests for URL resolution in the DOM layer
 - **render/image_test.go**: Comprehensive unit tests for:
   - Image drawing with scaling
   - Alpha blending
@@ -84,6 +97,7 @@ HTML Parser → DOM Tree → Style Computation → Layout → Rendering
 
 ## Browser Spec Compliance
 
+- **HTML5 §2.5**: URLs - URL resolution is performed in the DOM layer against the document's base URL
 - **HTML5 §4.8.2**: The img element (basic support)
 - **HTML5 §12.1.2**: Void elements (img is correctly handled as void element)
 

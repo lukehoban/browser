@@ -94,11 +94,10 @@ func TestLoadImage(t *testing.T) {
 	}
 	f.Close()
 
-	// Create a canvas and load the image
+	// Create a canvas and load the image using absolute path
 	c := NewCanvas(100, 100)
-	c.BaseDir = tmpDir
 
-	img, err := c.LoadImage("test.png")
+	img, err := c.LoadImage(testImgPath)
 	if err != nil {
 		t.Fatalf("failed to load image: %v", err)
 	}
@@ -110,7 +109,7 @@ func TestLoadImage(t *testing.T) {
 	}
 
 	// Check that the image is cached
-	img2, err := c.LoadImage("test.png")
+	img2, err := c.LoadImage(testImgPath)
 	if err != nil {
 		t.Fatalf("failed to load cached image: %v", err)
 	}
@@ -146,9 +145,9 @@ func TestRenderImage(t *testing.T) {
 	}
 	f.Close()
 
-	// Create a DOM node for the img element
+	// Create a DOM node for the img element with absolute path
 	imgNode := dom.NewElement("img")
-	imgNode.SetAttribute("src", "test.png")
+	imgNode.SetAttribute("src", testImgPath)
 
 	// Create a styled node
 	styledNode := &style.StyledNode{
@@ -176,7 +175,7 @@ func TestRenderImage(t *testing.T) {
 	}
 
 	// Render the layout box
-	canvas := Render(box, 100, 100, tmpDir)
+	canvas := Render(box, 100, 100)
 
 	// Check that the image was rendered (pixels should be red)
 	pixel := canvas.Pixels[20*100+20] // Inside the rendered image area

@@ -13,7 +13,6 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -22,10 +21,9 @@ import (
 
 // Canvas represents the rendering surface.
 type Canvas struct {
-	Width     int
-	Height    int
-	Pixels    []color.RGBA
-	BaseDir   string            // Base directory for resolving relative paths
+	Width      int
+	Height     int
+	Pixels     []color.RGBA
 	ImageCache map[string]image.Image // Cache for loaded images
 }
 
@@ -35,7 +33,6 @@ func NewCanvas(width, height int) *Canvas {
 		Width:      width,
 		Height:     height,
 		Pixels:     make([]color.RGBA, width*height),
-		BaseDir:    ".",
 		ImageCache: make(map[string]image.Image),
 	}
 }
@@ -133,19 +130,17 @@ func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
 	}
 }
 
-// LoadImage loads an image from a file path.
+// LoadImage loads an image from an absolute file path.
 // Supports PNG, JPEG, and GIF formats.
+// The path should be already resolved (absolute) before calling this method.
 func (c *Canvas) LoadImage(path string) (image.Image, error) {
 	// Check cache first
 	if img, ok := c.ImageCache[path]; ok {
 		return img, nil
 	}
 
-	// Resolve relative path based on BaseDir
-	fullPath := filepath.Join(c.BaseDir, path)
-
 	// Open and decode the image
-	file, err := os.Open(fullPath)
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -194,10 +189,8 @@ func (c *Canvas) SavePNG(filename string) error {
 }
 
 // Render renders a layout tree to a canvas.
-// The baseDir parameter is used to resolve relative paths for images.
-func Render(root *layout.LayoutBox, width, height int, baseDir string) *Canvas {
+func Render(root *layout.LayoutBox, width, height int) *Canvas {
 	canvas := NewCanvas(width, height)
-	canvas.BaseDir = baseDir
 	// Default white background
 	canvas.Clear(color.RGBA{255, 255, 255, 255})
 

@@ -166,7 +166,7 @@ func TestRender(t *testing.T) {
 	}
 
 	// Render
-	canvas := Render(box, 200, 100, ".")
+	canvas := Render(box, 200, 100)
 
 	if canvas.Width != 200 || canvas.Height != 100 {
 		t.Errorf("canvas size unexpected: %dx%d", canvas.Width, canvas.Height)
