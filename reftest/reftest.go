@@ -28,9 +28,6 @@ var (
 	hasRefLinkRe   = regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["']`)
 )
 
-// Default viewport dimensions for layout comparison.
-const defaultViewportWidth = 800.0
-
 // Result represents the outcome of a single reftest.
 type Result struct {
 	TestFile      string
