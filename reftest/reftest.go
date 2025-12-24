@@ -22,10 +22,10 @@ import (
 
 // Pre-compiled regular expressions for performance.
 var (
-	styleRe        = regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
-	refLinkRelRe   = regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["'][^>]+href\s*=\s*["']([^"']+)["']`)
-	refLinkHrefRe  = regexp.MustCompile(`(?i)<link[^>]+href\s*=\s*["']([^"']+)["'][^>]+rel\s*=\s*["'](match|mismatch)["']`)
-	hasRefLinkRe   = regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["']`)
+	styleRe       = regexp.MustCompile(`(?is)<style[^>]*>(.*?)</style>`)
+	refLinkRelRe  = regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["'][^>]+href\s*=\s*["']([^"']+)["']`)
+	refLinkHrefRe = regexp.MustCompile(`(?i)<link[^>]+href\s*=\s*["']([^"']+)["'][^>]+rel\s*=\s*["'](match|mismatch)["']`)
+	hasRefLinkRe  = regexp.MustCompile(`(?i)<link[^>]+rel\s*=\s*["'](match|mismatch)["']`)
 )
 
 // Result represents the outcome of a single reftest.
