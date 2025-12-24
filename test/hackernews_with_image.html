@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Hacker News</title>
+    <style>
+        /* Hacker News Visual Test with Image Support
+         * This test demonstrates image rendering in the HN-inspired layout.
+         */
+        body {
+            margin: 0;
+            padding: 0;
+            background: white;
+        }
+        
+        /* Orange header bar with logo */
+        #header {
+            background: orange;
+            height: 24px;
+            width: 680px;
+            margin: 0;
+            padding: 2px;
+        }
+        
+        /* Y Combinator logo */
+        #logo {
+            width: 18px;
+            height: 18px;
+            margin: 2px;
+        }
+        
+        /* Main content container with HN cream background */
+        #content {
+            background: #f6f6ef;
+            width: 680px;
+            margin: 0;
+            padding: 10px;
+            height: 400px;
+        }
+        
+        /* Story item rows */
+        .story {
+            background: gray;
+            height: 18px;
+            width: 600px;
+            margin: 8px;
+        }
+        
+        /* Subtext rows */
+        .subtext {
+            background: silver;
+            height: 12px;
+            width: 400px;
+            margin: 0 0 15px 30px;
+        }
+        
+        /* Rank numbers */
+        .rank {
+            background: orange;
+            width: 20px;
+            height: 18px;
+            margin: 8px;
+        }
+    </style>
+</head>
+<body>
+    <!-- HN Orange Header Bar with Logo -->
+    <div id="header">
+        <img id="logo" src="y18.png" alt="Y Combinator">
+    </div>
+    
+    <!-- Main Content Area -->
+    <div id="content">
+        <!-- Story 1 -->
+        <div class="rank"></div>
+        <div class="story"></div>
+        <div class="subtext"></div>
+        
+        <!-- Story 2 -->
+        <div class="rank"></div>
+        <div class="story"></div>
+        <div class="subtext"></div>
+        
+        <!-- Story 3 -->
+        <div class="rank"></div>
+        <div class="story"></div>
+        <div class="subtext"></div>
+    </div>
+</body>
+</html>
