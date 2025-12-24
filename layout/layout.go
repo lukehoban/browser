@@ -27,6 +27,7 @@ type LayoutBox struct {
 
 // BoxType represents the type of a layout box.
 // CSS 2.1 §9.2.1 Block-level elements and block boxes
+// CSS 2.1 §17 Tables
 type BoxType int
 
 const (
@@ -36,6 +37,12 @@ const (
 	InlineBox
 	// AnonymousBox represents an anonymous block box
 	AnonymousBox
+	// TableBox represents a table box
+	TableBox
+	// TableRowBox represents a table row box
+	TableRowBox
+	// TableCellBox represents a table cell box
+	TableCellBox
 )
 
 // Dimensions represents the dimensions of a box.
@@ -99,12 +106,34 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 		}
 	}
 
-	// Determine box type based on display property
+	// Determine box type based on display property or HTML element
+	// CSS 2.1 §17.2.1: The table element generates a principal table box
 	boxType := BlockBox
-	if display := styledNode.Styles["display"]; display == "inline" {
+	display := styledNode.Styles["display"]
+	
+	// If no explicit display property, infer from HTML element
+	if display == "" && styledNode.Node != nil && styledNode.Node.Type == dom.ElementNode {
+		switch styledNode.Node.Data {
+		case "table":
+			display = "table"
+		case "tr":
+			display = "table-row"
+		case "td", "th":
+			display = "table-cell"
+		}
+	}
+	
+	switch display {
+	case "inline":
 		boxType = InlineBox
-	} else if display == "none" {
+	case "none":
 		return nil // Don't create a box
+	case "table":
+		boxType = TableBox
+	case "table-row":
+		boxType = TableRowBox
+	case "table-cell":
+		boxType = TableCellBox
 	}
 
 	box := &LayoutBox{
@@ -126,6 +155,7 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 
 // Layout calculates the layout for this box and its children.
 // CSS 2.1 §10 Visual formatting model details
+// CSS 2.1 §17 Tables
 func (box *LayoutBox) Layout(containingBlock Dimensions) {
 	switch box.BoxType {
 	case BlockBox:
@@ -133,6 +163,12 @@ func (box *LayoutBox) Layout(containingBlock Dimensions) {
 	case InlineBox:
 		// Simplified: treat inline as block for now
 		box.layoutBlock(containingBlock)
+	case TableBox:
+		box.layoutTable(containingBlock)
+	case TableRowBox:
+		box.layoutTableRow(containingBlock)
+	case TableCellBox:
+		box.layoutTableCell(containingBlock)
 	}
 }
 
@@ -351,4 +387,159 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	box.Dimensions.Content.Y = containingBlock.Content.Y + containingBlock.Content.Height
 	box.Dimensions.Content.Width = width
 	box.Dimensions.Content.Height = height
+}
+
+// layoutTable lays out a table element.
+// CSS 2.1 §17.5 Visual layout of table contents
+func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
+	// Calculate table width (similar to block)
+	box.calculateBlockWidth(containingBlock)
+	box.calculateBlockPosition(containingBlock)
+
+	// Layout table rows
+	for _, row := range box.Children {
+		if row.BoxType == TableRowBox {
+			row.Layout(box.Dimensions)
+			box.Dimensions.Content.Height += row.marginBox().Height
+		}
+	}
+
+	// If height is explicitly set, use that
+	box.calculateBlockHeight()
+}
+
+// layoutTableRow lays out a table row.
+// CSS 2.1 §17.5.3 Table height algorithms
+func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
+	styles := box.StyledNode.Styles
+
+	// Calculate position
+	box.Dimensions.Margin.Top = parseLengthOr0(styles["margin-top"], containingBlock.Content.Width)
+	box.Dimensions.Margin.Bottom = parseLengthOr0(styles["margin-bottom"], containingBlock.Content.Width)
+	box.Dimensions.Padding.Top = parseLengthOr0(styles["padding-top"], containingBlock.Content.Width)
+	box.Dimensions.Padding.Bottom = parseLengthOr0(styles["padding-bottom"], containingBlock.Content.Width)
+	box.Dimensions.Border.Top = parseLengthOr0(styles["border-top-width"], containingBlock.Content.Width)
+	box.Dimensions.Border.Bottom = parseLengthOr0(styles["border-bottom-width"], containingBlock.Content.Width)
+
+	// Position row
+	box.Dimensions.Content.X = containingBlock.Content.X
+	box.Dimensions.Content.Y = containingBlock.Content.Y + containingBlock.Content.Height +
+		box.Dimensions.Margin.Top + box.Dimensions.Border.Top + box.Dimensions.Padding.Top
+	box.Dimensions.Content.Width = containingBlock.Content.Width
+
+	// Calculate number of cells and distribute width
+	numCells := len(box.Children)
+	if numCells == 0 {
+		return
+	}
+
+	// Simple algorithm: distribute width equally among cells
+	// CSS 2.1 §17.5.2.1: In the fixed table layout algorithm
+	cellWidth := containingBlock.Content.Width / float64(numCells)
+
+	// Layout each cell horizontally
+	currentX := box.Dimensions.Content.X
+	maxHeight := 0.0
+
+	for _, cell := range box.Children {
+		if cell.BoxType == TableCellBox {
+			// Create a containing block for the cell with calculated width
+			cellContainingBlock := Dimensions{
+				Content: Rect{
+					X:      currentX,
+					Y:      box.Dimensions.Content.Y,
+					Width:  cellWidth,
+					Height: 0,
+				},
+			}
+			cell.Layout(cellContainingBlock)
+
+			// Update position for next cell
+			currentX += cell.marginBox().Width
+
+			// Track maximum height
+			if cell.marginBox().Height > maxHeight {
+				maxHeight = cell.marginBox().Height
+			}
+		}
+	}
+
+	// Set row height to maximum cell height
+	box.Dimensions.Content.Height = maxHeight
+
+	// If row has explicit height, use that instead
+	if height := styles["height"]; height != "" {
+		if h := parseLength(height, 0); h >= 0 {
+			box.Dimensions.Content.Height = h
+		}
+	}
+}
+
+// layoutTableCell lays out a table cell.
+// CSS 2.1 §17.5.3 Table height algorithms
+func (box *LayoutBox) layoutTableCell(containingBlock Dimensions) {
+	styles := box.StyledNode.Styles
+
+	// Parse width - if specified, use it; otherwise use the width from containing block
+	width := parseLength(styles["width"], containingBlock.Content.Width)
+	if width < 0 {
+		width = containingBlock.Content.Width
+	}
+
+	// Padding
+	paddingLeft := parseLengthOr0(styles["padding-left"], containingBlock.Content.Width)
+	paddingRight := parseLengthOr0(styles["padding-right"], containingBlock.Content.Width)
+	paddingTop := parseLengthOr0(styles["padding-top"], containingBlock.Content.Width)
+	paddingBottom := parseLengthOr0(styles["padding-bottom"], containingBlock.Content.Width)
+
+	// Border
+	borderLeft := parseLengthOr0(styles["border-left-width"], containingBlock.Content.Width)
+	borderRight := parseLengthOr0(styles["border-right-width"], containingBlock.Content.Width)
+	borderTop := parseLengthOr0(styles["border-top-width"], containingBlock.Content.Width)
+	borderBottom := parseLengthOr0(styles["border-bottom-width"], containingBlock.Content.Width)
+
+	// Margin (typically 0 for table cells)
+	marginLeft := parseLengthOr0(styles["margin-left"], containingBlock.Content.Width)
+	marginRight := parseLengthOr0(styles["margin-right"], containingBlock.Content.Width)
+	marginTop := parseLengthOr0(styles["margin-top"], containingBlock.Content.Width)
+	marginBottom := parseLengthOr0(styles["margin-bottom"], containingBlock.Content.Width)
+
+	// Calculate content width
+	contentWidth := width - paddingLeft - paddingRight - borderLeft - borderRight - marginLeft - marginRight
+	if contentWidth < 0 {
+		contentWidth = 0
+	}
+
+	// Set dimensions
+	box.Dimensions.Content.Width = contentWidth
+	box.Dimensions.Content.X = containingBlock.Content.X + marginLeft + borderLeft + paddingLeft
+	box.Dimensions.Content.Y = containingBlock.Content.Y + marginTop + borderTop + paddingTop
+
+	box.Dimensions.Padding.Left = paddingLeft
+	box.Dimensions.Padding.Right = paddingRight
+	box.Dimensions.Padding.Top = paddingTop
+	box.Dimensions.Padding.Bottom = paddingBottom
+
+	box.Dimensions.Border.Left = borderLeft
+	box.Dimensions.Border.Right = borderRight
+	box.Dimensions.Border.Top = borderTop
+	box.Dimensions.Border.Bottom = borderBottom
+
+	box.Dimensions.Margin.Left = marginLeft
+	box.Dimensions.Margin.Right = marginRight
+	box.Dimensions.Margin.Top = marginTop
+	box.Dimensions.Margin.Bottom = marginBottom
+
+	// Layout children (cell content)
+	for _, child := range box.Children {
+		child.Layout(box.Dimensions)
+		box.Dimensions.Content.Height += child.marginBox().Height
+	}
+
+	// If height is explicitly set, use that
+	if height := styles["height"]; height != "" {
+		if h := parseLength(height, 0); h >= 0 {
+			box.Dimensions.Content.Height = h
+		}
+	}
 }
