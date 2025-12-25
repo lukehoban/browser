@@ -82,6 +82,12 @@ go test ./...
 
 The browser can be compiled to WebAssembly and run entirely in a web browser!
 
+### Live Demo
+
+Try it now at: **https://lukehoban.github.io/browser/**
+
+The demo is automatically deployed to GitHub Pages via GitHub Actions.
+
 ### Building for WASM
 
 ```bash
@@ -90,7 +96,7 @@ The browser can be compiled to WebAssembly and run entirely in a web browser!
 make build-wasm
 ```
 
-### Running the WASM Demo
+### Running the WASM Demo Locally
 
 ```bash
 # Build and serve in one command

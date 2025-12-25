@@ -2,6 +2,13 @@
 
 This directory contains a WebAssembly build of the browser that runs entirely in your web browser.
 
+## GitHub Pages Demo
+
+The demo is automatically deployed to GitHub Pages and available at:
+**https://lukehoban.github.io/browser/**
+
+The deployment happens automatically via GitHub Actions whenever changes are pushed to the `main` branch.
+
 ## Files
 
 - `index.html` - The demo web page
@@ -73,3 +80,18 @@ Requires a modern browser with WebAssembly support:
 - Only inline CSS in `<style>` tags is supported (no external stylesheets in WASM mode)
 - Network features (loading external resources) are not available in WASM mode
 - Image support is limited in WASM mode due to cross-origin restrictions
+
+## GitHub Pages Setup
+
+To enable GitHub Pages for this repository:
+
+1. Go to repository **Settings** → **Pages**
+2. Under "Build and deployment":
+   - Source: **GitHub Actions**
+3. The `.github/workflows/pages.yml` workflow will automatically build and deploy the WASM demo
+4. After the workflow runs, the demo will be available at `https://[username].github.io/[repository]/`
+
+The workflow:
+- Builds the WASM module on every push to `main`
+- Deploys the `wasm/` directory to GitHub Pages
+- Can also be triggered manually from the Actions tab
