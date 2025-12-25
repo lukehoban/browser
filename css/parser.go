@@ -327,6 +327,9 @@ func (p *Parser) parseDeclaration() *Declaration {
 			if value != "" {
 				value += " "
 			}
+		} else if token.Type == HashToken {
+			// CSS 2.1 §4.3.6: Preserve # prefix for color values
+			value += "#" + token.Value
 		} else {
 			value += token.Value
 		}

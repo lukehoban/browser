@@ -396,6 +396,42 @@ func TestExpandShorthand(t *testing.T) {
 				"margin-top": "15px",
 			},
 		},
+		{
+			name:     "border shorthand with width, style, and color",
+			property: "border",
+			value:    "2px solid #2196F3",
+			expected: map[string]string{
+				"border-top-width":    "2px",
+				"border-right-width":  "2px",
+				"border-bottom-width": "2px",
+				"border-left-width":   "2px",
+				"border-style":        "solid",
+				"border-color":        "#2196F3",
+			},
+		},
+		{
+			name:     "border-bottom shorthand",
+			property: "border-bottom",
+			value:    "3px solid #4CAF50",
+			expected: map[string]string{
+				"border-bottom-width": "3px",
+				"border-style":        "solid",
+				"border-color":        "#4CAF50",
+			},
+		},
+		{
+			name:     "border shorthand with named color",
+			property: "border",
+			value:    "1px dashed red",
+			expected: map[string]string{
+				"border-top-width":    "1px",
+				"border-right-width":  "1px",
+				"border-bottom-width": "1px",
+				"border-left-width":   "1px",
+				"border-style":        "dashed",
+				"border-color":        "red",
+			},
+		},
 	}
 
 	for _, tt := range tests {
