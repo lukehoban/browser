@@ -7,6 +7,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -336,6 +337,11 @@ func (c *Canvas) SavePNG(filename string) error {
 	}
 
 	return nil
+}
+
+// WritePNG writes the canvas as a PNG to the provided writer.
+func (c *Canvas) WritePNG(w io.Writer) error {
+	return png.Encode(w, c.ToImage())
 }
 
 // Render renders a layout tree to a canvas.

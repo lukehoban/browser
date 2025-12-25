@@ -17,12 +17,14 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - **Network support**: Load pages via HTTP/HTTPS
 - **External CSS**: Fetch and apply stylesheets from `<link>` tags
 - **Network images**: Load images from remote URLs
+- **Web interface**: Test from any device with the built-in web server
 
 ## Project Structure
 
 ```
 browser/
-├── cmd/browser/      # Main browser application
+├── cmd/browser/      # Main browser application (CLI)
+├── cmd/webserver/    # Web server for testing from any device
 ├── html/            # HTML tokenization and parsing
 ├── css/             # CSS parsing
 ├── dom/             # DOM tree structure
@@ -54,6 +56,8 @@ go build ./cmd/browser
 
 ### Running
 
+#### Command-Line Renderer
+
 ```bash
 # Render local HTML file to PNG
 ./browser -output output.png test/styled.html
@@ -67,6 +71,28 @@ go build ./cmd/browser
 # Custom viewport size
 ./browser -output output.png -width 1024 -height 768 test/hackernews.html
 ```
+
+#### Web Server (Test from Any Device)
+
+```bash
+# Build and start the web server
+go build ./cmd/webserver
+./webserver
+
+# The server will display URLs like:
+#   Local:   http://localhost:8080
+#   Network: http://<YOUR_MACHINE_IP>:8080
+
+# Options:
+./webserver -port 3000              # Custom port
+./webserver -host 0.0.0.0 -port 8080  # Bind to all interfaces
+```
+
+**To test from your phone:**
+1. Make sure your phone is on the same WiFi network as your computer
+2. Open your phone's browser and navigate to the Network URL shown when you start the server
+3. Enter HTML in the text area and click "Render" to see the output
+4. Try the quick example buttons for pre-built demos
 
 ### Testing
 
