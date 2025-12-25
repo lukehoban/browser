@@ -115,9 +115,7 @@ func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
 // CSS 2.1 §15.7 Font style: font-style
 // CSS 2.1 §16.3.1 Underlining, overlining, striking: text-decoration
 func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style FontStyle) {
-	// Use basicfont.Face7x13 as a simple built-in font
-	// This is a 7x13 pixel font, where 7 is advance and 13 is height
-	baseFace := basicfont.Face7x13
+	baseFace := basicfont.Face7x13 // 7x13 pixel font
 	
 	// Calculate scale factor based on desired font size
 	scale := style.Size / baseFontHeight

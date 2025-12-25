@@ -483,14 +483,10 @@ func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 }
 
 // calculateTableColumns calculates the number of columns in a table.
-// CSS 2.1 §17.2.1: The table column count is determined by examining all rows.
-// This implementation counts columns based on actual table cells and their colspan attributes.
-// Note: This is a simplified implementation that doesn't support column groups or explicit
-// column specifications via <col> elements, which are part of the full CSS 2.1 spec.
+// CSS 2.1 §17.2.1: Counts columns based on table cells and colspan attributes
 func (box *LayoutBox) calculateTableColumns() int {
 	maxColumns := 0
 
-	// Examine each row to find the maximum column count
 	for _, row := range box.Children {
 		if row.BoxType == TableRowBox {
 			columnCount := 0
@@ -505,7 +501,6 @@ func (box *LayoutBox) calculateTableColumns() int {
 		}
 	}
 
-	// Default to 1 if no columns found
 	if maxColumns == 0 {
 		maxColumns = 1
 	}
@@ -514,8 +509,7 @@ func (box *LayoutBox) calculateTableColumns() int {
 }
 
 // getColspan extracts the colspan attribute from a table cell.
-// Returns 1 if no colspan attribute is present or if the value is invalid.
-// CSS 2.1 §17.2.1: The colspan attribute specifies the number of columns spanned by a cell
+// CSS 2.1 §17.2.1: Returns 1 if no colspan attribute is present
 // HTML5 recommends a maximum colspan of 1000 to prevent performance issues
 func getColspan(cell *LayoutBox) int {
 	if cell.StyledNode == nil || cell.StyledNode.Node == nil {
@@ -545,18 +539,14 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 	// Collect column content sizes from all rows
 	columnMinWidths := make([]float64, numColumns)
 	
-	// Examine each row to estimate minimum column widths
 	for _, row := range box.Children {
 		if row.BoxType == TableRowBox {
 			colIndex := 0
 			for _, cell := range row.Children {
 				if cell.BoxType == TableCellBox {
 					colspan := getColspan(cell)
-					
-					// Estimate content width based on text content
 					minWidth := box.estimateCellMinWidth(cell)
 					
-					// For single-column cells, update the column minimum
 					if colspan == 1 && colIndex < numColumns {
 						if minWidth > columnMinWidths[colIndex] {
 							columnMinWidths[colIndex] = minWidth
@@ -569,7 +559,6 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 		}
 	}
 	
-	// Calculate total minimum width
 	totalMinWidth := 0.0
 	for _, w := range columnMinWidths {
 		totalMinWidth += w

@@ -265,8 +265,7 @@ func renderDocument(htmlContent string) (*layout.LayoutBox, error) {
 
 // extractCSS extracts CSS content from <style> elements in HTML.
 func extractCSS(htmlContent string) string {
-	// Use pre-compiled regex to extract style content
-	// This is a simplified approach - a full implementation would use the DOM
+	// Extract style content using regex (simplified approach)
 	matches := styleRe.FindAllStringSubmatch(htmlContent, -1)
 
 	var css strings.Builder
