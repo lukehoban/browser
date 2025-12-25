@@ -364,3 +364,100 @@ func TestParseAttributeSelectorMatching_Skipped(t *testing.T) {
 	// When implemented, SimpleSelector would have Attributes field
 	// For now, attribute selectors are skipped during parsing
 }
+
+// TestParseInlineStyle tests parsing of inline style attributes.
+// CSS 2.1 §6.4.3: Inline styles have the highest specificity.
+func TestParseInlineStyle(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []*Declaration
+	}{
+		{
+			name:  "single declaration",
+			input: "color: red",
+			expected: []*Declaration{
+				{Property: "color", Value: "red"},
+			},
+		},
+		{
+			name:  "single declaration with semicolon",
+			input: "color: red;",
+			expected: []*Declaration{
+				{Property: "color", Value: "red"},
+			},
+		},
+		{
+			name:  "multiple declarations",
+			input: "color: red; font-size: 16px",
+			expected: []*Declaration{
+				{Property: "color", Value: "red"},
+				{Property: "font-size", Value: "16px"},
+			},
+		},
+		{
+			name:  "multiple declarations with trailing semicolon",
+			input: "color: red; font-size: 16px;",
+			expected: []*Declaration{
+				{Property: "color", Value: "red"},
+				{Property: "font-size", Value: "16px"},
+			},
+		},
+		{
+			name:  "multiple declarations with spaces",
+			input: "  color: red;  font-size: 16px;  background: blue;  ",
+			expected: []*Declaration{
+				{Property: "color", Value: "red"},
+				{Property: "font-size", Value: "16px"},
+				{Property: "background", Value: "blue"},
+			},
+		},
+		{
+			name:  "complex values",
+			input: "margin: 10px 20px 30px 40px; padding: 5px;",
+			expected: []*Declaration{
+				{Property: "margin", Value: "10px 20px 30px 40px"},
+				{Property: "padding", Value: "5px"},
+			},
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: nil,
+		},
+		{
+			name:     "whitespace only",
+			input:    "   ",
+			expected: []*Declaration{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			declarations := ParseInlineStyle(tt.input)
+
+			if tt.expected == nil {
+				if declarations != nil {
+					t.Errorf("Expected nil, got %v", declarations)
+				}
+				return
+			}
+
+			if len(declarations) != len(tt.expected) {
+				t.Errorf("Expected %d declarations, got %d", len(tt.expected), len(declarations))
+				return
+			}
+
+			for i, expected := range tt.expected {
+				if declarations[i].Property != expected.Property {
+					t.Errorf("Declaration %d: expected property '%s', got '%s'",
+						i, expected.Property, declarations[i].Property)
+				}
+				if declarations[i].Value != expected.Value {
+					t.Errorf("Declaration %d: expected value '%s', got '%s'",
+						i, expected.Value, declarations[i].Value)
+				}
+			}
+		})
+	}
+}

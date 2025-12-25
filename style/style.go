@@ -26,7 +26,7 @@ type MatchedRule struct {
 // Specificity represents the specificity of a CSS selector.
 // CSS 2.1 §6.4.3 Calculating a selector's specificity
 type Specificity struct {
-	A int // Inline styles (not used in this implementation)
+	A int // Inline styles (A=1 for inline styles)
 	B int // ID selectors
 	C int // Class selectors, attribute selectors
 	D int // Element selectors
@@ -92,11 +92,16 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		// Apply rules in order of specificity
 		for _, matched := range matchedRules {
 			for _, decl := range matched.Rule.Declarations {
-				// CSS 2.1 §8.3, §8.4: Expand shorthand properties
-				expandedProps := expandShorthand(decl.Property, decl.Value)
-				for prop, val := range expandedProps {
-					styled.Styles[prop] = val
-				}
+				applyDeclaration(decl, styled.Styles)
+			}
+		}
+		
+		// Apply inline styles last - they have highest specificity
+		// CSS 2.1 §6.4.3: Inline styles have specificity A=1, higher than any selector
+		if styleAttr := node.GetAttribute("style"); styleAttr != "" {
+			inlineDecls := css.ParseInlineStyle(styleAttr)
+			for _, decl := range inlineDecls {
+				applyDeclaration(decl, styled.Styles)
 			}
 		}
 	}
@@ -317,6 +322,15 @@ func splitWhitespace(s string) []string {
 	}
 
 	return result
+}
+
+// applyDeclaration applies a CSS declaration to a styles map, expanding shorthand properties.
+// CSS 2.1 §8.3, §8.4: Shorthand properties are expanded to their longhand equivalents.
+func applyDeclaration(decl *css.Declaration, styles map[string]string) {
+	expandedProps := expandShorthand(decl.Property, decl.Value)
+	for prop, val := range expandedProps {
+		styles[prop] = val
+	}
 }
 
 // applyPresentationalHints converts HTML presentational attributes to CSS styles.

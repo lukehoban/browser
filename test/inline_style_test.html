@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Inline Style Test</title>
+    <style>
+        /* CSS rules that should be overridden by inline styles */
+        body {
+            font-size: 14px;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .blue-text {
+            color: blue;
+            font-size: 16px;
+        }
+        
+        #special {
+            color: green;
+            background: yellow;
+            padding: 10px;
+        }
+        
+        div {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Inline Style Attribute Tests</h1>
+    
+    <!-- Test 1: Inline style with no CSS rule -->
+    <div style="color: red; font-size: 20px; font-weight: bold;">
+        Test 1: This text should be RED, 20px, and BOLD (inline style only)
+    </div>
+    
+    <!-- Test 2: Inline style overrides class selector -->
+    <div class="blue-text" style="color: red;">
+        Test 2: This text should be RED (inline overrides .blue-text class)
+    </div>
+    
+    <!-- Test 3: Inline style overrides ID selector -->
+    <div id="special" style="color: purple; background: orange;">
+        Test 3: This text should be PURPLE on ORANGE (inline overrides #special ID)
+    </div>
+    
+    <!-- Test 4: Partial inline style - combines with CSS -->
+    <div class="blue-text" style="font-weight: bold;">
+        Test 4: This text should be BLUE (from class) and BOLD (from inline)
+    </div>
+    
+    <!-- Test 5: Inline style with shorthand properties -->
+    <div style="margin: 20px; padding: 15px; background: lightblue; border: 2px solid navy;">
+        Test 5: This div has margin, padding, background, and border from inline style
+    </div>
+    
+    <!-- Test 6: Complex inline style -->
+    <div style="color: darkgreen; font-size: 18px; font-style: italic; text-decoration: underline; background: lightyellow; padding: 10px;">
+        Test 6: Dark green, 18px, italic, underlined text on light yellow background
+    </div>
+    
+    <!-- Test 7: Multiple properties override -->
+    <div class="blue-text" id="special" style="color: crimson; font-size: 24px; background: lightcoral; padding: 20px;">
+        Test 7: CRIMSON text, 24px, on light coral background (inline overrides both class and ID)
+    </div>
+</body>
+</html>
