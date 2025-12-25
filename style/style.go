@@ -81,6 +81,11 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 
 	// Only compute styles for element nodes
 	if node.Type == dom.ElementNode {
+		// HTML presentational attributes: Convert to CSS styles before applying CSS rules
+		// These have lower specificity than CSS rules, so apply them first
+		// HTML5 §2.4.4: Presentational hints
+		applyPresentationalHints(node, styled.Styles)
+		
 		// Find all matching rules
 		matchedRules := matchRules(node, stylesheet)
 
@@ -312,4 +317,24 @@ func splitWhitespace(s string) []string {
 	}
 
 	return result
+}
+
+// applyPresentationalHints converts HTML presentational attributes to CSS styles.
+// HTML5 §2.4.4: Presentational hints
+// These attributes have lower specificity than CSS rules.
+func applyPresentationalHints(node *dom.Node, styles map[string]string) {
+	// <font color="..."> attribute
+	if node.Data == "font" {
+		if color := node.GetAttribute("color"); color != "" {
+			styles["color"] = color
+		}
+	}
+	
+	// bgcolor attribute (used on <table>, <tr>, <td>, <th>, <body>)
+	if bgcolor := node.GetAttribute("bgcolor"); bgcolor != "" {
+		styles["background-color"] = bgcolor
+	}
+	
+	// Note: Other presentational attributes like width, height, align, valign
+	// are already handled elsewhere in the codebase
 }
