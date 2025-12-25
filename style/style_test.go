@@ -525,3 +525,242 @@ func TestShorthandIntegration(t *testing.T) {
 		t.Errorf("Expected padding-left '10px', got %v", divStyled.Styles["padding-left"])
 	}
 }
+
+// SKIPPED TESTS FOR KNOWN BROKEN/UNIMPLEMENTED FEATURES
+// These tests document known limitations that need to be implemented.
+// See MILESTONES.md for more details.
+
+func TestCSSInheritance_Skipped(t *testing.T) {
+	t.Skip("CSS inheritance not implemented - CSS 2.1 §6.2")
+	// CSS 2.1 §6.2 Inheritance
+	// Inheritable properties (color, font-*, text-*, etc.) should propagate from parent to child
+	
+	// Create DOM: div > p > span
+	doc := dom.NewDocument()
+	div := dom.NewElement("div")
+	p := dom.NewElement("p")
+	span := dom.NewElement("span")
+	text := dom.NewText("Hello")
+	span.AppendChild(text)
+	p.AppendChild(span)
+	div.AppendChild(p)
+	doc.AppendChild(div)
+	
+	// Style only the div with color
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "red"},
+					{Property: "font-size", Value: "16px"},
+				},
+			},
+		},
+	}
+	
+	styledTree := StyleTree(doc, stylesheet)
+	divStyled := styledTree.Children[0]
+	pStyled := divStyled.Children[0]
+	spanStyled := pStyled.Children[0]
+	
+	// Div should have the explicit styles
+	if divStyled.Styles["color"] != "red" {
+		t.Errorf("Expected div color 'red', got %v", divStyled.Styles["color"])
+	}
+	if divStyled.Styles["font-size"] != "16px" {
+		t.Errorf("Expected div font-size '16px', got %v", divStyled.Styles["font-size"])
+	}
+	
+	// P should inherit color and font-size from div
+	if pStyled.Styles["color"] != "red" {
+		t.Errorf("Expected p to inherit color 'red', got %v", pStyled.Styles["color"])
+	}
+	if pStyled.Styles["font-size"] != "16px" {
+		t.Errorf("Expected p to inherit font-size '16px', got %v", pStyled.Styles["font-size"])
+	}
+	
+	// Span should inherit color and font-size from p
+	if spanStyled.Styles["color"] != "red" {
+		t.Errorf("Expected span to inherit color 'red', got %v", spanStyled.Styles["color"])
+	}
+	if spanStyled.Styles["font-size"] != "16px" {
+		t.Errorf("Expected span to inherit font-size '16px', got %v", spanStyled.Styles["font-size"])
+	}
+}
+
+func TestImportantDeclarations_Skipped(t *testing.T) {
+	t.Skip("!important declarations not implemented - CSS 2.1 §6.4.2")
+	// CSS 2.1 §6.4.2 !important rules
+	// !important declarations should override normal declarations regardless of specificity
+	
+	doc := dom.NewDocument()
+	div := dom.NewElement("div")
+	div.SetAttribute("id", "main")
+	doc.AppendChild(div)
+	
+	// When implemented, Declaration would have an Important field
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "red"}, // Would have Important: true
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{ID: "main"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "blue"},
+				},
+			},
+		},
+	}
+	
+	styledTree := StyleTree(doc, stylesheet)
+	divStyled := styledTree.Children[0]
+	
+	// The !important declaration should win even though ID selector has higher specificity
+	// Currently, ID selector wins due to higher specificity
+	if divStyled.Styles["color"] != "blue" {
+		t.Errorf("Expected color 'blue' (ID has higher specificity), got %v", divStyled.Styles["color"])
+	}
+}
+
+func TestComputedValues_Skipped(t *testing.T) {
+	t.Skip("Computed value calculation not implemented - CSS 2.1 §6.1.2")
+	// CSS 2.1 §6.1.2 Computed values
+	// Relative values (em, %, etc.) should be converted to absolute values
+	
+	doc := dom.NewDocument()
+	div := dom.NewElement("div")
+	p := dom.NewElement("p")
+	div.AppendChild(p)
+	doc.AppendChild(div)
+	
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-size", Value: "16px"},
+					{Property: "width", Value: "100%"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "p"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-size", Value: "1.5em"}, // Should be 24px (16px * 1.5)
+					{Property: "width", Value: "50%"},        // Should be 50% of parent
+				},
+			},
+		},
+	}
+	
+	styledTree := StyleTree(doc, stylesheet)
+	divStyled := styledTree.Children[0]
+	pStyled := divStyled.Children[0]
+	
+	// When implemented, would have ComputedStyles field
+	// P's font-size should be computed to 24px (1.5em of parent's 16px)
+	// For now, values are used as-is
+	if pStyled.Styles["font-size"] != "1.5em" {
+		t.Errorf("Expected font-size '1.5em' (not yet computed), got %v", pStyled.Styles["font-size"])
+	}
+}
+
+func TestPseudoClassMatching_Skipped(t *testing.T) {
+	t.Skip("Pseudo-class matching not implemented - CSS 2.1 §5.11")
+	// CSS 2.1 §5.11 Pseudo-classes
+	// Pseudo-classes should be matched based on element state/position
+	
+	doc := dom.NewDocument()
+	div := dom.NewElement("div")
+	p1 := dom.NewElement("p")
+	p2 := dom.NewElement("p")
+	div.AppendChild(p1)
+	div.AppendChild(p2)
+	doc.AppendChild(div)
+	
+	// Note: Parser would need to support pseudo-classes first
+	// This test assumes SimpleSelector would have a PseudoClass field
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "p"}}}, // Would have PseudoClass: "first-child"
+				},
+				Declarations: []*css.Declaration{
+					{Property: "margin-top", Value: "0"},
+				},
+			},
+		},
+	}
+	
+	styledTree := StyleTree(doc, stylesheet)
+	divStyled := styledTree.Children[0]
+	p1Styled := divStyled.Children[0]
+	p2Styled := divStyled.Children[1]
+	
+	// When implemented, first p should match :first-child and have margin-top: 0
+	// For now, both match the plain 'p' selector
+	if p1Styled.Styles["margin-top"] != "0" {
+		t.Errorf("Expected first p to have margin-top '0', got %v", p1Styled.Styles["margin-top"])
+	}
+	
+	// Second p should also match (no pseudo-class filtering yet)
+	if p2Styled.Styles["margin-top"] != "0" {
+		t.Error("Without pseudo-class support, second p also matches 'p' selector")
+	}
+}
+
+func TestChildCombinatorMatching_Skipped(t *testing.T) {
+	t.Skip("Child combinator matching not implemented - CSS 2.1 §5.5")
+	// CSS 2.1 §5.5 Child selectors
+	// Child combinator (>) should only match direct children
+	
+	// Create DOM: div > p > span
+	div := dom.NewElement("div")
+	p := dom.NewElement("p")
+	span := dom.NewElement("span")
+	div.AppendChild(p)
+	p.AppendChild(span)
+	
+	// When implemented, Selector would have a Combinator field
+	// Selector: div > span (should NOT match - span is grandchild)
+	selector := &css.Selector{
+		Simple: []*css.SimpleSelector{
+			{TagName: "div"},
+			{TagName: "span"},
+		},
+		// Would have: Combinator: ">"
+	}
+	
+	// Currently treats all multi-part selectors as descendant
+	if !matchesSelector(span, selector) {
+		t.Error("Currently matches as descendant (space), should NOT match with child combinator (>)")
+	}
+	
+	// Selector: div > p (should match - p is direct child)
+	selector2 := &css.Selector{
+		Simple: []*css.SimpleSelector{
+			{TagName: "div"},
+			{TagName: "p"},
+		},
+		// Would have: Combinator: ">"
+	}
+	
+	if !matchesSelector(p, selector2) {
+		t.Error("Expected p to match 'div > p' (direct child)")
+	}
+}

@@ -391,3 +391,318 @@ func TestParseFontSize(t *testing.T) {
 		})
 	}
 }
+
+// SKIPPED TESTS FOR KNOWN BROKEN/UNIMPLEMENTED FEATURES
+// These tests document known limitations that need to be implemented.
+// See MILESTONES.md for more details.
+
+func TestFontFamilySupport_Skipped(t *testing.T) {
+	t.Skip("Font-family support not implemented - CSS 2.1 §15.3")
+	// CSS 2.1 §15.3 Font family: the 'font-family' property
+	// Should support multiple font families and fallback to system fonts
+	
+	layoutBox := &layout.LayoutBox{
+		BoxType: layout.BlockBox,
+		Dimensions: layout.Dimensions{
+			Content: layout.Rect{X: 10, Y: 10, Width: 180, Height: 80},
+		},
+		StyledNode: &style.StyledNode{
+			Styles: map[string]string{
+				"font-family": "Arial, Helvetica, sans-serif",
+				"font-size":   "14px",
+			},
+		},
+	}
+	
+	// Should use Arial if available, else Helvetica, else sans-serif
+	canvas := Render(layoutBox, 200, 100)
+	
+	// Verify that the specified font was used (not just default)
+	// This would require font metrics inspection
+	if canvas == nil {
+		t.Error("Expected canvas to be created")
+	}
+}
+
+func TestTextAlign_Skipped(t *testing.T) {
+	t.Skip("Text-align not implemented - CSS 2.1 §16.2")
+	// CSS 2.1 §16.2 Alignment: the 'text-align' property
+	// Should support left, right, center, justify
+	
+	tests := []struct {
+		align    string
+		expectedX float64
+	}{
+		{"left", 10.0},
+		{"center", 150.0}, // Middle of 300px container
+		{"right", 290.0},  // Right edge minus text width
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.align, func(t *testing.T) {
+			layoutBox := &layout.LayoutBox{
+				BoxType: layout.BlockBox,
+				Dimensions: layout.Dimensions{
+					Content: layout.Rect{X: 0, Y: 10, Width: 300, Height: 20},
+				},
+				StyledNode: &style.StyledNode{
+					Styles: map[string]string{
+						"text-align": tt.align,
+					},
+				},
+			}
+			
+			canvas := Render(layoutBox, 300, 100)
+			
+			// Text should be positioned according to alignment
+			// This would require tracking text position during render
+			if canvas == nil {
+				t.Error("Expected canvas to be created")
+			}
+		})
+	}
+}
+
+func TestLineHeight_Skipped(t *testing.T) {
+	t.Skip("Line-height not implemented - CSS 2.1 §10.8.1")
+	// CSS 2.1 §10.8.1 Leading and half-leading
+	// Line-height should control vertical spacing between lines
+	
+	layoutBox := &layout.LayoutBox{
+		BoxType: layout.BlockBox,
+		Dimensions: layout.Dimensions{
+			Content: layout.Rect{X: 10, Y: 10, Width: 180, Height: 180},
+		},
+		StyledNode: &style.StyledNode{
+			Styles: map[string]string{
+				"font-size":   "14px",
+				"line-height": "1.5", // 21px
+			},
+		},
+	}
+	
+	canvas := Render(layoutBox, 200, 200)
+	
+	// Second line should be 21px below first line (14px * 1.5)
+	// This would require tracking line positions
+	if canvas == nil {
+		t.Error("Expected canvas to be created")
+	}
+}
+
+func TestBackgroundImage_Skipped(t *testing.T) {
+	t.Skip("Background-image not implemented - CSS 2.1 §14.2.1")
+	// CSS 2.1 §14.2.1 Background properties: 'background-image'
+	// Should load and render background images
+	
+	layoutBox := &layout.LayoutBox{
+		BoxType: layout.BlockBox,
+		Dimensions: layout.Dimensions{
+			Content: layout.Rect{X: 10, Y: 10, Width: 100, Height: 100},
+		},
+		StyledNode: &style.StyledNode{
+			Styles: map[string]string{
+				"background-image":  "url(test.png)",
+				"background-repeat": "no-repeat",
+			},
+		},
+	}
+	
+	canvas := Render(layoutBox, 200, 200)
+	
+	// Background image should be loaded and rendered
+	// Pixels should match the image content
+	if canvas == nil {
+		t.Error("Expected canvas to be created")
+	}
+}
+
+func TestTextDecorationOverline_Skipped(t *testing.T) {
+	t.Skip("Text-decoration overline not implemented - CSS 2.1 §16.3.1")
+	// CSS 2.1 §16.3.1 Underlining, overlining, striking, and blinking
+	// Should support overline and line-through in addition to underline
+	
+	tests := []struct {
+		decoration string
+		checkY     float64 // Y position where line should appear
+	}{
+		{"overline", 10.0},      // Above text
+		{"line-through", 15.0},  // Through middle
+		{"underline", 20.0},     // Below text (already implemented)
+	}
+	
+	for _, tt := range tests {
+		t.Run(tt.decoration, func(t *testing.T) {
+			layoutBox := &layout.LayoutBox{
+				BoxType: layout.BlockBox,
+				Dimensions: layout.Dimensions{
+					Content: layout.Rect{X: 10, Y: 10, Width: 100, Height: 20},
+				},
+				StyledNode: &style.StyledNode{
+					Styles: map[string]string{
+						"text-decoration": tt.decoration,
+						"color":           "black",
+					},
+				},
+			}
+			
+			canvas := Render(layoutBox, 200, 100)
+			
+			// Line should appear at expected Y position
+			// Would need to inspect canvas pixels
+			if canvas == nil {
+				t.Error("Expected canvas to be created")
+			}
+		})
+	}
+}
+
+func TestTableRowspan_Skipped(t *testing.T) {
+	t.Skip("Table rowspan not implemented - CSS 2.1 §17.2")
+	// CSS 2.1 §17.2 The CSS table model
+	// Rowspan attribute should allow cells to span multiple rows
+	
+	// Table with rowspan:
+	// Row 1: [Cell A (rowspan=2)] [Cell B]
+	// Row 2:                      [Cell C]
+	
+	layoutBox := &layout.LayoutBox{
+		BoxType: layout.TableBox,
+		Dimensions: layout.Dimensions{
+			Content: layout.Rect{X: 0, Y: 0, Width: 400, Height: 300},
+		},
+		Children: []*layout.LayoutBox{
+			// Row 1
+			{
+				BoxType: layout.TableRowBox,
+				Children: []*layout.LayoutBox{
+					{
+						BoxType: layout.TableCellBox,
+						Dimensions: layout.Dimensions{
+							Content: layout.Rect{X: 0, Y: 0, Width: 200, Height: 100},
+						},
+						StyledNode: &style.StyledNode{
+							Node: nil, // Would have rowspan attribute
+						},
+					},
+					{
+						BoxType: layout.TableCellBox,
+						Dimensions: layout.Dimensions{
+							Content: layout.Rect{X: 200, Y: 0, Width: 200, Height: 50},
+						},
+					},
+				},
+			},
+			// Row 2
+			{
+				BoxType: layout.TableRowBox,
+				Children: []*layout.LayoutBox{
+					{
+						BoxType: layout.TableCellBox,
+						Dimensions: layout.Dimensions{
+							Content: layout.Rect{X: 200, Y: 50, Width: 200, Height: 50},
+						},
+					},
+				},
+			},
+		},
+	}
+	
+	canvas := Render(layoutBox, 400, 300)
+	
+	// Cell A should span both rows (height = 100)
+	// Cell B and C should be in single rows (height = 50 each)
+	if canvas == nil {
+		t.Error("Expected canvas to be created")
+	}
+}
+
+func TestTableHeaders_Skipped(t *testing.T) {
+	t.Skip("Table headers (<thead>, <tbody>, <tfoot>) not implemented - HTML5 §4.9.5-7")
+	// HTML5 §4.9.5 The thead element
+	// HTML5 §4.9.6 The tbody element
+	// HTML5 §4.9.7 The tfoot element
+	// Should properly handle table header, body, and footer sections
+	
+	// Table structure should recognize and lay out thead, tbody, tfoot
+	// When implemented, would have TableHeaderBox, TableBodyBox, TableFooterBox types
+	layoutBox := &layout.LayoutBox{
+		BoxType: layout.TableBox,
+		Children: []*layout.LayoutBox{
+			{
+				BoxType: layout.TableRowBox, // Would be TableHeaderBox for <thead>
+				Children: []*layout.LayoutBox{
+					// Header rows
+				},
+			},
+			{
+				BoxType: layout.TableRowBox, // Would be TableBodyBox for <tbody>
+				Children: []*layout.LayoutBox{
+					// Body rows
+				},
+			},
+			{
+				BoxType: layout.TableRowBox, // Would be TableFooterBox for <tfoot>
+				Children: []*layout.LayoutBox{
+					// Footer rows
+				},
+			},
+		},
+	}
+	
+	canvas := Render(layoutBox, 400, 300)
+	
+	// Headers should be styled/positioned differently from body
+	if canvas == nil {
+		t.Error("Expected canvas to be created")
+	}
+}
+
+func TestBorderCollapse_Skipped(t *testing.T) {
+	t.Skip("Border-collapse not implemented - CSS 2.1 §17.6.1")
+	// CSS 2.1 §17.6.1 The separated borders model
+	// CSS 2.1 §17.6.2 The collapsing border model
+	// Should support both separate and collapsed border models
+	
+	layoutBox := &layout.LayoutBox{
+		BoxType: layout.TableBox,
+		StyledNode: &style.StyledNode{
+			Styles: map[string]string{
+				"border-collapse": "collapse",
+			},
+		},
+		Children: []*layout.LayoutBox{
+			{
+				BoxType: layout.TableRowBox,
+				Children: []*layout.LayoutBox{
+					{
+						BoxType: layout.TableCellBox,
+						Dimensions: layout.Dimensions{
+							Content: layout.Rect{X: 0, Y: 0, Width: 100, Height: 50},
+							Border: layout.EdgeSizes{
+								Top: 1, Right: 1, Bottom: 1, Left: 1,
+							},
+						},
+					},
+					{
+						BoxType: layout.TableCellBox,
+						Dimensions: layout.Dimensions{
+							Content: layout.Rect{X: 100, Y: 0, Width: 100, Height: 50},
+							Border: layout.EdgeSizes{
+								Top: 1, Right: 1, Bottom: 1, Left: 1,
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	
+	canvas := Render(layoutBox, 300, 200)
+	
+	// With border-collapse: collapse, adjacent borders should merge
+	// Border between cells should be 1px, not 2px
+	if canvas == nil {
+		t.Error("Expected canvas to be created")
+	}
+}

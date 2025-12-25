@@ -282,3 +282,85 @@ body { color: blue; }
 		t.Error("Expected .test rule to be parsed")
 	}
 }
+
+// SKIPPED TESTS FOR KNOWN BROKEN/UNIMPLEMENTED FEATURES
+// These tests document known limitations that need to be implemented.
+// See MILESTONES.md for more details.
+
+func TestParsePseudoClasses_Skipped(t *testing.T) {
+	t.Skip("Pseudo-classes not implemented - CSS 2.1 §5.11")
+	// CSS 2.1 §5.11 Pseudo-classes
+	// Common pseudo-classes include :hover, :active, :focus, :first-child, :last-child, :nth-child
+	
+	input := "a:hover { color: red; } p:first-child { margin-top: 0; }"
+	_ = Parse(input)
+	
+	// When implemented, parser should recognize pseudo-classes
+	// Expected structure would include PseudoClass field in SimpleSelector
+	// For now, this gracefully fails/skips the selector
+}
+
+func TestParsePseudoElements_Skipped(t *testing.T) {
+	t.Skip("Pseudo-elements not implemented - CSS 2.1 §5.12")
+	// CSS 2.1 §5.12 Pseudo-elements
+	// Common pseudo-elements include ::before, ::after, ::first-line, ::first-letter
+	
+	input := "p::before { content: '→ '; } p::after { content: ' ←'; }"
+	_ = Parse(input)
+	
+	// When implemented, parser should recognize pseudo-elements
+	// Expected structure would include PseudoElement field in SimpleSelector
+	// For now, this gracefully fails/skips the selector
+}
+
+func TestParseChildCombinator_Skipped(t *testing.T) {
+	t.Skip("Child combinator not implemented - CSS 2.1 §5.5")
+	// CSS 2.1 §5.5 Child selectors
+	// The child combinator (>) selects direct children only
+	
+	input := "div > p { color: blue; }"
+	_ = Parse(input)
+	
+	// When implemented, the Selector structure would include a Combinator field
+	// to distinguish between descendant (space) and child (>) combinators
+	// For now, this might parse but treat '>' as a descendant combinator
+}
+
+func TestParseAdjacentSiblingCombinator_Skipped(t *testing.T) {
+	t.Skip("Adjacent sibling combinator not implemented - CSS 2.1 §5.7")
+	// CSS 2.1 §5.7 Adjacent sibling selectors
+	// The adjacent sibling combinator (+) selects the immediately following sibling
+	
+	input := "h1 + p { margin-top: 0; }"
+	_ = Parse(input)
+	
+	// When implemented, would need Combinator field to distinguish sibling selectors
+	// For now, this might not parse correctly
+}
+
+func TestParseGeneralSiblingCombinator_Skipped(t *testing.T) {
+	t.Skip("General sibling combinator not implemented - CSS 3 Selectors")
+	// CSS 3 Selectors §8.3.2 General sibling combinator
+	// The general sibling combinator (~) selects all following siblings
+	
+	input := "h1 ~ p { color: gray; }"
+	_ = Parse(input)
+	
+	// When implemented, would need Combinator field for general sibling matching
+	// For now, this might not parse correctly
+}
+
+func TestParseAttributeSelectorMatching_Skipped(t *testing.T) {
+	t.Skip("Attribute selector matching not implemented - CSS 2.1 §5.8")
+	// CSS 2.1 §5.8 Attribute selectors
+	// While parsing is gracefully handled, actual matching is not implemented
+	// This test would verify that matching works correctly
+	
+	// The parser skips attribute selectors, but they should be parsed
+	// into the data structure and matched during style computation
+	input := `input[type="text"] { border: 1px solid black; }`
+	_ = Parse(input)
+	
+	// When implemented, SimpleSelector would have Attributes field
+	// For now, attribute selectors are skipped during parsing
+}
