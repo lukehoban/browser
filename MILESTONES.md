@@ -306,14 +306,18 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Fix failing tests
 
 ### Current Test Results:
-- **WPT CSS Tests**: 100% pass rate (11/11 tests) 🎉
+- **WPT CSS Tests**: 100% pass rate (30/30 tests) 🎉
 - **Unit Test Coverage**: 90%+ across all modules
 - **Test Categories Passing**:
-  - ✅ css-box (longhand properties): 100% (3/3 tests)
-  - ✅ css-box (shorthand properties): 100% (2/2 tests)
-  - ✅ css-cascade: 100% (2/2 tests)
-  - ✅ css-display: 100% (1/1 test)
-  - ✅ css-selectors: 100% (3/3 tests)
+  - ✅ css-borders: 100% (1/1 test)
+  - ✅ css-box: 100% (9/9 tests)
+  - ✅ css-cascade: 100% (3/3 tests)
+  - ✅ css-color: 100% (2/2 tests)
+  - ✅ css-display: 100% (2/2 tests)
+  - ✅ css-fonts: 100% (4/4 tests)
+  - ✅ css-inheritance: 100% (3/3 tests)
+  - ✅ css-selectors: 100% (5/5 tests)
+  - ✅ css-text-decor: 100% (1/1 test)
 
 ### Completed Features:
 

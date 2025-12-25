@@ -175,30 +175,65 @@ To view WPT test results from CI:
 
 | Category | Tests | Passed | Failed | Pass Rate |
 |----------|-------|--------|--------|-----------|
-| css-box (longhand) | 3 | 3 | 0 | 100% |
-| css-box (shorthand) | 2 | 2 | 0 | 100% |
-| css-cascade | 2 | 2 | 0 | 100% |
-| css-display | 1 | 1 | 0 | 100% |
-| css-selectors | 3 | 3 | 0 | 100% |
-| **Total** | **11** | **11** | **0** | **100%** 🎉 |
+| css-borders | 1 | 1 | 0 | 100% |
+| css-box | 9 | 9 | 0 | 100% |
+| css-cascade | 3 | 3 | 0 | 100% |
+| css-color | 2 | 2 | 0 | 100% |
+| css-display | 2 | 2 | 0 | 100% |
+| css-fonts | 4 | 4 | 0 | 100% |
+| css-inheritance | 3 | 3 | 0 | 100% |
+| css-selectors | 5 | 5 | 0 | 100% |
+| css-text-decor | 1 | 1 | 0 | 100% |
+| **Total** | **30** | **30** | **0** | **100%** 🎉 |
 
 ### Test Categories
 
-1. **css-box**: Box model tests (width, height, padding, margin)
-   - Longhand properties: ✅ Passing
-   - Shorthand properties: ✅ Passing (implemented!)
+1. **css-borders**: Border property tests
+   - border-color: ✅ Passing
+   - border-width with border-style: ✅ Passing
 
-2. **css-cascade**: Cascade and specificity tests
+2. **css-box**: Box model tests (width, height, padding, margin)
+   - Longhand properties: ✅ Passing
+   - Shorthand properties: ✅ Passing
+   - Combined box model: ✅ Passing
+   - Percentage widths: ✅ Passing
+   - Different padding values: ✅ Passing
+
+3. **css-cascade**: Cascade and specificity tests
    - Specificity calculation: ✅ Passing
    - ID vs class priority: ✅ Passing
+   - Multiple classes specificity: ✅ Passing
 
-3. **css-display**: Display property tests
+4. **css-color**: Color property tests
+   - Hex colors (#RRGGBB): ✅ Passing
+   - Named colors: ✅ Passing
+   - Text color: ✅ Passing
+
+5. **css-display**: Display property tests
    - Block display: ✅ Passing
+   - Table display: ✅ Passing
 
-4. **css-selectors**: Selector tests
+6. **css-fonts**: Font property tests
+   - font-size: ✅ Passing
+   - font-weight (bold): ✅ Passing
+   - font-style (italic): ✅ Passing
+   - Combined font properties: ✅ Passing
+
+7. **css-inheritance**: CSS inheritance tests
+   - color inheritance: ✅ Passing
+   - font-size inheritance: ✅ Passing
+   - font-weight inheritance: ✅ Passing
+
+8. **css-selectors**: Selector tests
    - Class selector: ✅ Passing
    - ID selector: ✅ Passing
    - Descendant combinator: ✅ Passing
+   - Element.class combined: ✅ Passing
+   - Element#id.class combined: ✅ Passing
+   - Multiple selectors (comma-separated): ✅ Passing
+
+9. **css-text-decor**: Text decoration tests
+   - text-decoration underline: ✅ Passing
 
 ### Adding New Tests
 
