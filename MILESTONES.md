@@ -116,18 +116,21 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Calculate selector specificity (CSS 2.1 §6.4.3)
 - [x] Implement cascade by specificity
 - [x] Basic style property application
+- [x] Inline style attribute support (CSS 2.1 §6.4.3) - December 2025
 
 ### Deliverables:
 - ✅ Style computation engine
 - ✅ Styled DOM tree with computed styles
+- ✅ Inline `style` attribute parsing and application
 
 ### Validation:
 - ✅ Correct selector matching
 - ✅ Proper cascade order by specificity
 - ✅ Descendant selectors work correctly
+- ✅ Inline styles override all CSS rules (highest specificity)
 
 ### Known Limitations:
-- ⚠️ No inheritance implementation
+- ⚠️ No inheritance implementation (partially complete - font properties inherit)
 - ⚠️ No `!important` support
 - ⚠️ No computed value calculation (values used as-is)
 
@@ -461,6 +464,7 @@ The browser can now load Hacker News from the network and render content with pr
 
 - [x] **CSS Inheritance** ✅ COMPLETE
   - [x] Inherit property values from parents
+  - [x] Inline style attribute support (CSS 2.1 §6.4.3) - December 2025
   - [ ] Computed value calculation (partially complete)
 
 - [x] **Network Support** ✅ COMPLETE
@@ -476,6 +480,7 @@ The browser successfully loads and renders Hacker News from the network with exc
 - Tables use content-based column sizing
 - Text supports variable font sizes with bold/italic/underline styles
 - HTML alignment attributes (`align`, `valign`, `<center>`) work correctly
+- **Inline style attributes** (`style="color: red"`) now supported with highest specificity
 
 Minor visual differences remain due to missing CSS properties (background-image, line-height, font-family).
 
@@ -493,5 +498,5 @@ Minor visual differences remain due to missing CSS properties (background-image,
 
 ## Current Status
 **Completed**: Milestones 1-9 (Foundation through Network Support, including Testing & Validation)  
-**Recent Update**: Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)  
+**Recent Update**: Inline style attribute support added - CSS 2.1 §6.4.3 (December 2025)  
 **Last Updated**: 2025-12-25
