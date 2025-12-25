@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CSS Selectors: General sibling combinator</title>
+<link rel="match" href="general-sibling-001-ref.html">
+<style>
+h1 ~ p {
+    width: 100px;
+    height: 50px;
+    background: green;
+}
+p {
+    width: 100px;
+    height: 50px;
+    background: red;
+}
+</style>
+</head>
+<body>
+<div>
+    <h1>Title</h1>
+    <p></p>
+    <div></div>
+    <p></p>
+</div>
+</body>
+</html>
