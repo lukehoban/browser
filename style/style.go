@@ -52,8 +52,24 @@ func (s Specificity) Compare(other Specificity) int {
 
 // StyleTree computes styles for a DOM tree using a stylesheet.
 // CSS 2.1 §6 Assigning property values
-func StyleTree(root *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
-	return styleNode(root, stylesheet, make(map[string]string))
+// CSS 2.1 §6.4.4: User agent -> Author stylesheet cascade
+func StyleTree(root *dom.Node, authorStylesheet *css.Stylesheet) *StyledNode {
+	// CSS 2.1 §6.4.1: Cascading order - User agent styles come first
+	// Merge user-agent stylesheet with author stylesheet
+	mergedStylesheet := &css.Stylesheet{
+		Rules: make([]*css.Rule, 0),
+	}
+	
+	// Add user-agent styles first (lower specificity in cascade)
+	userAgentStylesheet := DefaultUserAgentStylesheet()
+	mergedStylesheet.Rules = append(mergedStylesheet.Rules, userAgentStylesheet.Rules...)
+	
+	// Add author styles second (higher specificity in cascade)
+	if authorStylesheet != nil {
+		mergedStylesheet.Rules = append(mergedStylesheet.Rules, authorStylesheet.Rules...)
+	}
+	
+	return styleNode(root, mergedStylesheet, make(map[string]string))
 }
 
 // styleNode computes styles for a single node and its children.

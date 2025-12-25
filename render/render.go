@@ -93,6 +93,66 @@ var defaultFontStyle = FontStyle{
 	Decoration: "none",
 }
 
+// MeasureText measures the dimensions of text using TrueType fonts.
+// This provides accurate width and height for layout calculations.
+// Returns (width, height) in pixels.
+func MeasureText(text string, style FontStyle) (float64, float64) {
+	if text == "" {
+		return 0, 0
+	}
+	
+	// Load the built-in Go fonts
+	err := loadGoFonts()
+	if err != nil {
+		// Fallback to basicfont dimensions with scaling
+		face := basicfont.Face7x13
+		scale := style.Size / css.BaseFontHeight
+		width := float64(len(text)*face.Advance) * scale
+		height := float64(face.Height) * scale
+		return width, height
+	}
+	
+	// Select the appropriate Go font based on weight and style
+	var selectedFont *opentype.Font
+	if style.Weight == "bold" && style.Style == "italic" {
+		selectedFont = goBoldItalicFont
+	} else if style.Weight == "bold" {
+		selectedFont = goBoldFont
+	} else if style.Style == "italic" {
+		selectedFont = goItalicFont
+	} else {
+		selectedFont = goRegularFont
+	}
+	
+	// Create face with proper DPI and size
+	face, err := opentype.NewFace(selectedFont, &opentype.FaceOptions{
+		Size:    style.Size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		// Fallback to basicfont dimensions with scaling
+		basicFace := basicfont.Face7x13
+		scale := style.Size / css.BaseFontHeight
+		width := float64(len(text)*basicFace.Advance) * scale
+		height := float64(basicFace.Height) * scale
+		return width, height
+	}
+	defer face.Close()
+	
+	// Measure text using font drawer
+	metrics := face.Metrics()
+	drawer := &font.Drawer{
+		Face: face,
+	}
+	
+	width := drawer.MeasureString(text).Ceil()
+	// Use line-height for height (ascent + descent gives the font's natural line height)
+	height := (metrics.Ascent + metrics.Descent).Ceil()
+	
+	return float64(width), float64(height)
+}
+
 // Canvas represents the rendering surface.
 type Canvas struct {
 	Width      int
