@@ -593,10 +593,11 @@ func parseFontSize(value string) float64 {
 func parseColor(value string) color.RGBA {
 	value = strings.TrimSpace(strings.ToLower(value))
 
-	// CSS 2.1 §4.3.6: Named colors (16 basic colors)
-	// CSS Color Module Level 3: Extended color keywords (147 colors)
+	// CSS 2.1 §4.3.6: Named colors
+	// CSS 2.1 defines 17 basic color keywords (including orange added in CSS 2.1)
+	// CSS Color Module Level 3: Extended color keywords (147 total colors)
 	namedColors := map[string]color.RGBA{
-		// CSS 2.1 Basic 16 colors (SVG 1.0 color keywords)
+		// CSS 2.1 Basic 17 colors
 		"black":   {0, 0, 0, 255},
 		"silver":  {192, 192, 192, 255},
 		"gray":    {128, 128, 128, 255},
@@ -616,7 +617,7 @@ func parseColor(value string) color.RGBA {
 		"teal":    {0, 128, 128, 255},
 		"aqua":    {0, 255, 255, 255},
 		"cyan":    {0, 255, 255, 255},
-		"orange":  {255, 165, 0, 255},
+		"orange":  {255, 165, 0, 255}, // Added in CSS 2.1
 		
 		// Extended colors commonly used in web pages
 		"lightgray":      {211, 211, 211, 255},

@@ -116,7 +116,7 @@ func TestParseColor(t *testing.T) {
 		input    string
 		expected color.RGBA
 	}{
-		// CSS 2.1 basic 16 colors
+		// CSS 2.1 basic 17 colors (including orange added in CSS 2.1)
 		{"black", color.RGBA{0, 0, 0, 255}},
 		{"white", color.RGBA{255, 255, 255, 255}},
 		{"red", color.RGBA{255, 0, 0, 255}},
