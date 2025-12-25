@@ -343,3 +343,39 @@ func Parse(input string) *Stylesheet {
 	parser := NewParser(input)
 	return parser.Parse()
 }
+
+// ParseInlineStyle parses inline style declarations from a style attribute.
+// CSS 2.1 §6.4.3: Inline styles have specificity A=1, higher than any other selector.
+// Unlike regular CSS rules, inline styles don't have selectors or braces - just declarations.
+func ParseInlineStyle(styleAttr string) []*Declaration {
+	if styleAttr == "" {
+		return nil
+	}
+	
+	parser := NewParser(styleAttr)
+	declarations := make([]*Declaration, 0)
+	
+	for {
+		parser.tokenizer.SkipWhitespace()
+		
+		token := parser.tokenizer.Peek()
+		if token.Type == EOFToken {
+			break
+		}
+		
+		decl := parser.parseDeclaration()
+		if decl != nil {
+			declarations = append(declarations, decl)
+		}
+		
+		parser.tokenizer.SkipWhitespace()
+		
+		// Expect ';' or EOF
+		token = parser.tokenizer.Peek()
+		if token.Type == SemicolonToken {
+			parser.tokenizer.Next()
+		}
+	}
+	
+	return declarations
+}

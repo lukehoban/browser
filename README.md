@@ -72,6 +72,12 @@ go build ./cmd/browser
 ./browser -output output.png -width 1024 -height 768 test/hackernews.html
 ```
 
+## Screenshot
+
+Latest Hacker News render (1024x768):
+
+![Hacker News Rendering](./hackernews_screenshot.png)
+
 ### Testing
 
 ```bash

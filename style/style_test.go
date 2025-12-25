@@ -834,3 +834,210 @@ t.Errorf("Got %d styles, expected %d", len(styles), len(tt.expected))
 })
 }
 }
+
+// TestInlineStyles tests that inline style attributes are applied correctly.
+// CSS 2.1 §6.4.3: Inline styles have the highest specificity.
+func TestInlineStyles(t *testing.T) {
+	tests := []struct {
+		name         string
+		html         *dom.Node
+		css          *css.Stylesheet
+		expectedDiv  map[string]string
+	}{
+		{
+			name: "inline style with no CSS rules",
+			html: func() *dom.Node {
+				doc := dom.NewDocument()
+				div := dom.NewElement("div")
+				div.SetAttribute("style", "color: red; font-size: 20px")
+				doc.AppendChild(div)
+				return doc
+			}(),
+			css: &css.Stylesheet{Rules: []*css.Rule{}},
+			expectedDiv: map[string]string{
+				"color":     "red",
+				"font-size": "20px",
+			},
+		},
+		{
+			name: "inline style overrides CSS rule",
+			html: func() *dom.Node {
+				doc := dom.NewDocument()
+				div := dom.NewElement("div")
+				div.SetAttribute("style", "color: red")
+				doc.AppendChild(div)
+				return doc
+			}(),
+			css: &css.Stylesheet{
+				Rules: []*css.Rule{
+					{
+						Selectors: []*css.Selector{
+							{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+						},
+						Declarations: []*css.Declaration{
+							{Property: "color", Value: "blue"},
+						},
+					},
+				},
+			},
+			expectedDiv: map[string]string{
+				"color": "red", // Inline style wins
+			},
+		},
+		{
+			name: "inline style overrides ID selector",
+			html: func() *dom.Node {
+				doc := dom.NewDocument()
+				div := dom.NewElement("div")
+				div.SetAttribute("id", "main")
+				div.SetAttribute("style", "color: red")
+				doc.AppendChild(div)
+				return doc
+			}(),
+			css: &css.Stylesheet{
+				Rules: []*css.Rule{
+					{
+						Selectors: []*css.Selector{
+							{Simple: []*css.SimpleSelector{{ID: "main"}}},
+						},
+						Declarations: []*css.Declaration{
+							{Property: "color", Value: "blue"},
+						},
+					},
+				},
+			},
+			expectedDiv: map[string]string{
+				"color": "red", // Inline style wins over ID selector
+			},
+		},
+		{
+			name: "inline style combines with CSS rules",
+			html: func() *dom.Node {
+				doc := dom.NewDocument()
+				div := dom.NewElement("div")
+				div.SetAttribute("style", "color: red")
+				doc.AppendChild(div)
+				return doc
+			}(),
+			css: &css.Stylesheet{
+				Rules: []*css.Rule{
+					{
+						Selectors: []*css.Selector{
+							{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+						},
+						Declarations: []*css.Declaration{
+							{Property: "font-size", Value: "16px"},
+						},
+					},
+				},
+			},
+			expectedDiv: map[string]string{
+				"color":     "red",  // From inline style
+				"font-size": "16px", // From CSS rule
+			},
+		},
+		{
+			name: "inline style with shorthand property",
+			html: func() *dom.Node {
+				doc := dom.NewDocument()
+				div := dom.NewElement("div")
+				div.SetAttribute("style", "margin: 10px 20px")
+				doc.AppendChild(div)
+				return doc
+			}(),
+			css: &css.Stylesheet{Rules: []*css.Rule{}},
+			expectedDiv: map[string]string{
+				"margin-top":    "10px",
+				"margin-right":  "20px",
+				"margin-bottom": "10px",
+				"margin-left":   "20px",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			styledTree := StyleTree(tt.html, tt.css)
+			
+			// Get the div (first child of document)
+			if len(styledTree.Children) == 0 {
+				t.Fatal("Expected at least one child in styled tree")
+			}
+			divStyled := styledTree.Children[0]
+
+			// Check expected styles
+			for prop, expectedVal := range tt.expectedDiv {
+				if actualVal, ok := divStyled.Styles[prop]; !ok {
+					t.Errorf("Expected style %s to be set", prop)
+				} else if actualVal != expectedVal {
+					t.Errorf("Style %s = %v, expected %v", prop, actualVal, expectedVal)
+				}
+			}
+		})
+	}
+}
+
+// TestInlineStyleSpecificity tests that inline styles have higher specificity than any selector.
+// CSS 2.1 §6.4.3: Inline style declarations have the highest specificity (A=1).
+func TestInlineStyleSpecificity(t *testing.T) {
+	doc := dom.NewDocument()
+	div := dom.NewElement("div")
+	div.SetAttribute("id", "unique")
+	div.SetAttribute("class", "special highlight")
+	div.SetAttribute("style", "color: red")
+	doc.AppendChild(div)
+
+	// Create stylesheet with rules of varying specificity
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				// Element selector (specificity: 0,0,0,1)
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "blue"},
+				},
+			},
+			{
+				// Class selector (specificity: 0,0,1,0)
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{Classes: []string{"special"}}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "green"},
+				},
+			},
+			{
+				// ID selector (specificity: 0,1,0,0)
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{ID: "unique"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "yellow"},
+				},
+			},
+			{
+				// Combined selector (specificity: 0,1,2,1)
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{
+						TagName: "div",
+						ID:      "unique",
+						Classes: []string{"special", "highlight"},
+					}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "purple"},
+				},
+			},
+		},
+	}
+
+	styledTree := StyleTree(doc, stylesheet)
+	divStyled := styledTree.Children[0]
+
+	// Inline style should win over all CSS rules
+	if divStyled.Styles["color"] != "red" {
+		t.Errorf("Expected inline style 'red' to win, got %v", divStyled.Styles["color"])
+	}
+}
