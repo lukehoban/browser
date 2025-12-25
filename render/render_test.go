@@ -116,17 +116,36 @@ func TestParseColor(t *testing.T) {
 		input    string
 		expected color.RGBA
 	}{
+		// CSS 2.1 basic colors
 		{"black", color.RGBA{0, 0, 0, 255}},
 		{"white", color.RGBA{255, 255, 255, 255}},
 		{"red", color.RGBA{255, 0, 0, 255}},
 		{"blue", color.RGBA{0, 0, 255, 255}},
+		{"green", color.RGBA{0, 128, 0, 255}},
+		{"yellow", color.RGBA{255, 255, 0, 255}},
+		{"navy", color.RGBA{0, 0, 128, 255}},
+		{"purple", color.RGBA{128, 0, 128, 255}},
+		
+		// Extended color names (CSS Color Module Level 3)
+		{"lightgray", color.RGBA{211, 211, 211, 255}},
+		{"lightgrey", color.RGBA{211, 211, 211, 255}},
+		{"darkgray", color.RGBA{169, 169, 169, 255}},
+		{"darkgrey", color.RGBA{169, 169, 169, 255}},
+		{"lightblue", color.RGBA{173, 216, 230, 255}},
+		{"darkblue", color.RGBA{0, 0, 139, 255}},
+		{"lightgreen", color.RGBA{144, 238, 144, 255}},
+		{"darkgreen", color.RGBA{0, 100, 0, 255}},
+		
+		// Hex colors
 		{"#FF0000", color.RGBA{255, 0, 0, 255}},
 		{"#00FF00", color.RGBA{0, 255, 0, 255}},
 		{"#0000FF", color.RGBA{0, 0, 255, 255}},
 		{"#f00", color.RGBA{255, 0, 0, 255}},
 		{"#0f0", color.RGBA{0, 255, 0, 255}},
 		{"#00f", color.RGBA{0, 0, 255, 255}},
-		{"unknown", color.RGBA{0, 0, 0, 255}}, // defaults to black
+		
+		// Unknown color defaults to black
+		{"unknown", color.RGBA{0, 0, 0, 255}},
 	}
 
 	for _, tt := range tests {
