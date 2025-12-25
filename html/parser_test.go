@@ -176,12 +176,9 @@ func TestParseMixedContent(t *testing.T) {
 	}
 }
 
-// SKIPPED TESTS FOR KNOWN BROKEN/UNIMPLEMENTED FEATURES
-// These tests document known limitations that need to be implemented.
-// See MILESTONES.md for more details.
+// Tests for character reference decoding (HTML5 §12.2.4.2)
 
-func TestParseCharacterReferences_Skipped(t *testing.T) {
-	t.Skip("Character references not implemented - HTML5 §12.2.4.2")
+func TestParseCharacterReferences(t *testing.T) {
 	// HTML5 §12.2.4.2 Character reference state
 	// Character references like &amp;, &lt;, &gt;, &nbsp; should be decoded
 	
@@ -200,8 +197,7 @@ func TestParseCharacterReferences_Skipped(t *testing.T) {
 	}
 }
 
-func TestParseNumericCharacterReferences_Skipped(t *testing.T) {
-	t.Skip("Numeric character references not implemented - HTML5 §12.2.4.3")
+func TestParseNumericCharacterReferences(t *testing.T) {
 	// HTML5 §12.2.4.3 Numeric character reference state
 	// Both decimal (&#NNN;) and hexadecimal (&#xHHH;) forms should be supported
 	
@@ -213,6 +209,21 @@ func TestParseNumericCharacterReferences_Skipped(t *testing.T) {
 	expected := "<>©" // <, >, copyright symbol
 	if text.Data != expected {
 		t.Errorf("Expected text '%s', got '%s'", expected, text.Data)
+	}
+}
+
+func TestParseNbsp(t *testing.T) {
+	// HTML5 §12.2.4.4: Named character reference - non-breaking space
+	// &nbsp; should be decoded to Unicode non-breaking space (U+00A0)
+	
+	input := "<div>Hello&nbsp;World</div>"
+	doc := Parse(input)
+	
+	div := doc.Children[0]
+	text := div.Children[0]
+	expected := "Hello\u00A0World"
+	if text.Data != expected {
+		t.Errorf("Expected text with non-breaking space, got '%s'", text.Data)
 	}
 }
 

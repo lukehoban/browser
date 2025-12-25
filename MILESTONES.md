@@ -53,7 +53,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Preserve text content and attributes
 
 ### Known Limitations:
-- ⚠️ No character reference support (`&amp;`, `&lt;`, etc.)
+- ✅ Character reference support (`&amp;`, `&lt;`, `&nbsp;`, etc.) - COMPLETE (December 2025)
 - ⚠️ Simplified error recovery
 - ⚠️ No script/style CDATA sections
 - ⚠️ No namespace support
@@ -176,6 +176,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Render text content
 - [x] Output to PNG image format
 - [x] Font size support (CSS 2.1 §15.7)
+- [x] Font size pt unit support (CSS 2.1 §4.3.2) - December 2025
 - [x] Font weight support - bold (CSS 2.1 §15.6)
 - [x] Font style support - italic (CSS 2.1 §15.7)
 - [x] Text decoration support - underline (CSS 2.1 §16.3.1)
@@ -189,6 +190,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Variable font sizes (scaled from base font)
 - ✅ Bold, italic, and underlined text rendering
 - ✅ Font property inheritance from parent to child elements
+- ✅ Font size parsing for px, pt units and named sizes
 
 ### Validation:
 - ✅ Rendered pages show text content
@@ -196,6 +198,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Text is readable with proper color styling
 - ✅ PNG output works correctly
 - ✅ Different font sizes render correctly (10px, 14px, 20px, 28px)
+- ✅ Point units (10pt, 12pt) convert correctly to pixels at 96 DPI
 - ✅ Bold text appears bolder/thicker
 - ✅ Italic text appears slanted
 - ✅ Underlined text has line below it
