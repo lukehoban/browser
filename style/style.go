@@ -50,15 +50,35 @@ func (s Specificity) Compare(other Specificity) int {
 // StyleTree computes styles for a DOM tree using a stylesheet.
 // CSS 2.1 §6 Assigning property values
 func StyleTree(root *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
-	return styleNode(root, stylesheet)
+	return styleNode(root, stylesheet, make(map[string]string))
 }
 
 // styleNode computes styles for a single node and its children.
-func styleNode(node *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
+// CSS 2.1 §6.2 Inheritance
+// Font properties are inherited from parent to child
+func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[string]string) *StyledNode {
 	styled := &StyledNode{
 		Node:     node,
 		Styles:   make(map[string]string),
 		Children: make([]*StyledNode, 0),
+	}
+
+	// Inherit font properties from parent (CSS 2.1 §6.2)
+	// These properties are inherited by default
+	inheritedProps := []string{
+		"color",
+		"font-size",
+		"font-family",
+		"font-weight",
+		"font-style",
+		"text-decoration",
+		"line-height",
+	}
+	
+	for _, prop := range inheritedProps {
+		if val, ok := parentStyles[prop]; ok {
+			styled.Styles[prop] = val
+		}
 	}
 
 	// Only compute styles for element nodes
@@ -79,9 +99,9 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
 		}
 	}
 
-	// Recursively style children
+	// Recursively style children, passing this node's styles as parent styles
 	for _, child := range node.Children {
-		styledChild := styleNode(child, stylesheet)
+		styledChild := styleNode(child, stylesheet, styled.Styles)
 		styled.Children = append(styled.Children, styledChild)
 	}
 

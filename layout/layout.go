@@ -18,6 +18,12 @@ import (
 
 // Table layout constants
 const (
+	// baseFontHeight is the height in pixels of basicfont.Face7x13
+	// This is used for text dimension calculations throughout the layout engine
+	// CSS 2.1 §15.7: The default 'medium' font size is typically 16px, but we use
+	// 13px to match the available basicfont.Face7x13 from golang.org/x/image/font/basicfont
+	baseFontHeight = 13.0
+	
 	// maxColumnWidth is the maximum width any table column can have.
 	// This prevents extremely wide content from creating unusable layouts.
 	// CSS 2.1 §17.5.2.2 does not specify a maximum, but practical implementations
@@ -389,19 +395,65 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 		return
 	}
 
-	// Calculate text dimensions using basicfont.Face7x13
+	// Calculate text dimensions using basicfont.Face7x13 as base
 	// Note: For basicfont.Face7x13, all characters have fixed width (Advance)
 	// For more accurate measurement, we could use font.Drawer.MeasureString()
 	// but basicfont is monospaced so character count * Advance is accurate
 	face := basicfont.Face7x13
-	width := float64(len(text) * face.Advance)
-	height := float64(face.Height)
+	
+	// Get font size from styles (CSS 2.1 §15.7)
+	fontSize := extractFontSize(box.StyledNode.Styles)
+	scale := fontSize / baseFontHeight
+	
+	width := float64(len(text)*face.Advance) * scale
+	height := float64(face.Height) * scale
 
 	// Position the text node
 	box.Dimensions.Content.X = containingBlock.Content.X
 	box.Dimensions.Content.Y = containingBlock.Content.Y + containingBlock.Content.Height
 	box.Dimensions.Content.Width = width
 	box.Dimensions.Content.Height = height
+}
+
+// extractFontSize extracts the font-size from CSS styles and returns it in pixels.
+// CSS 2.1 §15.7 Font size: the 'font-size' property
+func extractFontSize(styles map[string]string) float64 {
+	fontSize := styles["font-size"]
+	if fontSize == "" {
+		return baseFontHeight // Default font size
+	}
+	
+	fontSize = strings.TrimSpace(strings.ToLower(fontSize))
+	
+	// Handle pixel values (e.g., "14px")
+	if strings.HasSuffix(fontSize, "px") {
+		fontSize = strings.TrimSuffix(fontSize, "px")
+		if size, err := strconv.ParseFloat(fontSize, 64); err == nil && size > 0 {
+			return size
+		}
+	}
+	
+	// Handle plain numbers (treat as pixels)
+	if size, err := strconv.ParseFloat(fontSize, 64); err == nil && size > 0 {
+		return size
+	}
+	
+	// Handle named sizes (CSS 2.1 §15.7)
+	namedSizes := map[string]float64{
+		"xx-small": 9.0,
+		"x-small":  10.0,
+		"small":    12.0,
+		"medium":   baseFontHeight,
+		"large":    16.0,
+		"x-large":  20.0,
+		"xx-large": 24.0,
+	}
+	
+	if size, ok := namedSizes[fontSize]; ok {
+		return size
+	}
+	
+	return baseFontHeight // Default font size
 }
 
 // layoutTable lays out a table element.
@@ -587,9 +639,11 @@ func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 	for _, child := range layoutBox.Children {
 		if child.StyledNode != nil && child.StyledNode.Node != nil {
 			if child.StyledNode.Node.Type == dom.TextNode {
-				// Estimate text width
+				// Estimate text width accounting for font size
 				text := child.StyledNode.Node.Data
-				textWidth := float64(len(text)) * charWidth
+				fontSize := extractFontSize(child.StyledNode.Styles)
+				scale := fontSize / baseFontHeight
+				textWidth := float64(len(text)) * charWidth * scale
 				width += textWidth
 			} else {
 				// Recursively estimate child width
