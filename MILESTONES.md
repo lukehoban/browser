@@ -35,6 +35,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
   - [x] Data state
   - [x] Tag open/close states
   - [x] Basic character handling
+  - [x] Character entity decoding (HTML5 §12.2.4.2) - December 2025
 - [x] Build DOM tree structure
   - [x] Element nodes
   - [x] Text nodes
@@ -46,14 +47,16 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ HTML tokenizer that produces tokens from HTML strings
 - ✅ DOM tree builder that constructs a tree from tokens
 - ✅ Test suite validating parsing of basic HTML documents
+- ✅ Character entity decoding (&nbsp;, &amp;, &lt;, &gt;, &#NNN;, &#xHHH;)
 
 ### Validation:
 - ✅ Parse simple HTML documents successfully
 - ✅ Handle nested elements correctly
 - ✅ Preserve text content and attributes
+- ✅ Decode named character entities (&nbsp;, &amp;, etc.)
+- ✅ Decode numeric character entities (&#60;, &#x3C;, etc.)
 
 ### Known Limitations:
-- ✅ Character reference support (`&amp;`, `&lt;`, `&nbsp;`, etc.) - COMPLETE (December 2025)
 - ⚠️ Simplified error recovery
 - ⚠️ No script/style CDATA sections
 - ⚠️ No namespace support
@@ -143,16 +146,19 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Block formatting context
 - [x] Normal flow layout
 - [x] Width and height calculations (auto, px, %)
+- [x] Default display:none for non-rendered elements (head, title, meta, link, style, script) - December 2025
 
 ### Deliverables:
 - ✅ Layout engine producing positioned boxes
 - ✅ Support for block-level elements
 - ✅ Box model with content, padding, border, margin
+- ✅ Non-rendered elements (head, title, script, etc.) correctly hidden
 
 ### Validation:
 - ✅ Correct box dimensions
 - ✅ Proper positioning of elements
 - ✅ Margins, padding, borders applied correctly
+- ✅ Head/title/meta/script elements not rendered
 
 ### Known Limitations:
 - ⚠️ Inline layout implemented (December 2025) but lacks line wrapping and text alignment controls
@@ -410,6 +416,7 @@ The browser can now load Hacker News from the network and render content with pr
   - Maximum column width capping to prevent overflow
 - [x] **Basic Font Rendering** ✅ COMPLETE
   - Variable font sizes (CSS font-size property)
+  - Font size pt unit support (CSS 2.1 §4.3.2) - December 2025
   - Bold text rendering (CSS font-weight property)
   - Italic text rendering (CSS font-style property)
   - Text underline (CSS text-decoration property)
@@ -420,6 +427,10 @@ The browser can now load Hacker News from the network and render content with pr
   - `<center>` element support for centering content
   - Rank numbers properly right-aligned
   - Vote arrows properly centered
+- [x] **HTML Character Entities** ✅ COMPLETE (December 2025)
+  - Named entities (&nbsp;, &amp;, &lt;, &gt;, etc.)
+  - Numeric entities (&#60;, &#x3C;, etc.)
+  - Non-breaking spaces render correctly
 
 ### Required Features for Full Fidelity:
 - [ ] **Text Layout Improvements**
@@ -458,7 +469,15 @@ The browser can now load Hacker News from the network and render content with pr
   - [x] Load remote images
 
 ### Current Status:
-The browser successfully loads and renders Hacker News from the network with excellent visual fidelity. Tables use content-based column sizing, text supports variable font sizes with bold/italic/underline styles, and HTML alignment attributes (`align`, `valign`, `<center>`) work correctly. Minor visual differences exist due to missing CSS properties (background-image, line-height, font-family).
+The browser successfully loads and renders Hacker News from the network with excellent visual fidelity. Key improvements in December 2025 include:
+- HTML character entities (&nbsp;, &amp;, etc.) now decode correctly
+- Font size pt units (10pt, 7pt) are properly converted to pixels
+- Non-rendered elements (head, title, script) are correctly hidden
+- Tables use content-based column sizing
+- Text supports variable font sizes with bold/italic/underline styles
+- HTML alignment attributes (`align`, `valign`, `<center>`) work correctly
+
+Minor visual differences remain due to missing CSS properties (background-image, line-height, font-family).
 
 ---
 
@@ -474,5 +493,5 @@ The browser successfully loads and renders Hacker News from the network with exc
 
 ## Current Status
 **Completed**: Milestones 1-9 (Foundation through Network Support, including Testing & Validation)  
-**Recent Update**: Added HTML alignment attribute support (align, valign) and `<center>` element (December 2025)  
+**Recent Update**: Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)  
 **Last Updated**: 2025-12-25

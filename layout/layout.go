@@ -137,6 +137,10 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 		case "a", "span", "b", "strong", "i", "em", "font", "code", "small", "big",
 			"abbr", "cite", "kbd", "samp", "var", "sub", "sup", "mark", "u", "s", "del", "ins":
 			display = "inline"
+		// HTML5 §10.3.1: Elements that should not be rendered
+		// These elements have display:none in the default UA stylesheet
+		case "head", "title", "meta", "link", "style", "script", "noscript", "base":
+			display = "none"
 		}
 	}
 
