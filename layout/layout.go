@@ -214,6 +214,14 @@ func (box *LayoutBox) layoutBlock(containingBlock Dimensions) {
 
 	// Calculate height
 	box.calculateBlockHeight()
+
+	// Handle <center> element - center children horizontally
+	// HTML 4.01 §15.1.2: The CENTER element centers content
+	if box.StyledNode != nil && box.StyledNode.Node != nil && 
+	   box.StyledNode.Node.Type == dom.ElementNode && 
+	   box.StyledNode.Node.Data == "center" {
+		box.applyHorizontalAlignment("center")
+	}
 }
 
 // calculateBlockWidth calculates the width of a block box.
@@ -890,5 +898,101 @@ func (box *LayoutBox) layoutTableCell(containingBlock Dimensions) {
 		if h := parseLength(height, 0); h >= 0 {
 			box.Dimensions.Content.Height = h
 		}
+	}
+
+	// Apply HTML align attribute for horizontal alignment
+	// HTML 4.01 §11.3.2: The align attribute specifies horizontal alignment
+	// Supported values: left, center, right
+	if align := box.StyledNode.Node.GetAttribute("align"); align != "" {
+		box.applyHorizontalAlignment(align)
+	}
+
+	// Apply HTML valign attribute for vertical alignment
+	// HTML 4.01 §11.3.2: The valign attribute specifies vertical alignment
+	// Supported values: top, middle, bottom
+	if valign := box.StyledNode.Node.GetAttribute("valign"); valign != "" {
+		box.applyVerticalAlignment(valign)
+	}
+}
+
+// applyHorizontalAlignment adjusts child positions based on HTML align attribute.
+// HTML 4.01 §11.3.2: The align attribute specifies horizontal alignment in table cells.
+func (box *LayoutBox) applyHorizontalAlignment(align string) {
+	align = strings.ToLower(strings.TrimSpace(align))
+	
+	if len(box.Children) == 0 {
+		return
+	}
+	
+	// Calculate the total width of all children
+	totalChildWidth := 0.0
+	for _, child := range box.Children {
+		totalChildWidth += child.marginBox().Width
+	}
+	
+	// Calculate available space
+	availableSpace := box.Dimensions.Content.Width - totalChildWidth
+	
+	if availableSpace <= 0 {
+		return // No space to align
+	}
+	
+	var offset float64
+	switch align {
+	case "right":
+		offset = availableSpace
+	case "center":
+		offset = availableSpace / 2.0
+	case "left":
+		// Default, no offset needed
+		offset = 0
+	default:
+		return // Unknown alignment, do nothing
+	}
+	
+	// Adjust X position of all children
+	for _, child := range box.Children {
+		child.Dimensions.Content.X += offset
+	}
+}
+
+// applyVerticalAlignment adjusts child positions based on HTML valign attribute.
+// HTML 4.01 §11.3.2: The valign attribute specifies vertical alignment in table cells.
+func (box *LayoutBox) applyVerticalAlignment(valign string) {
+	valign = strings.ToLower(strings.TrimSpace(valign))
+	
+	if len(box.Children) == 0 {
+		return
+	}
+	
+	// Calculate the total height of all children
+	totalChildHeight := 0.0
+	for _, child := range box.Children {
+		totalChildHeight += child.marginBox().Height
+	}
+	
+	// Calculate available space
+	availableSpace := box.Dimensions.Content.Height - totalChildHeight
+	
+	if availableSpace <= 0 {
+		return // No space to align
+	}
+	
+	var offset float64
+	switch valign {
+	case "bottom":
+		offset = availableSpace
+	case "middle":
+		offset = availableSpace / 2.0
+	case "top":
+		// Default, no offset needed
+		offset = 0
+	default:
+		return // Unknown alignment, do nothing
+	}
+	
+	// Adjust Y position of all children
+	for _, child := range box.Children {
+		child.Dimensions.Content.Y += offset
 	}
 }
