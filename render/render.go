@@ -503,6 +503,15 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 		return
 	}
 
+	// CSS 2.1 §16.6.1: Whitespace processing
+	// Collapse sequences of whitespace (spaces, tabs, newlines) into a single space
+	// This is the default behavior for normal text (not pre-formatted)
+	text = collapseWhitespace(text)
+	
+	if text == "" {
+		return
+	}
+
 	// Get text color from styles (default to black)
 	textColor := parseColor(box.StyledNode.Styles["color"])
 	if textColor == (color.RGBA{0, 0, 0, 0}) {
@@ -680,6 +689,45 @@ func parseHexColor(hex string) color.RGBA {
 	}
 
 	return color.RGBA{r, g, b, 255}
+}
+
+// collapseWhitespace collapses consecutive whitespace characters into a single space.
+// CSS 2.1 §16.6.1: The white-space property
+// For normal text (white-space: normal, which is the default):
+// - Sequences of whitespace (space, tab, newline, carriage return) are collapsed into a single space
+// - Leading and trailing whitespace is removed
+func collapseWhitespace(text string) string {
+	if text == "" {
+		return text
+	}
+	
+	var result strings.Builder
+	lastWasSpace := true // Start as true to trim leading whitespace
+	
+	for _, ch := range text {
+		// Check if character is whitespace (space, tab, newline, carriage return)
+		isSpace := ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
+		
+		if isSpace {
+			// Only add a space if we haven't just added one
+			if !lastWasSpace {
+				result.WriteRune(' ')
+				lastWasSpace = true
+			}
+		} else {
+			// Regular character - add it
+			result.WriteRune(ch)
+			lastWasSpace = false
+		}
+	}
+	
+	// Trim trailing whitespace
+	output := result.String()
+	if lastWasSpace && len(output) > 0 {
+		output = output[:len(output)-1]
+	}
+	
+	return output
 }
 
 // renderImage renders an image element if present.
