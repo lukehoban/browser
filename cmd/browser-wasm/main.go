@@ -34,7 +34,19 @@ func renderHTML(this js.Value, args []js.Value) interface{} {
 	width := args[1].Int()
 	height := args[2].Int()
 
-	// Parse HTML
+	// Validate dimensions
+	if width <= 0 || height <= 0 {
+		return map[string]interface{}{
+			"error": "Width and height must be positive",
+		}
+	}
+	if width > 10000 || height > 10000 {
+		return map[string]interface{}{
+			"error": "Width and height must not exceed 10000 pixels",
+		}
+	}
+
+	// Parse HTML (html.Parse doesn't return errors, it's resilient)
 	doc := html.Parse(htmlContent)
 
 	// Extract CSS from <style> tags
@@ -105,6 +117,6 @@ func main() {
 	// Signal that Go is ready
 	js.Global().Set("goReady", true)
 
-	// Keep the Go program running
-	<-make(chan bool)
+	// Keep the Go program running indefinitely
+	select {}
 }

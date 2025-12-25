@@ -288,8 +288,19 @@
                 // Call the Go function
                 const result = renderHTML(htmlInput, width, height);
 
+                // Validate result structure
+                if (!result || typeof result !== 'object') {
+                    setStatus('Error: Invalid response from WASM module', 'error');
+                    return;
+                }
+
                 if (result.error) {
                     setStatus('Error: ' + result.error, 'error');
+                    return;
+                }
+
+                if (!result.image) {
+                    setStatus('Error: No image data returned', 'error');
                     return;
                 }
 
