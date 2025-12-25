@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>CSS Selectors: Child combinator</title>
+<link rel="match" href="child-combinator-001-ref.html">
+<style>
+div > p {
+    width: 100px;
+    height: 100px;
+    background: green;
+}
+</style>
+</head>
+<body>
+<div>
+    <p></p>
+    <span>
+        <p></p>
+    </span>
+</div>
+</body>
+</html>
