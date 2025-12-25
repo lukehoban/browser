@@ -17,18 +17,22 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - **Network support**: Load pages via HTTP/HTTPS
 - **External CSS**: Fetch and apply stylesheets from `<link>` tags
 - **Network images**: Load images from remote URLs
+- **WebAssembly**: Run the browser entirely in a web client
 
 ## Project Structure
 
 ```
 browser/
-├── cmd/browser/      # Main browser application
+├── cmd/
+│   ├── browser/      # Main CLI browser application
+│   └── browser-wasm/ # WebAssembly entry point
 ├── html/            # HTML tokenization and parsing
 ├── css/             # CSS parsing
 ├── dom/             # DOM tree structure
 ├── style/           # Style computation and cascade
 ├── layout/          # Layout engine (visual formatting model)
 ├── render/          # Rendering engine
+├── wasm/            # WebAssembly demo page
 └── test/            # Test files and fixtures
 ```
 
@@ -73,6 +77,29 @@ go build ./cmd/browser
 ```bash
 go test ./...
 ```
+
+## WebAssembly Build
+
+The browser can be compiled to WebAssembly and run entirely in a web browser!
+
+### Building for WASM
+
+```bash
+./build-wasm.sh
+# or
+make build-wasm
+```
+
+### Running the WASM Demo
+
+```bash
+# Build and serve in one command
+make serve-wasm
+```
+
+Then open http://localhost:8080 in your browser.
+
+See [wasm/README.md](wasm/README.md) for more details.
 
 ## Documentation
 

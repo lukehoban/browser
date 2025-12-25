@@ -7,6 +7,9 @@
 *.so
 *.dylib
 
+# WebAssembly
+wasm/browser.wasm
+
 # Test binary, built with `go test -c`
 *.test
 
