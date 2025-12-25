@@ -177,39 +177,7 @@
     <div class="container">
         <div class="panel">
             <h2>HTML Input</h2>
-            <textarea id="htmlInput" placeholder="Enter your HTML here..."><!DOCTYPE html>
-<html>
-<head>
-    <style>
-        body {
-            margin: 20px;
-            font-family: Arial, sans-serif;
-        }
-        h1 {
-            color: #4CAF50;
-            border-bottom: 3px solid #4CAF50;
-            padding-bottom: 10px;
-        }
-        p {
-            color: #333;
-            line-height: 1.6;
-        }
-        .box {
-            background: #e3f2fd;
-            padding: 15px;
-            margin: 10px 0;
-            border: 2px solid #2196F3;
-        }
-    </style>
-</head>
-<body>
-    <h1>Hello from WASM Browser!</h1>
-    <p>This page is rendered by a <strong>Go browser</strong> running in WebAssembly.</p>
-    <div class="box">
-        <p>This is a styled box with blue border and background.</p>
-    </div>
-</body>
-</html></textarea>
+            <textarea id="htmlInput" placeholder="Enter your HTML here..."></textarea>
 
             <div class="controls">
                 <button id="renderBtn" disabled>Loading...</button>
@@ -223,6 +191,7 @@
 
             <div class="examples">
                 <h3>Example Pages:</h3>
+                <button onclick="loadExample('hackernews')">Hacker News</button>
                 <button onclick="loadExample('simple')">Simple</button>
                 <button onclick="loadExample('colors')">Colors</button>
                 <button onclick="loadExample('layout')">Layout</button>
@@ -323,6 +292,189 @@
 
         function loadExample(type) {
             const examples = {
+                hackernews: `<!DOCTYPE html>
+<html lang="en" op="news">
+<head>
+    <style>
+        body { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #828282; }
+        td { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #828282; }
+        a:link { color: #000000; text-decoration: none; }
+        a:visited { color: #828282; text-decoration: none; }
+        .title { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #828282; }
+        .subtext { font-family: Verdana, Geneva, sans-serif; font-size: 7pt; color: #828282; }
+        .pagetop { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #222222; }
+        .comhead { font-family: Verdana, Geneva, sans-serif; font-size: 8pt; color: #828282; }
+        .hnname { margin-left: 1px; margin-right: 5px; }
+        .rank { font-size: 10pt; }
+        .sitebit { font-size: 8pt; color: #828282; }
+        .sitestr { color: #828282; }
+        .hnuser { color: #828282; }
+        .age { color: #828282; }
+        .score { color: #828282; }
+        .subline { font-size: 7pt; }
+    </style>
+</head>
+<body>
+    <center>
+        <table id="hnmain" border="0" cellpadding="0" cellspacing="0" width="85%" bgcolor="#f6f6ef">
+            <tr>
+                <td bgcolor="#cc1010">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding:2px">
+                        <tr>
+                            <td style="width:18px;padding-right:4px">
+                                <a href="https://news.ycombinator.com">
+                                    <img src="data:image/svg+xml,%3Csvg height='18' viewBox='4 4 188 188' width='18' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m4 4h188v188h-188z' fill='%23f60'/%3E%3Cpath d='m73.2521756 45.01 22.7478244 47.39130083 22.7478244-47.39130083h19.56569631l-34.32352071 64.48661468v41.49338532h-15.98v-41.49338532l-34.32352071-64.48661468z' fill='%23fff'/%3E%3C/svg%3E" width="18" height="18" style="border:1px white solid; display:block">
+                                </a>
+                            </td>
+                            <td style="line-height:12pt; height:10px;">
+                                <span class="pagetop">
+                                    <b class="hnname"><a href="news">Hacker News</a></b>
+                                    <a href="newest">new</a> | 
+                                    <a href="front">past</a> | 
+                                    <a href="newcomments">comments</a> | 
+                                    <a href="ask">ask</a> | 
+                                    <a href="show">show</a> | 
+                                    <a href="jobs">jobs</a> | 
+                                    <a href="submit">submit</a>
+                                </span>
+                            </td>
+                            <td style="text-align:right;padding-right:4px;">
+                                <span class="pagetop"><a href="login?goto=news">login</a></span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr style="height:10px"></tr>
+            <tr>
+                <td>
+                    <table border="0" cellpadding="0" cellspacing="0">
+                        <tr class="athing">
+                            <td align="right" valign="top" class="title">
+                                <font color="#be2828"><span class="rank">1.</span></font>
+                            </td>
+                            <td valign="top" class="votelinks"></td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://fidget-spinner.github.io/posts/no-longer-sorry.html">Python 3.15's interpreter for Windows x86-64 should hopefully be 15% faster</a>
+                                    <span class="sitebit comhead"> (<span class="sitestr">fidget-spinner.github.io</span>)</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">241 points</span> by 
+                                    <a href="user?id=lumpa" class="hnuser">lumpa</a> 
+                                    <span class="age"><a href="item?id=46384167">7 hours ago</a></span> | 
+                                    <a href="item?id=46384167">72 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="spacer" style="height:5px"></tr>
+                        <tr class="athing">
+                            <td align="right" valign="top" class="title">
+                                <font color="#005a00"><span class="rank">2.</span></font>
+                            </td>
+                            <td valign="top" class="votelinks"></td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://www.newyorker.com/news/press-room/the-entire-new-yorker-archive-is-now-fully-digitized">The entire New Yorker archive is now digitized</a>
+                                    <span class="sitebit comhead"> (<span class="sitestr">newyorker.com</span>)</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">223 points</span> by 
+                                    <a href="user?id=thm" class="hnuser">thm</a> 
+                                    <span class="age"><a href="item?id=46336577">7 hours ago</a></span> | 
+                                    <a href="item?id=46336577">33 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="spacer" style="height:5px"></tr>
+                        <tr class="athing">
+                            <td align="right" valign="top" class="title">
+                                <font color="#be2828"><span class="rank">3.</span></font>
+                            </td>
+                            <td valign="top" class="votelinks"></td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://github.com/NVIDIA/cuda-tile">CUDA Tile Open Sourced</a>
+                                    <span class="sitebit comhead"> (<span class="sitestr">github.com/nvidia</span>)</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">63 points</span> by 
+                                    <a href="user?id=JonChesterfield" class="hnuser">JonChesterfield</a> 
+                                    <span class="age"><a href="item?id=46330732">4 hours ago</a></span> | 
+                                    <a href="item?id=46330732">4 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="spacer" style="height:5px"></tr>
+                        <tr class="athing">
+                            <td align="right" valign="top" class="title">
+                                <font color="#005a00"><span class="rank">4.</span></font>
+                            </td>
+                            <td valign="top" class="votelinks"></td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://www.deepsouthventures.com/i-sell-onions-on-the-internet/">I sell onions on the Internet (2019)</a>
+                                    <span class="sitebit comhead"> (<span class="sitestr">deepsouthventures.com</span>)</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">259 points</span> by 
+                                    <a href="user?id=sogen" class="hnuser">sogen</a> 
+                                    <span class="age"><a href="item?id=46385308">4 hours ago</a></span> | 
+                                    <a href="item?id=46385308">67 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr class="spacer" style="height:5px"></tr>
+                        <tr class="athing">
+                            <td align="right" valign="top" class="title">
+                                <font color="#be2828"><span class="rank">5.</span></font>
+                            </td>
+                            <td valign="top" class="votelinks"></td>
+                            <td class="title">
+                                <span class="titleline">
+                                    <a href="https://etc.octavore.com/2025/12/archiving-git-branches-as-tags/">Archiving Git Branches as Tags</a>
+                                    <span class="sitebit comhead"> (<span class="sitestr">octavore.com</span>)</span>
+                                </span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"></td>
+                            <td class="subtext">
+                                <span class="subline">
+                                    <span class="score">23 points</span> by 
+                                    <a href="user?id=octavore" class="hnuser">octavore</a> 
+                                    <span class="age"><a href="item?id=46357362">1 hour ago</a></span> | 
+                                    <a href="item?id=46357362">2 comments</a>
+                                </span>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </center>
+</body>
+</html>`,
                 simple: `<!DOCTYPE html>
 <html>
 <head>
@@ -416,6 +568,9 @@
                 render();
             }
         });
+
+        // Load Hacker News example by default
+        loadExample('hackernews');
     </script>
 </body>
 </html>
