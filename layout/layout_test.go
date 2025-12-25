@@ -746,8 +746,7 @@ cell1.Dimensions.Content.Y, cell2.Dimensions.Content.Y)
 // These tests document known limitations that need to be implemented.
 // See MILESTONES.md for more details.
 
-func TestInlineLayout_Skipped(t *testing.T) {
-	t.Skip("Inline layout not implemented - CSS 2.1 §9.4.2")
+func TestInlineLayout(t *testing.T) {
 	// CSS 2.1 §9.4.2 Inline formatting contexts
 	// Inline elements should flow horizontally within line boxes
 	

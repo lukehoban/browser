@@ -8,11 +8,11 @@ Successfully renders https://news.ycombinator.com/ with proper:
 - Content-based column auto-sizing
 - All story titles, metadata, and navigation readable
 
-## Screenshot
+## Screenshot (captured Dec 25, 2025, 1024x768)
 
-![Hacker News Rendering](https://github.com/user-attachments/assets/c4f7a2dd-5c63-414e-980a-da89eb464baa)
+![Hacker News Rendering](./hackernews_screenshot.png)
 
-*Rendered output showing 7 stories in 800x1200 viewport with correct structure, readable text, and proper alignment.*
+*Rendered output of https://news.ycombinator.com/ with correct three-column layout, readable text, and aligned metadata.*
 
 ## Documentation Already Exists
 

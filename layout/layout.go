@@ -8,6 +8,7 @@
 package layout
 
 import (
+	"math"
 	"strconv"
 	"strings"
 
@@ -123,7 +124,7 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 	// CSS 2.1 §9.2.2: Inline-level elements
 	boxType := BlockBox
 	display := styledNode.Styles["display"]
-	
+
 	// If no explicit display property, infer from HTML element
 	if display == "" && styledNode.Node != nil && styledNode.Node.Type == dom.ElementNode {
 		switch styledNode.Node.Data {
@@ -140,7 +141,7 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 			display = "inline"
 		}
 	}
-	
+
 	switch display {
 	case "inline":
 		boxType = InlineBox
@@ -179,8 +180,7 @@ func (box *LayoutBox) Layout(containingBlock Dimensions) {
 	case BlockBox:
 		box.layoutBlock(containingBlock)
 	case InlineBox:
-		// Simplified: treat inline as block for now
-		box.layoutBlock(containingBlock)
+		box.layoutInlineBox(containingBlock)
 	case TableBox:
 		box.layoutTable(containingBlock)
 	case TableRowBox:
@@ -214,9 +214,9 @@ func (box *LayoutBox) layoutBlock(containingBlock Dimensions) {
 
 	// Handle <center> element - center children horizontally
 	// HTML 4.01 §15.1.2: The CENTER element centers content
-	if box.StyledNode != nil && box.StyledNode.Node != nil && 
-	   box.StyledNode.Node.Type == dom.ElementNode && 
-	   box.StyledNode.Node.Data == "center" {
+	if box.StyledNode != nil && box.StyledNode.Node != nil &&
+		box.StyledNode.Node.Type == dom.ElementNode &&
+		box.StyledNode.Node.Data == "center" {
 		box.applyHorizontalAlignment("center")
 	}
 }
@@ -302,11 +302,135 @@ func (box *LayoutBox) calculateBlockPosition(containingBlock Dimensions) {
 
 // layoutBlockChildren lays out the children of a block box.
 func (box *LayoutBox) layoutBlockChildren() {
-	for _, child := range box.Children {
+	for i := 0; i < len(box.Children); {
+		child := box.Children[i]
+
+		// CSS 2.1 §9.4.2: Inline formatting context
+		if child.isInlineLevel() {
+			inlineRun := make([]*LayoutBox, 0)
+			for i < len(box.Children) && box.Children[i].isInlineLevel() {
+				inlineRun = append(inlineRun, box.Children[i])
+				i++
+			}
+			box.layoutInlineChildren(inlineRun)
+			continue
+		}
+
+		// Block-level layout (existing behavior)
 		child.Layout(box.Dimensions)
-		// Update height to include child
 		box.Dimensions.Content.Height += child.marginBox().Height
+		i++
 	}
+}
+
+// layoutInlineChildren lays out a run of inline-level children within this block box.
+// CSS 2.1 §9.4.2 Inline formatting contexts: inline-level boxes are laid out in horizontal line boxes.
+func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
+	if len(children) == 0 {
+		return
+	}
+
+	currentX := box.Dimensions.Content.X
+	currentY := box.Dimensions.Content.Y + box.Dimensions.Content.Height
+	maxHeight := 0.0
+
+	for _, child := range children {
+		inlineCB := Dimensions{
+			Content: Rect{
+				X:      currentX,
+				Y:      currentY,
+				Width:  math.Max(0, box.Dimensions.Content.Width-(currentX-box.Dimensions.Content.X)),
+				Height: 0,
+			},
+		}
+
+		child.Layout(inlineCB)
+
+		// Position child so its margin box starts at currentX/currentY
+		child.Dimensions.Content.X = currentX + child.Dimensions.Margin.Left + child.Dimensions.Border.Left + child.Dimensions.Padding.Left
+		child.Dimensions.Content.Y = currentY + child.Dimensions.Margin.Top + child.Dimensions.Border.Top + child.Dimensions.Padding.Top
+
+		currentX += child.marginBox().Width
+		if child.marginBox().Height > maxHeight {
+			maxHeight = child.marginBox().Height
+		}
+	}
+
+	// Increase parent height by the tallest inline box on this line
+	box.Dimensions.Content.Height += maxHeight
+}
+
+// layoutInlineBox lays out an inline box and its inline children.
+// CSS 2.1 §9.4.2 Inline formatting contexts
+func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
+	styles := box.StyledNode.Styles
+
+	// Apply inline box model properties
+	box.Dimensions.Margin.Left = parseLengthOr0(styles["margin-left"], containingBlock.Content.Width)
+	box.Dimensions.Margin.Right = parseLengthOr0(styles["margin-right"], containingBlock.Content.Width)
+	box.Dimensions.Margin.Top = parseLengthOr0(styles["margin-top"], containingBlock.Content.Width)
+	box.Dimensions.Margin.Bottom = parseLengthOr0(styles["margin-bottom"], containingBlock.Content.Width)
+
+	box.Dimensions.Padding.Left = parseLengthOr0(styles["padding-left"], containingBlock.Content.Width)
+	box.Dimensions.Padding.Right = parseLengthOr0(styles["padding-right"], containingBlock.Content.Width)
+	box.Dimensions.Padding.Top = parseLengthOr0(styles["padding-top"], containingBlock.Content.Width)
+	box.Dimensions.Padding.Bottom = parseLengthOr0(styles["padding-bottom"], containingBlock.Content.Width)
+
+	box.Dimensions.Border.Left = parseLengthOr0(styles["border-left-width"], containingBlock.Content.Width)
+	box.Dimensions.Border.Right = parseLengthOr0(styles["border-right-width"], containingBlock.Content.Width)
+	box.Dimensions.Border.Top = parseLengthOr0(styles["border-top-width"], containingBlock.Content.Width)
+	box.Dimensions.Border.Bottom = parseLengthOr0(styles["border-bottom-width"], containingBlock.Content.Width)
+
+	// Position content relative to containing block and the box model edges
+	box.Dimensions.Content.X = containingBlock.Content.X +
+		box.Dimensions.Margin.Left +
+		box.Dimensions.Border.Left +
+		box.Dimensions.Padding.Left
+	box.Dimensions.Content.Y = containingBlock.Content.Y +
+		box.Dimensions.Margin.Top +
+		box.Dimensions.Border.Top +
+		box.Dimensions.Padding.Top
+
+	currentX := box.Dimensions.Content.X
+	currentY := box.Dimensions.Content.Y
+	maxHeight := 0.0
+
+	for _, child := range box.Children {
+		inlineCB := Dimensions{
+			Content: Rect{
+				X:      currentX,
+				Y:      currentY,
+				Width:  math.Max(0, containingBlock.Content.Width-(currentX-containingBlock.Content.X)),
+				Height: 0,
+			},
+		}
+
+		child.Layout(inlineCB)
+
+		// Position child so its margin box starts at currentX/currentY
+		child.Dimensions.Content.X = currentX + child.Dimensions.Margin.Left + child.Dimensions.Border.Left + child.Dimensions.Padding.Left
+		child.Dimensions.Content.Y = currentY + child.Dimensions.Margin.Top + child.Dimensions.Border.Top + child.Dimensions.Padding.Top
+
+		currentX += child.marginBox().Width
+		if child.marginBox().Height > maxHeight {
+			maxHeight = child.marginBox().Height
+		}
+	}
+
+	box.Dimensions.Content.Width = currentX - box.Dimensions.Content.X
+	box.Dimensions.Content.Height = maxHeight
+}
+
+// isInlineLevel returns true for inline boxes and text nodes.
+// Note: Anonymous inline boxes (CSS 2.1 §9.2.2.1) are not generated yet; only explicit inline elements and text nodes are treated as inline.
+func (box *LayoutBox) isInlineLevel() bool {
+	if box.BoxType == InlineBox {
+		return true
+	}
+	if box.StyledNode != nil && box.StyledNode.Node != nil && box.StyledNode.Node.Type == dom.TextNode {
+		return true
+	}
+	return false
 }
 
 // calculateBlockHeight calculates the height of a block box.
@@ -403,7 +527,7 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	// CSS 2.1 §16.6.1: Collapse whitespace for layout calculations
 	// This ensures dimensions match what will actually be rendered
 	text = collapseWhitespace(text)
-	
+
 	if text == "" {
 		box.Dimensions.Content.Width = 0
 		box.Dimensions.Content.Height = 0
@@ -415,11 +539,11 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	// For more accurate measurement, we could use font.Drawer.MeasureString()
 	// but basicfont is monospaced so character count * Advance is accurate
 	face := basicfont.Face7x13
-	
+
 	// Get font size from styles (CSS 2.1 §15.7)
 	fontSize := extractFontSize(box.StyledNode.Styles)
 	scale := fontSize / baseFontHeight
-	
+
 	width := float64(len(text)*face.Advance) * scale
 	height := float64(face.Height) * scale
 
@@ -437,9 +561,9 @@ func extractFontSize(styles map[string]string) float64 {
 	if fontSize == "" {
 		return baseFontHeight // Default font size
 	}
-	
+
 	fontSize = strings.TrimSpace(strings.ToLower(fontSize))
-	
+
 	// Handle pixel values (e.g., "14px")
 	if strings.HasSuffix(fontSize, "px") {
 		fontSize = strings.TrimSuffix(fontSize, "px")
@@ -447,12 +571,12 @@ func extractFontSize(styles map[string]string) float64 {
 			return size
 		}
 	}
-	
+
 	// Handle plain numbers (treat as pixels)
 	if size, err := strconv.ParseFloat(fontSize, 64); err == nil && size > 0 {
 		return size
 	}
-	
+
 	// Handle named sizes (CSS 2.1 §15.7)
 	namedSizes := map[string]float64{
 		"xx-small": 9.0,
@@ -463,11 +587,11 @@ func extractFontSize(styles map[string]string) float64 {
 		"x-large":  20.0,
 		"xx-large": 24.0,
 	}
-	
+
 	if size, ok := namedSizes[fontSize]; ok {
 		return size
 	}
-	
+
 	return baseFontHeight // Default font size
 }
 
@@ -480,14 +604,14 @@ func collapseWhitespace(text string) string {
 	if text == "" {
 		return text
 	}
-	
+
 	var result strings.Builder
 	lastWasSpace := true // Start as true to trim leading whitespace
-	
+
 	for _, ch := range text {
 		// Check if character is whitespace (space, tab, newline, carriage return)
 		isSpace := ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
-		
+
 		if isSpace {
 			// Only add a space if we haven't just added one
 			if !lastWasSpace {
@@ -500,13 +624,13 @@ func collapseWhitespace(text string) string {
 			lastWasSpace = false
 		}
 	}
-	
+
 	// Trim trailing whitespace
 	output := result.String()
 	if lastWasSpace && len(output) > 0 {
 		output = output[:len(output)-1]
 	}
-	
+
 	return output
 }
 
@@ -520,7 +644,7 @@ func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 	// Calculate the number of columns in the table
 	// CSS 2.1 §17.2.1: The number of columns is determined by examining all rows
 	numColumns := box.calculateTableColumns()
-	
+
 	// Calculate column widths based on content
 	// CSS 2.1 §17.5.2.2: Auto table layout
 	columnWidths := box.calculateColumnWidths(numColumns, box.Dimensions.Content.Width)
@@ -570,12 +694,12 @@ func getColspan(cell *LayoutBox) int {
 	if cell.StyledNode == nil || cell.StyledNode.Node == nil {
 		return 1
 	}
-	
+
 	colspanStr := cell.StyledNode.Node.GetAttribute("colspan")
 	if colspanStr == "" {
 		return 1
 	}
-	
+
 	if val, err := strconv.Atoi(colspanStr); err == nil && val > 0 {
 		// Cap at maxColspan as recommended by HTML specification
 		if val > maxColspan {
@@ -583,7 +707,7 @@ func getColspan(cell *LayoutBox) int {
 		}
 		return val
 	}
-	
+
 	return 1
 }
 
@@ -607,7 +731,7 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 							columnMinWidths[colIndex] = minWidth
 						}
 					}
-					
+
 					colIndex += colspan
 				}
 			}
@@ -618,7 +742,7 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 	for _, w := range columnMinWidths {
 		totalMinWidth += w
 	}
-	
+
 	// Allocate widths proportionally, ensuring minimums are met
 	columnWidths := make([]float64, numColumns)
 	if totalMinWidth > 0 && totalMinWidth < tableWidth {
@@ -639,14 +763,14 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 			columnWidths[i] = equalWidth
 		}
 	}
-	
+
 	return columnWidths
 }
 
 // estimateCellMinWidth estimates the minimum width needed for a cell's content
 func (box *LayoutBox) estimateCellMinWidth(cell *LayoutBox) float64 {
 	minWidth := 30.0 // Default minimum
-	
+
 	// Check for explicit width style
 	if cell.StyledNode != nil {
 		if widthStr := cell.StyledNode.Styles["width"]; widthStr != "" {
@@ -655,29 +779,29 @@ func (box *LayoutBox) estimateCellMinWidth(cell *LayoutBox) float64 {
 			}
 		}
 	}
-	
+
 	// Estimate based on content, but cap at reasonable maximum
 	contentWidth := box.estimateContentWidth(cell)
 	if contentWidth > minWidth {
 		minWidth = contentWidth
 	}
-	
+
 	// Cap at reasonable maximum to prevent extremely wide content from creating unusable layouts
 	if minWidth > maxColumnWidth {
 		minWidth = maxColumnWidth
 	}
-	
+
 	return minWidth
 }
 
 // estimateContentWidth estimates the width of content in a box
 func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 	width := 0.0
-	
+
 	// Use the same character width as in layoutText
 	face := basicfont.Face7x13
 	charWidth := float64(face.Advance)
-	
+
 	// Recursively estimate width from children
 	for _, child := range layoutBox.Children {
 		if child.StyledNode != nil && child.StyledNode.Node != nil {
@@ -696,14 +820,14 @@ func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 			}
 		}
 	}
-	
+
 	// Add padding if specified
 	if layoutBox.StyledNode != nil {
 		paddingLeft := parseLengthOr0(layoutBox.StyledNode.Styles["padding-left"], 0)
 		paddingRight := parseLengthOr0(layoutBox.StyledNode.Styles["padding-right"], 0)
 		width += paddingLeft + paddingRight
 	}
-	
+
 	return width
 }
 
@@ -721,7 +845,7 @@ func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
 	if numColumns == 0 {
 		numColumns = len(box.Children)
 	}
-	
+
 	box.layoutWithColumns(containingBlock, numColumns)
 }
 
@@ -955,24 +1079,24 @@ func (box *LayoutBox) layoutTableCell(containingBlock Dimensions) {
 // HTML 4.01 §11.3.2: The align attribute specifies horizontal alignment in table cells.
 func (box *LayoutBox) applyHorizontalAlignment(align string) {
 	align = strings.ToLower(strings.TrimSpace(align))
-	
+
 	if len(box.Children) == 0 {
 		return
 	}
-	
+
 	// Calculate the total width of all children
 	totalChildWidth := 0.0
 	for _, child := range box.Children {
 		totalChildWidth += child.marginBox().Width
 	}
-	
+
 	// Calculate available space
 	availableSpace := box.Dimensions.Content.Width - totalChildWidth
-	
+
 	if availableSpace <= 0 {
 		return // No space to align
 	}
-	
+
 	var offset float64
 	switch align {
 	case "right":
@@ -985,7 +1109,7 @@ func (box *LayoutBox) applyHorizontalAlignment(align string) {
 	default:
 		return // Unknown alignment, do nothing
 	}
-	
+
 	// Adjust X position of all children
 	for _, child := range box.Children {
 		child.Dimensions.Content.X += offset
@@ -996,24 +1120,24 @@ func (box *LayoutBox) applyHorizontalAlignment(align string) {
 // HTML 4.01 §11.3.2: The valign attribute specifies vertical alignment in table cells.
 func (box *LayoutBox) applyVerticalAlignment(valign string) {
 	valign = strings.ToLower(strings.TrimSpace(valign))
-	
+
 	if len(box.Children) == 0 {
 		return
 	}
-	
+
 	// Calculate the total height of all children
 	totalChildHeight := 0.0
 	for _, child := range box.Children {
 		totalChildHeight += child.marginBox().Height
 	}
-	
+
 	// Calculate available space
 	availableSpace := box.Dimensions.Content.Height - totalChildHeight
-	
+
 	if availableSpace <= 0 {
 		return // No space to align
 	}
-	
+
 	var offset float64
 	switch valign {
 	case "bottom":
@@ -1026,7 +1150,7 @@ func (box *LayoutBox) applyVerticalAlignment(valign string) {
 	default:
 		return // Unknown alignment, do nothing
 	}
-	
+
 	// Adjust Y position of all children
 	for _, child := range box.Children {
 		child.Dimensions.Content.Y += offset

@@ -155,7 +155,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Margins, padding, borders applied correctly
 
 ### Known Limitations:
-- ⚠️ Limited inline layout support
+- ⚠️ Inline layout implemented (December 2025) but lacks line wrapping and text alignment controls
 - ⚠️ No positioning schemes (absolute, relative, fixed)
 - ⚠️ No float support
 - ⚠️ No flexbox or grid layout
