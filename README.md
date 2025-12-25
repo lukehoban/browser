@@ -10,7 +10,8 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - HTML parsing with DOM tree construction
 - CSS 2.1 parsing and style computation
 - Visual formatting model (box model, block layout)
-- Text rendering with color support
+- **High-quality text rendering** with Go fonts (proportional sans-serif)
+- Font styling support (bold, italic, underline, size)
 - Image rendering (PNG, JPEG, GIF support)
 - Background and border rendering
 - PNG image output
@@ -73,6 +74,12 @@ go build ./cmd/browser
 ```
 
 ## Screenshots
+
+### Font Rendering
+
+The browser uses the [Go fonts](https://blog.golang.org/go-fonts) - high-quality, proportional, sans-serif fonts designed for the Go project. These fonts are embedded in the binary and provide excellent readability with support for bold, italic, and various sizes.
+
+![Font Comparison](./font_comparison_screenshot.png)
 
 ### Test Case Rendering
 
