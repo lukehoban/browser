@@ -455,20 +455,7 @@ The browser can now load Hacker News from the network and render content with pr
   - [x] Load remote images
 
 ### Current Status:
-The browser successfully loads and renders Hacker News from the network with excellent table layout, font rendering, and alignment support. Tables use content-based column sizing. Text supports variable font sizes, bold, italic, and underline styles, with proper CSS inheritance. HTML alignment attributes (`align`, `valign`) and the `<center>` element provide proper horizontal and vertical alignment of cell content.
-
-**Latest Assessment (2025-12-25)**: Hacker News homepage renders successfully with excellent visual fidelity:
-- ✅ Table structure detected and laid out correctly
-- ✅ Three-column layout working (rank | vote | title+metadata)
-- ✅ Text is readable and properly positioned
-- ✅ Story rows alternate with metadata rows as expected
-- ✅ Rank numbers are right-aligned (HTML `align="right"`)
-- ✅ Vote arrows are centered (HTML `<center>` element)
-- ✅ Vertical alignment works correctly (HTML `valign="top"`)
-- ⚠️ Vote arrows show as black squares (CSS background-image not supported, which is expected)
-- ⚠️ Some minor spacing differences due to limited CSS property support (line-height, font-family)
-
-The rendering quality is appropriate for the browser's current CSS 2.1 implementation scope.
+The browser successfully loads and renders Hacker News from the network with excellent visual fidelity. Tables use content-based column sizing, text supports variable font sizes with bold/italic/underline styles, and HTML alignment attributes (`align`, `valign`, `<center>`) work correctly. Minor visual differences exist due to missing CSS properties (background-image, line-height, font-family).
 
 ---
 
