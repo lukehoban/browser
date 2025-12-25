@@ -7,7 +7,6 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -33,10 +32,6 @@ const (
 	
 	// CSS 2.1 §16.3.1: Distance below baseline for underlines
 	underlineOffset = 2.0
-	
-	// Supersampling factor for antialiasing text
-	// Higher values produce smoother results but require more memory and processing
-	supersamplingFactor = 4
 )
 
 var (
@@ -175,9 +170,7 @@ func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
 // CSS 2.1 §15.7 Font style: font-style
 // CSS 2.1 §16.3.1 Underlining, overlining, striking: text-decoration
 //
-// Text is rendered with antialiasing using supersampling: the text is rendered
-// at a higher resolution (supersamplingFactor × target size) and then downsampled
-// using bilinear interpolation. This produces smooth, high-quality text rendering.
+// Text is rendered directly at 1x resolution using TrueType fonts with built-in antialiasing.
 func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style FontStyle) {
 	// Load the built-in Go fonts
 	err := loadGoFonts()
@@ -261,7 +254,7 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	// Calculate baseline offset
 	baselineOffset := metrics.Ascent.Ceil()
 	
-	// Copy text pixels to canvas (no italic slant needed since we use native italic font)
+	// Copy text pixels to canvas with proper alpha blending
 	for dy := 0; dy < textHeight; dy++ {
 		for dx := 0; dx < textWidth; dx++ {
 			px := x + dx
@@ -270,11 +263,15 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 			if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
 				r, g, b, a := textImg.At(dx, dy).RGBA()
 				if a > 0 {
+					// Use alpha blending for smooth antialiasing
+					alpha := float64(a) / 65535.0
+					existing := c.Pixels[py*c.Width+px]
+					
 					c.Pixels[py*c.Width+px] = color.RGBA{
-						R: uint8(r >> 8),
-						G: uint8(g >> 8),
-						B: uint8(b >> 8),
-						A: uint8(a >> 8),
+						R: uint8(float64(r>>8)*alpha + float64(existing.R)*(1-alpha)),
+						G: uint8(float64(g>>8)*alpha + float64(existing.G)*(1-alpha)),
+						B: uint8(float64(b>>8)*alpha + float64(existing.B)*(1-alpha)),
+						A: 255, // Canvas is opaque
 					}
 				}
 			}
@@ -290,26 +287,18 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 }
 
 // drawScaledBasicFont is a fallback function for rendering with the basic bitmap font.
-// This preserves the original scaling behavior when TrueType fonts are not available.
+// This renders text at 1x resolution without supersampling.
 func (c *Canvas) drawScaledBasicFont(text string, x, y int, col color.RGBA, style FontStyle, face font.Face, scale float64) {
 	baseFace := basicfont.Face7x13
 	
-	// Calculate the dimensions for scaled text
-	// Apply supersampling for antialiasing: render at higher resolution
-	supersampledScale := scale * supersamplingFactor
-	
-	// Calculate the dimensions for supersampled text
+	// Calculate dimensions for scaled text
 	baseWidth := len(text) * baseFace.Advance
 	baseHeight := baseFace.Height
 	
-	supersampledWidth := int(float64(baseWidth) * supersampledScale)
-	supersampledHeight := int(float64(baseHeight) * supersampledScale)
-	
-	// Final dimensions after downsampling
 	scaledWidth := int(float64(baseWidth) * scale)
 	scaledHeight := int(float64(baseHeight) * scale)
 	
-	// Render at high resolution using nearest-neighbor upscaling
+	// Render at base resolution
 	baseImg := image.NewRGBA(image.Rect(0, 0, baseWidth, baseHeight))
 	drawer := &font.Drawer{
 		Dst:  baseImg,
@@ -326,11 +315,13 @@ func (c *Canvas) drawScaledBasicFont(text string, x, y int, col color.RGBA, styl
 		drawer.DrawString(text)
 	}
 	
-	// Upscale to supersampled resolution using nearest-neighbor
-	supersampledImg := scaleImage(baseImg, supersampledWidth, supersampledHeight)
-	
-	// Downsample with bilinear interpolation for antialiasing
-	textImg := downsampleImage(supersampledImg, scaledWidth, scaledHeight)
+	// Scale the image if needed (simple nearest-neighbor)
+	var textImg *image.RGBA
+	if scale != 1.0 {
+		textImg = scaleImageSimple(baseImg, scaledWidth, scaledHeight)
+	} else {
+		textImg = baseImg
+	}
 	
 	// Calculate adjusted baseline offset for scaled text
 	baselineOffset := int(float64(baseFace.Ascent) * scale)
@@ -351,7 +342,7 @@ func (c *Canvas) drawScaledBasicFont(text string, x, y int, col color.RGBA, styl
 			if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
 				r, g, b, a := textImg.At(dx, dy).RGBA()
 				if a > 0 {
-					// Use alpha blending for smooth antialiasing
+					// Use alpha blending for smooth rendering
 					alpha := float64(a) / 65535.0
 					existing := c.Pixels[py*c.Width+px]
 					
@@ -376,8 +367,8 @@ func (c *Canvas) drawScaledBasicFont(text string, x, y int, col color.RGBA, styl
 	}
 }
 
-// scaleImage scales an image using nearest-neighbor interpolation.
-func scaleImage(src *image.RGBA, newWidth, newHeight int) *image.RGBA {
+// scaleImageSimple scales an image using nearest-neighbor interpolation.
+func scaleImageSimple(src *image.RGBA, newWidth, newHeight int) *image.RGBA {
 	if newWidth <= 0 || newHeight <= 0 {
 		return src
 	}
@@ -393,89 +384,6 @@ func scaleImage(src *image.RGBA, newWidth, newHeight int) *image.RGBA {
 			srcX := bounds.Min.X + (dx * srcWidth / newWidth)
 			srcY := bounds.Min.Y + (dy * srcHeight / newHeight)
 			dst.Set(dx, dy, src.At(srcX, srcY))
-		}
-	}
-	
-	return dst
-}
-
-// downsampleImage downsamples an image using bilinear interpolation for antialiasing.
-// This function is designed to work well when downsampling high-resolution renders
-// to produce smooth, antialiased output.
-func downsampleImage(src *image.RGBA, newWidth, newHeight int) *image.RGBA {
-	if newWidth <= 0 || newHeight <= 0 {
-		return src
-	}
-	
-	bounds := src.Bounds()
-	srcWidth := bounds.Dx()
-	srcHeight := bounds.Dy()
-	
-	// If no scaling needed, return source
-	if srcWidth == newWidth && srcHeight == newHeight {
-		return src
-	}
-	
-	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
-	
-	// Calculate scale ratios
-	xRatio := float64(srcWidth) / float64(newWidth)
-	yRatio := float64(srcHeight) / float64(newHeight)
-	
-	for dy := 0; dy < newHeight; dy++ {
-		for dx := 0; dx < newWidth; dx++ {
-			// Map destination pixel to source pixel with floating point precision
-			srcX := float64(dx) * xRatio
-			srcY := float64(dy) * yRatio
-			
-			// Get integer and fractional parts
-			x0 := int(srcX)
-			y0 := int(srcY)
-			x1 := x0 + 1
-			y1 := y0 + 1
-			
-			// Ensure we don't go out of bounds
-			if x1 >= srcWidth {
-				x1 = srcWidth - 1
-			}
-			if y1 >= srcHeight {
-				y1 = srcHeight - 1
-			}
-			
-			// Get fractional parts
-			xFrac := srcX - float64(x0)
-			yFrac := srcY - float64(y0)
-			
-			// Get the four surrounding pixels
-			c00 := src.RGBAAt(bounds.Min.X+x0, bounds.Min.Y+y0)
-			c10 := src.RGBAAt(bounds.Min.X+x1, bounds.Min.Y+y0)
-			c01 := src.RGBAAt(bounds.Min.X+x0, bounds.Min.Y+y1)
-			c11 := src.RGBAAt(bounds.Min.X+x1, bounds.Min.Y+y1)
-			
-			// Perform bilinear interpolation for each channel
-			// Interpolate in x direction
-			r0 := float64(c00.R)*(1-xFrac) + float64(c10.R)*xFrac
-			r1 := float64(c01.R)*(1-xFrac) + float64(c11.R)*xFrac
-			g0 := float64(c00.G)*(1-xFrac) + float64(c10.G)*xFrac
-			g1 := float64(c01.G)*(1-xFrac) + float64(c11.G)*xFrac
-			b0 := float64(c00.B)*(1-xFrac) + float64(c10.B)*xFrac
-			b1 := float64(c01.B)*(1-xFrac) + float64(c11.B)*xFrac
-			a0 := float64(c00.A)*(1-xFrac) + float64(c10.A)*xFrac
-			a1 := float64(c01.A)*(1-xFrac) + float64(c11.A)*xFrac
-			
-			// Interpolate in y direction
-			r := r0*(1-yFrac) + r1*yFrac
-			g := g0*(1-yFrac) + g1*yFrac
-			b := b0*(1-yFrac) + b1*yFrac
-			a := a0*(1-yFrac) + a1*yFrac
-			
-			// Set the destination pixel with clamping to prevent overflow
-			dst.SetRGBA(dx, dy, color.RGBA{
-				R: uint8(math.Min(255, r+0.5)), // Round and clamp to [0, 255]
-				G: uint8(math.Min(255, g+0.5)),
-				B: uint8(math.Min(255, b+0.5)),
-				A: uint8(math.Min(255, a+0.5)),
-			})
 		}
 	}
 	
