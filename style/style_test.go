@@ -764,3 +764,73 @@ func TestChildCombinatorMatching_Skipped(t *testing.T) {
 		t.Error("Expected p to match 'div > p' (direct child)")
 	}
 }
+
+// TestPresentationalHints tests HTML presentational attributes
+func TestPresentationalHints(t *testing.T) {
+tests := []struct {
+name     string
+node     *dom.Node
+expected map[string]string
+}{
+{
+name: "font color attribute",
+node: func() *dom.Node {
+n := dom.NewElement("font")
+n.SetAttribute("color", "red")
+return n
+}(),
+expected: map[string]string{"color": "red"},
+},
+{
+name: "font color hex",
+node: func() *dom.Node {
+n := dom.NewElement("font")
+n.SetAttribute("color", "#0000FF")
+return n
+}(),
+expected: map[string]string{"color": "#0000FF"},
+},
+{
+name: "bgcolor on table cell",
+node: func() *dom.Node {
+n := dom.NewElement("td")
+n.SetAttribute("bgcolor", "yellow")
+return n
+}(),
+expected: map[string]string{"background-color": "yellow"},
+},
+{
+name: "bgcolor on table row",
+node: func() *dom.Node {
+n := dom.NewElement("tr")
+n.SetAttribute("bgcolor", "#FF0000")
+return n
+}(),
+expected: map[string]string{"background-color": "#FF0000"},
+},
+{
+name: "no presentational attributes",
+node: dom.NewElement("div"),
+expected: map[string]string{},
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+styles := make(map[string]string)
+applyPresentationalHints(tt.node, styles)
+
+for key, expectedVal := range tt.expected {
+if actualVal, ok := styles[key]; !ok {
+t.Errorf("Expected style %s to be set", key)
+} else if actualVal != expectedVal {
+t.Errorf("Style %s = %v, expected %v", key, actualVal, expectedVal)
+}
+}
+
+if len(styles) != len(tt.expected) {
+t.Errorf("Got %d styles, expected %d", len(styles), len(tt.expected))
+}
+})
+}
+}

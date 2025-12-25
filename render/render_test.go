@@ -116,17 +116,63 @@ func TestParseColor(t *testing.T) {
 		input    string
 		expected color.RGBA
 	}{
+		// CSS 2.1 basic 17 colors (including orange added in CSS 2.1)
 		{"black", color.RGBA{0, 0, 0, 255}},
 		{"white", color.RGBA{255, 255, 255, 255}},
 		{"red", color.RGBA{255, 0, 0, 255}},
 		{"blue", color.RGBA{0, 0, 255, 255}},
+		{"green", color.RGBA{0, 128, 0, 255}},
+		{"yellow", color.RGBA{255, 255, 0, 255}},
+		{"navy", color.RGBA{0, 0, 128, 255}},
+		{"purple", color.RGBA{128, 0, 128, 255}},
+		{"silver", color.RGBA{192, 192, 192, 255}},
+		{"gray", color.RGBA{128, 128, 128, 255}},
+		{"grey", color.RGBA{128, 128, 128, 255}},
+		{"maroon", color.RGBA{128, 0, 0, 255}},
+		{"olive", color.RGBA{128, 128, 0, 255}},
+		{"teal", color.RGBA{0, 128, 128, 255}},
+		{"lime", color.RGBA{0, 255, 0, 255}},
+		{"orange", color.RGBA{255, 165, 0, 255}},
+		{"fuchsia", color.RGBA{255, 0, 255, 255}},
+		{"magenta", color.RGBA{255, 0, 255, 255}},
+		{"aqua", color.RGBA{0, 255, 255, 255}},
+		{"cyan", color.RGBA{0, 255, 255, 255}},
+		
+		// Extended color names - gray variants (both spellings)
+		{"lightgray", color.RGBA{211, 211, 211, 255}},
+		{"lightgrey", color.RGBA{211, 211, 211, 255}},
+		{"darkgray", color.RGBA{169, 169, 169, 255}},
+		{"darkgrey", color.RGBA{169, 169, 169, 255}},
+		{"dimgray", color.RGBA{105, 105, 105, 255}},
+		{"dimgrey", color.RGBA{105, 105, 105, 255}},
+		{"slategray", color.RGBA{112, 128, 144, 255}},
+		{"slategrey", color.RGBA{112, 128, 144, 255}},
+		
+		// Extended colors - commonly used
+		{"lightblue", color.RGBA{173, 216, 230, 255}},
+		{"darkblue", color.RGBA{0, 0, 139, 255}},
+		{"lightgreen", color.RGBA{144, 238, 144, 255}},
+		{"darkgreen", color.RGBA{0, 100, 0, 255}},
+		{"pink", color.RGBA{255, 192, 203, 255}},
+		{"lightpink", color.RGBA{255, 182, 193, 255}},
+		{"brown", color.RGBA{165, 42, 42, 255}},
+		{"gold", color.RGBA{255, 215, 0, 255}},
+		{"coral", color.RGBA{255, 127, 80, 255}},
+		{"crimson", color.RGBA{220, 20, 60, 255}},
+		{"indigo", color.RGBA{75, 0, 130, 255}},
+		{"violet", color.RGBA{238, 130, 238, 255}},
+		
+		// Hex colors
 		{"#FF0000", color.RGBA{255, 0, 0, 255}},
 		{"#00FF00", color.RGBA{0, 255, 0, 255}},
 		{"#0000FF", color.RGBA{0, 0, 255, 255}},
 		{"#f00", color.RGBA{255, 0, 0, 255}},
 		{"#0f0", color.RGBA{0, 255, 0, 255}},
 		{"#00f", color.RGBA{0, 0, 255, 255}},
-		{"unknown", color.RGBA{0, 0, 0, 255}}, // defaults to black
+		
+		// Unknown color defaults to black
+		{"unknown", color.RGBA{0, 0, 0, 255}},
+		{"notacolor", color.RGBA{0, 0, 0, 255}},
 	}
 
 	for _, tt := range tests {
