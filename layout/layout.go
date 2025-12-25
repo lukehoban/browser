@@ -18,6 +18,10 @@ import (
 
 // Table layout constants
 const (
+	// baseFontHeight is the height in pixels of basicfont.Face7x13
+	// This is used for text dimension calculations throughout the layout engine
+	baseFontHeight = 13.0
+	
 	// maxColumnWidth is the maximum width any table column can have.
 	// This prevents extremely wide content from creating unusable layouts.
 	// CSS 2.1 §17.5.2.2 does not specify a maximum, but practical implementations
@@ -397,7 +401,7 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	
 	// Get font size from styles (CSS 2.1 §15.7)
 	fontSize := extractFontSize(box.StyledNode.Styles)
-	scale := fontSize / 13.0 // 13 is the height of basicfont.Face7x13
+	scale := fontSize / baseFontHeight
 	
 	width := float64(len(text)*face.Advance) * scale
 	height := float64(face.Height) * scale
@@ -414,7 +418,7 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 func extractFontSize(styles map[string]string) float64 {
 	fontSize := styles["font-size"]
 	if fontSize == "" {
-		return 13.0 // Default font size
+		return baseFontHeight // Default font size
 	}
 	
 	fontSize = strings.TrimSpace(strings.ToLower(fontSize))
@@ -437,7 +441,7 @@ func extractFontSize(styles map[string]string) float64 {
 		"xx-small": 9.0,
 		"x-small":  10.0,
 		"small":    12.0,
-		"medium":   13.0,
+		"medium":   baseFontHeight,
 		"large":    16.0,
 		"x-large":  20.0,
 		"xx-large": 24.0,
@@ -447,7 +451,7 @@ func extractFontSize(styles map[string]string) float64 {
 		return size
 	}
 	
-	return 13.0 // Default font size
+	return baseFontHeight // Default font size
 }
 
 // layoutTable lays out a table element.
@@ -636,7 +640,7 @@ func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 				// Estimate text width accounting for font size
 				text := child.StyledNode.Node.Data
 				fontSize := extractFontSize(child.StyledNode.Styles)
-				scale := fontSize / 13.0 // 13 is the height of basicfont.Face7x13
+				scale := fontSize / baseFontHeight
 				textWidth := float64(len(text)) * charWidth * scale
 				width += textWidth
 			} else {

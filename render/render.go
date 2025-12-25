@@ -1,9 +1,3 @@
-// Package render implements the rendering engine for the browser.
-// It converts a layout tree into a visual representation as a PNG image.
-//
-// Spec references:
-// - CSS 2.1 §14 Colors and backgrounds
-// - CSS 2.1 §8 Box model
 package render
 
 import (
@@ -22,6 +16,20 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/math/fixed"
+)
+
+// Font rendering constants
+const (
+	// baseFontHeight is the height in pixels of basicfont.Face7x13
+	baseFontHeight = 13.0
+	
+	// italicSlantFactor determines the angle of italic text
+	// Value of 0.2 approximates a 15-degree slant (tan(15°) ≈ 0.27, reduced for readability)
+	italicSlantFactor = 0.2
+	
+	// underlineOffset is the distance below the baseline to draw underlines
+	// CSS 2.1 §16.3.1: Underlines should be positioned below the baseline
+	underlineOffset = 2.0
 )
 
 // Canvas represents the rendering surface.
@@ -111,8 +119,7 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	baseFace := basicfont.Face7x13
 	
 	// Calculate scale factor based on desired font size
-	// basicfont.Face7x13 has height of 13 pixels
-	scale := style.Size / 13.0
+	scale := style.Size / baseFontHeight
 	if scale <= 0 {
 		scale = 1.0
 	}
@@ -163,9 +170,8 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 			// CSS 2.1 §15.7: Synthetic italic can be created by slanting
 			slant := 0
 			if style.Style == "italic" {
-				// Slant by about 15 degrees (tan(15°) ≈ 0.27)
 				// Shift more at the top, less at the bottom
-				slant = int(float64(scaledHeight-dy) * 0.2)
+				slant = int(float64(scaledHeight-dy) * italicSlantFactor)
 			}
 			
 			px := x + dx + slant
@@ -189,7 +195,7 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	// Draw underline if needed
 	// CSS 2.1 §16.3.1: Underline is drawn below the baseline
 	if style.Decoration == "underline" {
-		underlineY := y + int(float64(baseFace.Descent)*scale/2)
+		underlineY := y + int(underlineOffset*scale)
 		underlineThickness := max(1, int(scale*0.5))
 		c.FillRect(x, underlineY, scaledWidth, underlineThickness, col)
 	}
@@ -520,8 +526,15 @@ func extractFontStyle(styles map[string]string) FontStyle {
 	// Parse font-weight (CSS 2.1 §15.6)
 	if fontWeight := styles["font-weight"]; fontWeight != "" {
 		fontWeight = strings.TrimSpace(strings.ToLower(fontWeight))
-		if fontWeight == "bold" || fontWeight == "bolder" || fontWeight >= "600" {
+		// Check for keyword values
+		if fontWeight == "bold" || fontWeight == "bolder" {
 			fontStyle.Weight = "bold"
+		} else {
+			// Check for numeric values (600-900 are bold)
+			// CSS 2.1 §15.6: Values 100-900 indicate weight, 400 is normal, 700 is bold
+			if weight, err := strconv.Atoi(fontWeight); err == nil && weight >= 600 {
+				fontStyle.Weight = "bold"
+			}
 		}
 	}
 	
