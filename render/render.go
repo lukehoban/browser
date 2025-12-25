@@ -19,6 +19,7 @@ import (
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/gofont/gobolditalic"
 	"golang.org/x/image/font/gofont/goitalic"
 	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/font/opentype"
@@ -41,11 +42,12 @@ const (
 var (
 	// Global font cache to avoid reloading fonts
 	// The Go fonts are embedded in the binary and always available
-	goRegularFont *opentype.Font
-	goBoldFont    *opentype.Font
-	goItalicFont  *opentype.Font
-	fontOnce      sync.Once
-	fontErr       error
+	goRegularFont    *opentype.Font
+	goBoldFont       *opentype.Font
+	goItalicFont     *opentype.Font
+	goBoldItalicFont *opentype.Font
+	fontOnce         sync.Once
+	fontErr          error
 )
 
 // loadGoFonts loads the built-in Go fonts from the golang.org/x/image/font/gofont packages.
@@ -72,6 +74,13 @@ func loadGoFonts() error {
 		
 		// Load Go Italic font
 		goItalicFont, err = opentype.Parse(goitalic.TTF)
+		if err != nil {
+			fontErr = err
+			return
+		}
+		
+		// Load Go Bold Italic font
+		goBoldItalicFont, err = opentype.Parse(gobolditalic.TTF)
 		if err != nil {
 			fontErr = err
 			return
@@ -181,9 +190,10 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 		var selectedFont *opentype.Font
 		
 		// CSS 2.1 §15.6 & §15.7: Choose font based on weight and style
-		// Note: We use bold font for bold, italic font for italic
-		// For bold+italic, we use italic and apply synthetic bold
-		if style.Weight == "bold" && style.Style != "italic" {
+		// We have native fonts for all combinations: regular, bold, italic, and bold-italic
+		if style.Weight == "bold" && style.Style == "italic" {
+			selectedFont = goBoldItalicFont
+		} else if style.Weight == "bold" {
 			selectedFont = goBoldFont
 		} else if style.Style == "italic" {
 			selectedFont = goItalicFont
@@ -247,13 +257,6 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	drawer.Dst = textImg
 	drawer.Dot = fixed.Point26_6{X: 0, Y: metrics.Ascent}
 	drawer.DrawString(text)
-	
-	// CSS 2.1 §15.6: Apply synthetic bold for bold+italic combination
-	// (since we're using italic font, we need to add bold effect)
-	if style.Weight == "bold" && style.Style == "italic" {
-		drawer.Dot = fixed.Point26_6{X: fixed.I(1), Y: metrics.Ascent}
-		drawer.DrawString(text)
-	}
 	
 	// Calculate baseline offset
 	baselineOffset := metrics.Ascent.Ceil()
