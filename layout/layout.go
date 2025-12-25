@@ -188,8 +188,7 @@ func (box *LayoutBox) Layout(containingBlock Dimensions) {
 	case BlockBox:
 		box.layoutBlock(containingBlock)
 	case InlineBox:
-		// Simplified: treat inline as block for now
-		box.layoutBlock(containingBlock)
+		box.layoutInlineBox(containingBlock)
 	case TableBox:
 		box.layoutTable(containingBlock)
 	case TableRowBox:
@@ -311,11 +310,108 @@ func (box *LayoutBox) calculateBlockPosition(containingBlock Dimensions) {
 
 // layoutBlockChildren lays out the children of a block box.
 func (box *LayoutBox) layoutBlockChildren() {
-	for _, child := range box.Children {
+	for i := 0; i < len(box.Children); {
+		child := box.Children[i]
+
+		// CSS 2.1 §9.4.2: Inline formatting context
+		if child.isInlineLevel() {
+			inlineRun := make([]*LayoutBox, 0)
+			for i < len(box.Children) && box.Children[i].isInlineLevel() {
+				inlineRun = append(inlineRun, box.Children[i])
+				i++
+			}
+			box.layoutInlineChildren(inlineRun)
+			continue
+		}
+
+		// Block-level layout (existing behavior)
 		child.Layout(box.Dimensions)
-		// Update height to include child
 		box.Dimensions.Content.Height += child.marginBox().Height
+		i++
 	}
+}
+
+// layoutInlineChildren lays out a run of inline-level children within this block box.
+// CSS 2.1 §9.4.2 Inline formatting contexts: inline-level boxes are laid out in horizontal line boxes.
+func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
+	if len(children) == 0 {
+		return
+	}
+
+	currentX := box.Dimensions.Content.X
+	currentY := box.Dimensions.Content.Y + box.Dimensions.Content.Height
+	maxHeight := 0.0
+
+	for _, child := range children {
+		inlineCB := Dimensions{
+			Content: Rect{
+				X:      currentX,
+				Y:      currentY,
+				Width:  box.Dimensions.Content.Width - (currentX - box.Dimensions.Content.X),
+				Height: 0,
+			},
+		}
+
+		child.Layout(inlineCB)
+
+		// Position child at current run location
+		child.Dimensions.Content.X = currentX
+		child.Dimensions.Content.Y = currentY
+
+		currentX += child.marginBox().Width
+		if child.marginBox().Height > maxHeight {
+			maxHeight = child.marginBox().Height
+		}
+	}
+
+	// Increase parent height by the tallest inline box on this line
+	box.Dimensions.Content.Height += maxHeight
+}
+
+// layoutInlineBox lays out an inline box and its inline children.
+// CSS 2.1 §9.4.2 Inline formatting contexts
+func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
+	box.Dimensions.Content.X = containingBlock.Content.X
+	box.Dimensions.Content.Y = containingBlock.Content.Y
+
+	currentX := box.Dimensions.Content.X
+	currentY := box.Dimensions.Content.Y
+	maxHeight := 0.0
+
+	for _, child := range box.Children {
+		inlineCB := Dimensions{
+			Content: Rect{
+				X:      currentX,
+				Y:      currentY,
+				Width:  containingBlock.Content.Width - (currentX - containingBlock.Content.X),
+				Height: 0,
+			},
+		}
+
+		child.Layout(inlineCB)
+
+		child.Dimensions.Content.X = currentX
+		child.Dimensions.Content.Y = currentY
+
+		currentX += child.marginBox().Width
+		if child.marginBox().Height > maxHeight {
+			maxHeight = child.marginBox().Height
+		}
+	}
+
+	box.Dimensions.Content.Width = currentX - box.Dimensions.Content.X
+	box.Dimensions.Content.Height = maxHeight
+}
+
+// isInlineLevel returns true for inline boxes and text nodes.
+func (box *LayoutBox) isInlineLevel() bool {
+	if box.BoxType == InlineBox {
+		return true
+	}
+	if box.StyledNode != nil && box.StyledNode.Node != nil && box.StyledNode.Node.Type == dom.TextNode {
+		return true
+	}
+	return false
 }
 
 // calculateBlockHeight calculates the height of a block box.
