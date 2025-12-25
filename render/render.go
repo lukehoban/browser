@@ -596,26 +596,26 @@ func parseColor(value string) color.RGBA {
 	// CSS 2.1 §4.3.6: Named colors (16 basic colors)
 	// CSS Color Module Level 3: Extended color keywords (147 colors)
 	namedColors := map[string]color.RGBA{
-		// CSS 2.1 Basic 16 colors
+		// CSS 2.1 Basic 16 colors (SVG 1.0 color keywords)
 		"black":   {0, 0, 0, 255},
-		"white":   {255, 255, 255, 255},
-		"red":     {255, 0, 0, 255},
-		"green":   {0, 128, 0, 255},
-		"blue":    {0, 0, 255, 255},
-		"yellow":  {255, 255, 0, 255},
-		"cyan":    {0, 255, 255, 255},
-		"magenta": {255, 0, 255, 255},
+		"silver":  {192, 192, 192, 255},
 		"gray":    {128, 128, 128, 255},
 		"grey":    {128, 128, 128, 255},
-		"silver":  {192, 192, 192, 255},
+		"white":   {255, 255, 255, 255},
 		"maroon":  {128, 0, 0, 255},
-		"navy":    {0, 0, 128, 255},
-		"olive":   {128, 128, 0, 255},
+		"red":     {255, 0, 0, 255},
 		"purple":  {128, 0, 128, 255},
+		"fuchsia": {255, 0, 255, 255},
+		"magenta": {255, 0, 255, 255},
+		"green":   {0, 128, 0, 255},
+		"lime":    {0, 255, 0, 255},
+		"olive":   {128, 128, 0, 255},
+		"yellow":  {255, 255, 0, 255},
+		"navy":    {0, 0, 128, 255},
+		"blue":    {0, 0, 255, 255},
 		"teal":    {0, 128, 128, 255},
 		"aqua":    {0, 255, 255, 255},
-		"fuchsia": {255, 0, 255, 255},
-		"lime":    {0, 255, 0, 255},
+		"cyan":    {0, 255, 255, 255},
 		"orange":  {255, 165, 0, 255},
 		
 		// Extended colors commonly used in web pages
