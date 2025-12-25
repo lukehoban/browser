@@ -11,12 +11,18 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/layout"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/font/gofont/gobold"
+	"golang.org/x/image/font/gofont/gobolditalic"
+	"golang.org/x/image/font/gofont/goitalic"
+	"golang.org/x/image/font/gofont/goregular"
+	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -32,6 +38,57 @@ const (
 	// Higher values produce smoother results but require more memory and processing
 	supersamplingFactor = 4
 )
+
+var (
+	// Global font cache to avoid reloading fonts
+	// The Go fonts are embedded in the binary and always available
+	goRegularFont    *opentype.Font
+	goBoldFont       *opentype.Font
+	goItalicFont     *opentype.Font
+	goBoldItalicFont *opentype.Font
+	fontOnce         sync.Once
+	fontErr          error
+)
+
+// loadGoFonts loads the built-in Go fonts from the golang.org/x/image/font/gofont packages.
+// These fonts are embedded in the binary and always available.
+// The Go fonts are high-quality, open-source, sans-serif fonts designed for the Go project.
+// See https://blog.golang.org/go-fonts for details.
+func loadGoFonts() error {
+	fontOnce.Do(func() {
+		var err error
+		
+		// Load Go Regular font (default)
+		goRegularFont, err = opentype.Parse(goregular.TTF)
+		if err != nil {
+			fontErr = err
+			return
+		}
+		
+		// Load Go Bold font
+		goBoldFont, err = opentype.Parse(gobold.TTF)
+		if err != nil {
+			fontErr = err
+			return
+		}
+		
+		// Load Go Italic font
+		goItalicFont, err = opentype.Parse(goitalic.TTF)
+		if err != nil {
+			fontErr = err
+			return
+		}
+		
+		// Load Go Bold Italic font
+		goBoldItalicFont, err = opentype.Parse(gobolditalic.TTF)
+		if err != nil {
+			fontErr = err
+			return
+		}
+	})
+	
+	return fontErr
+}
 
 // defaultFontStyle represents CSS 2.1 initial values for font properties
 var defaultFontStyle = FontStyle{
@@ -122,14 +179,122 @@ func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
 // at a higher resolution (supersamplingFactor × target size) and then downsampled
 // using bilinear interpolation. This produces smooth, high-quality text rendering.
 func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style FontStyle) {
-	baseFace := basicfont.Face7x13 // 7x13 pixel font
+	// Load the built-in Go fonts
+	err := loadGoFonts()
 	
-	// Calculate scale factor based on desired font size
-	scale := style.Size / css.BaseFontHeight
-	if scale <= 0 {
-		scale = 1.0
+	var face font.Face
+	var metrics font.Metrics
+	
+	if err == nil {
+		// Select the appropriate Go font based on weight and style
+		var selectedFont *opentype.Font
+		
+		// CSS 2.1 §15.6 & §15.7: Choose font based on weight and style
+		// We have native fonts for all combinations: regular, bold, italic, and bold-italic
+		if style.Weight == "bold" && style.Style == "italic" {
+			selectedFont = goBoldItalicFont
+		} else if style.Weight == "bold" {
+			selectedFont = goBoldFont
+		} else if style.Style == "italic" {
+			selectedFont = goItalicFont
+		} else {
+			selectedFont = goRegularFont
+		}
+		
+		// Create face with proper DPI and size
+		face, err = opentype.NewFace(selectedFont, &opentype.FaceOptions{
+			Size:    style.Size,
+			DPI:     72,
+			Hinting: font.HintingFull,
+		})
+		if err != nil {
+			// Fall back to basicfont if face creation fails
+			face = basicfont.Face7x13
+			metrics = face.Metrics()
+			scale := style.Size / css.BaseFontHeight
+			if scale <= 0 {
+				scale = 1.0
+			}
+			c.drawScaledBasicFont(text, x, y, col, style, face, scale)
+			return
+		}
+		defer face.Close()
+		metrics = face.Metrics()
+	} else {
+		// Fallback to bitmap font if Go font loading fails
+		face = basicfont.Face7x13
+		metrics = face.Metrics()
+		
+		// For basicfont, we need to scale
+		scale := style.Size / css.BaseFontHeight
+		if scale <= 0 {
+			scale = 1.0
+		}
+		
+		// Use scaled rendering with basicfont
+		c.drawScaledBasicFont(text, x, y, col, style, face, scale)
+		return
 	}
 	
+	// Measure the text to determine width
+	drawer := &font.Drawer{
+		Dst:  nil, // We'll set this later
+		Src:  image.NewUniform(col),
+		Face: face,
+	}
+	
+	// Measure text bounds
+	textWidth := drawer.MeasureString(text).Ceil()
+	textHeight := (metrics.Ascent + metrics.Descent).Ceil()
+	
+	if textWidth <= 0 || textHeight <= 0 {
+		return
+	}
+	
+	// Create temporary image for the text
+	textImg := image.NewRGBA(image.Rect(0, 0, textWidth, textHeight))
+	
+	drawer.Dst = textImg
+	drawer.Dot = fixed.Point26_6{X: 0, Y: metrics.Ascent}
+	drawer.DrawString(text)
+	
+	// Calculate baseline offset
+	baselineOffset := metrics.Ascent.Ceil()
+	
+	// Copy text pixels to canvas (no italic slant needed since we use native italic font)
+	for dy := 0; dy < textHeight; dy++ {
+		for dx := 0; dx < textWidth; dx++ {
+			px := x + dx
+			py := y - baselineOffset + dy
+			
+			if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
+				r, g, b, a := textImg.At(dx, dy).RGBA()
+				if a > 0 {
+					c.Pixels[py*c.Width+px] = color.RGBA{
+						R: uint8(r >> 8),
+						G: uint8(g >> 8),
+						B: uint8(b >> 8),
+						A: uint8(a >> 8),
+					}
+				}
+			}
+		}
+	}
+	
+	// CSS 2.1 §16.3.1: Draw underline if needed
+	if style.Decoration == "underline" {
+		underlineY := y + int(underlineOffset)
+		underlineThickness := max(1, int(style.Size*0.05))
+		c.FillRect(x, underlineY, textWidth, underlineThickness, col)
+	}
+}
+
+// drawScaledBasicFont is a fallback function for rendering with the basic bitmap font.
+// This preserves the original scaling behavior when TrueType fonts are not available.
+func (c *Canvas) drawScaledBasicFont(text string, x, y int, col color.RGBA, style FontStyle, face font.Face, scale float64) {
+	baseFace := basicfont.Face7x13
+	
+	// Calculate the dimensions for scaled text
 	// Apply supersampling for antialiasing: render at higher resolution
 	supersampledScale := scale * supersamplingFactor
 	
