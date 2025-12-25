@@ -129,6 +129,7 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 
 	// Determine box type based on display property or HTML element
 	// CSS 2.1 §17.2.1: The table element generates a principal table box
+	// CSS 2.1 §9.2.2: Inline-level elements
 	boxType := BlockBox
 	display := styledNode.Styles["display"]
 	
@@ -141,6 +142,11 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 			display = "table-row"
 		case "td", "th":
 			display = "table-cell"
+		// CSS 2.1 §9.2.2: Inline-level elements and inline boxes
+		// These elements generate inline boxes by default
+		case "a", "span", "b", "strong", "i", "em", "font", "code", "small", "big",
+			"abbr", "cite", "kbd", "samp", "var", "sub", "sup", "mark", "u", "s", "del", "ins":
+			display = "inline"
 		}
 	}
 	
@@ -403,6 +409,16 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 		return
 	}
 
+	// CSS 2.1 §16.6.1: Collapse whitespace for layout calculations
+	// This ensures dimensions match what will actually be rendered
+	text = collapseWhitespace(text)
+	
+	if text == "" {
+		box.Dimensions.Content.Width = 0
+		box.Dimensions.Content.Height = 0
+		return
+	}
+
 	// Calculate text dimensions using basicfont.Face7x13 as base
 	// Note: For basicfont.Face7x13, all characters have fixed width (Advance)
 	// For more accurate measurement, we could use font.Drawer.MeasureString()
@@ -462,6 +478,45 @@ func extractFontSize(styles map[string]string) float64 {
 	}
 	
 	return baseFontHeight // Default font size
+}
+
+// collapseWhitespace collapses consecutive whitespace characters into a single space.
+// CSS 2.1 §16.6.1: The white-space property
+// For normal text (white-space: normal, which is the default):
+// - Sequences of whitespace (space, tab, newline, carriage return) are collapsed into a single space
+// - Leading and trailing whitespace is removed
+func collapseWhitespace(text string) string {
+	if text == "" {
+		return text
+	}
+	
+	var result strings.Builder
+	lastWasSpace := true // Start as true to trim leading whitespace
+	
+	for _, ch := range text {
+		// Check if character is whitespace (space, tab, newline, carriage return)
+		isSpace := ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
+		
+		if isSpace {
+			// Only add a space if we haven't just added one
+			if !lastWasSpace {
+				result.WriteRune(' ')
+				lastWasSpace = true
+			}
+		} else {
+			// Regular character - add it
+			result.WriteRune(ch)
+			lastWasSpace = false
+		}
+	}
+	
+	// Trim trailing whitespace
+	output := result.String()
+	if lastWasSpace && len(output) > 0 {
+		output = output[:len(output)-1]
+	}
+	
+	return output
 }
 
 // layoutTable lays out a table element.
@@ -647,8 +702,9 @@ func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 	for _, child := range layoutBox.Children {
 		if child.StyledNode != nil && child.StyledNode.Node != nil {
 			if child.StyledNode.Node.Type == dom.TextNode {
-				// Estimate text width accounting for font size
-				text := child.StyledNode.Node.Data
+				// Estimate text width accounting for font size and whitespace collapsing
+				// CSS 2.1 §16.6.1: Collapse whitespace for width calculations
+				text := collapseWhitespace(child.StyledNode.Node.Data)
 				fontSize := extractFontSize(child.StyledNode.Styles)
 				scale := fontSize / baseFontHeight
 				textWidth := float64(len(text)) * charWidth * scale
