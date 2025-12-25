@@ -23,6 +23,8 @@ The MILESTONES.md document is the source of truth for project progress and shoul
 
 This project renders HTML/CSS to PNG images. Visual changes are difficult to review from code alone. To ensure quality:
 
+1. **Keep the README Hacker News screenshot current.** When you make meaningful rendering/layout changes, regenerate `hackernews_screenshot.png` (e.g., `./browser -output hackernews_screenshot.png https://news.ycombinator.com/`) and update the README reference.
+
 1. **Before submitting changes** that affect rendering, layout, or styling:
    - Build the browser: `go build ./cmd/browser`
    - Render a test page: `./browser -output screenshot.png test/render_test.html`
