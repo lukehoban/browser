@@ -4,6 +4,7 @@ import (
 	"image/color"
 	"testing"
 
+	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/layout"
 	"github.com/lukehoban/browser/style"
 )
@@ -418,6 +419,8 @@ func TestParseFontSize(t *testing.T) {
 	}{
 		{"14px", 14.0},
 		{"20px", 20.0},
+		{"10pt", 10.0 * 96.0 / 72.0}, // 10pt at 96 DPI
+		{"12pt", 12.0 * 96.0 / 72.0}, // 12pt at 96 DPI
 		{"10", 10.0},
 		{"24", 24.0},
 		{"medium", 13.0},
@@ -430,9 +433,9 @@ func TestParseFontSize(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := parseFontSize(tt.input)
+			result := css.ParseFontSize(tt.input)
 			if result != tt.expected {
-				t.Errorf("parseFontSize(%q) = %v, expected %v", tt.input, result, tt.expected)
+				t.Errorf("css.ParseFontSize(%q) = %v, expected %v", tt.input, result, tt.expected)
 			}
 		})
 	}

@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/layout"
 	"golang.org/x/image/font"
@@ -20,9 +21,6 @@ import (
 
 // Font rendering constants
 const (
-	// CSS 2.1 §15.7: Default 'medium' font size (using basicfont.Face7x13)
-	baseFontHeight = 13.0
-	
 	// CSS 2.1 §15.7: Slant factor for synthetic italic rendering
 	italicSlantFactor = 0.2
 	
@@ -32,7 +30,7 @@ const (
 
 // defaultFontStyle represents CSS 2.1 initial values for font properties
 var defaultFontStyle = FontStyle{
-	Size:       baseFontHeight,
+	Size:       css.BaseFontHeight,
 	Weight:     "normal",
 	Style:      "normal",
 	Decoration: "none",
@@ -118,7 +116,7 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	baseFace := basicfont.Face7x13 // 7x13 pixel font
 	
 	// Calculate scale factor based on desired font size
-	scale := style.Size / baseFontHeight
+	scale := style.Size / css.BaseFontHeight
 	if scale <= 0 {
 		scale = 1.0
 	}
@@ -519,7 +517,7 @@ func extractFontStyle(styles map[string]string) FontStyle {
 	
 	// Parse font-size (CSS 2.1 §15.7)
 	if fontSize := styles["font-size"]; fontSize != "" {
-		if size := parseFontSize(fontSize); size > 0 {
+		if size := css.ParseFontSize(fontSize); size > 0 {
 			fontStyle.Size = size
 		}
 	}
@@ -551,40 +549,6 @@ func extractFontStyle(styles map[string]string) FontStyle {
 	}
 	
 	return fontStyle
-}
-
-// parseFontSize parses a CSS font-size value and returns the size in pixels.
-// CSS 2.1 §15.7 Font size: the 'font-size' property
-func parseFontSize(value string) float64 {
-	value = strings.TrimSpace(strings.ToLower(value))
-	
-	if strings.HasSuffix(value, "px") {
-		value = strings.TrimSuffix(value, "px")
-		if size, err := strconv.ParseFloat(value, 64); err == nil {
-			return size
-		}
-	}
-	
-	if size, err := strconv.ParseFloat(value, 64); err == nil {
-		return size
-	}
-	
-	// CSS 2.1 §15.7: Named sizes
-	namedSizes := map[string]float64{
-		"xx-small": 9.0,
-		"x-small":  10.0,
-		"small":    12.0,
-		"medium":   13.0,
-		"large":    16.0,
-		"x-large":  20.0,
-		"xx-large": 24.0,
-	}
-	
-	if size, ok := namedSizes[value]; ok {
-		return size
-	}
-	
-	return 0
 }
 
 // parseColor parses a CSS color value and returns a color.RGBA.

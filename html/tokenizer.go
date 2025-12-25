@@ -6,6 +6,7 @@
 package html
 
 import (
+	"strconv"
 	"strings"
 	"unicode"
 )
@@ -102,9 +103,11 @@ func (t *Tokenizer) readText() Token {
 	for t.pos < len(t.input) && t.input[t.pos] != '<' {
 		t.pos++
 	}
+	// HTML5 §12.2.4.2: Decode character references in text content
+	text := decodeHTMLEntities(t.input[start:t.pos])
 	return Token{
 		Type: TextToken,
-		Data: t.input[start:t.pos],
+		Data: text,
 	}
 }
 
@@ -301,4 +304,196 @@ func (t *Tokenizer) skipWhitespace() {
 	for t.pos < len(t.input) && unicode.IsSpace(rune(t.input[t.pos])) {
 		t.pos++
 	}
+}
+
+// decodeHTMLEntities decodes HTML character references in text.
+// HTML5 §12.2.4.2 Character reference state
+// Supports named character references (e.g., &amp;, &lt;, &nbsp;) and
+// numeric character references (decimal &#NNN; and hexadecimal &#xHHH;)
+func decodeHTMLEntities(s string) string {
+	if !strings.Contains(s, "&") {
+		return s
+	}
+
+	var result strings.Builder
+	result.Grow(len(s))
+
+	i := 0
+	for i < len(s) {
+		if s[i] != '&' {
+			result.WriteByte(s[i])
+			i++
+			continue
+		}
+
+		// Find the end of the entity (semicolon or end of valid chars)
+		end := i + 1
+		for end < len(s) && end < i+12 && s[end] != ';' && s[end] != '&' && s[end] != '<' {
+			end++
+		}
+
+		// Check if we found a complete entity ending with semicolon
+		if end < len(s) && s[end] == ';' {
+			entity := s[i+1 : end]
+			if decoded, ok := decodeEntity(entity); ok {
+				result.WriteString(decoded)
+				i = end + 1
+				continue
+			}
+		}
+
+		// Not a valid entity, output the ampersand literally
+		result.WriteByte(s[i])
+		i++
+	}
+
+	return result.String()
+}
+
+// decodeEntity decodes a single HTML entity (without & and ;).
+// HTML5 §12.2.4.2 Character reference state
+func decodeEntity(entity string) (string, bool) {
+	if entity == "" {
+		return "", false
+	}
+
+	// Numeric character reference
+	// HTML5 §12.2.4.3 Numeric character reference state
+	if entity[0] == '#' {
+		return decodeNumericEntity(entity[1:])
+	}
+
+	// Named character reference
+	// HTML5 §12.2.4.4 Named character reference state
+	if decoded, ok := namedEntities[entity]; ok {
+		return decoded, true
+	}
+
+	return "", false
+}
+
+// decodeNumericEntity decodes a numeric character reference.
+// Supports decimal (e.g., "60" for '<') and hexadecimal (e.g., "x3C" for '<')
+func decodeNumericEntity(s string) (string, bool) {
+	if s == "" {
+		return "", false
+	}
+
+	var codePoint int64
+	var err error
+
+	if s[0] == 'x' || s[0] == 'X' {
+		// Hexadecimal
+		codePoint, err = strconv.ParseInt(s[1:], 16, 32)
+	} else {
+		// Decimal
+		codePoint, err = strconv.ParseInt(s, 10, 32)
+	}
+
+	if err != nil || codePoint <= 0 || codePoint > 0x10FFFF {
+		return "", false
+	}
+
+	return string(rune(codePoint)), true
+}
+
+// namedEntities maps HTML entity names to their decoded values.
+// HTML5 §12.2.4.4: Named character references
+// This is a subset of the most commonly used entities.
+var namedEntities = map[string]string{
+	// Common entities
+	"nbsp":   "\u00A0", // Non-breaking space
+	"amp":    "&",
+	"lt":     "<",
+	"gt":     ">",
+	"quot":   "\"",
+	"apos":   "'",
+	
+	// Latin characters
+	"copy":   "©",
+	"reg":    "®",
+	"trade":  "™",
+	"deg":    "°",
+	"plusmn": "±",
+	"cent":   "¢",
+	"pound":  "£",
+	"euro":   "€",
+	"yen":    "¥",
+	"sect":   "§",
+	"para":   "¶",
+	"middot": "·",
+	"bull":   "•",
+	"hellip": "…",
+	"prime":  "′",
+	"Prime":  "″",
+	
+	// Dashes and spaces
+	"ndash":  "–",
+	"mdash":  "—",
+	"lsquo":  "'",
+	"rsquo":  "'",
+	"ldquo":  "\u201C", // "
+	"rdquo":  "\u201D", // "
+	"sbquo":  "‚",
+	"bdquo":  "„",
+	"laquo":  "«",
+	"raquo":  "»",
+	"thinsp": "\u2009",
+	"ensp":   "\u2002",
+	"emsp":   "\u2003",
+	
+	// Math symbols
+	"times":  "×",
+	"divide": "÷",
+	"minus":  "−",
+	"lowast": "∗",
+	"le":     "≤",
+	"ge":     "≥",
+	"ne":     "≠",
+	"equiv":  "≡",
+	"asymp":  "≈",
+	"infin":  "∞",
+	"sum":    "∑",
+	"prod":   "∏",
+	"radic":  "√",
+	"part":   "∂",
+	"int":    "∫",
+	
+	// Arrows
+	"larr":   "←",
+	"uarr":   "↑",
+	"rarr":   "→",
+	"darr":   "↓",
+	"harr":   "↔",
+	"lArr":   "⇐",
+	"uArr":   "⇑",
+	"rArr":   "⇒",
+	"dArr":   "⇓",
+	"hArr":   "⇔",
+	
+	// Greek letters (commonly used)
+	"alpha":   "α",
+	"beta":    "β",
+	"gamma":   "γ",
+	"delta":   "δ",
+	"epsilon": "ε",
+	"pi":      "π",
+	"sigma":   "σ",
+	"omega":   "ω",
+	"Alpha":   "Α",
+	"Beta":    "Β",
+	"Gamma":   "Γ",
+	"Delta":  "Δ",
+	"Pi":     "Π",
+	"Sigma":  "Σ",
+	"Omega":  "Ω",
+	
+	// Miscellaneous
+	"iexcl":  "¡",
+	"iquest": "¿",
+	"loz":    "◊",
+	"spades": "♠",
+	"clubs":  "♣",
+	"hearts": "♥",
+	"diams":  "♦",
 }

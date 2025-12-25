@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/style"
 	"golang.org/x/image/font/basicfont"
@@ -19,9 +20,6 @@ import (
 
 // Table layout constants
 const (
-	// CSS 2.1 §15.7: Default 'medium' font size (using basicfont.Face7x13)
-	baseFontHeight = 13.0
-	
 	// CSS 2.1 §17.5.2.2: Maximum table column width to prevent unusable layouts
 	maxColumnWidth = 400.0
 	
@@ -139,6 +137,10 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 		case "a", "span", "b", "strong", "i", "em", "font", "code", "small", "big",
 			"abbr", "cite", "kbd", "samp", "var", "sub", "sup", "mark", "u", "s", "del", "ins":
 			display = "inline"
+		// HTML5 §10.3.1: Elements that should not be rendered
+		// These elements have display:none in the default UA stylesheet
+		case "head", "title", "meta", "link", "style", "script", "noscript", "base":
+			display = "none"
 		}
 	}
 
@@ -542,7 +544,7 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 
 	// Get font size from styles (CSS 2.1 §15.7)
 	fontSize := extractFontSize(box.StyledNode.Styles)
-	scale := fontSize / baseFontHeight
+	scale := fontSize / css.BaseFontHeight
 
 	width := float64(len(text)*face.Advance) * scale
 	height := float64(face.Height) * scale
@@ -559,40 +561,14 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 func extractFontSize(styles map[string]string) float64 {
 	fontSize := styles["font-size"]
 	if fontSize == "" {
-		return baseFontHeight // Default font size
+		return css.BaseFontHeight // Default font size
 	}
 
-	fontSize = strings.TrimSpace(strings.ToLower(fontSize))
-
-	// Handle pixel values (e.g., "14px")
-	if strings.HasSuffix(fontSize, "px") {
-		fontSize = strings.TrimSuffix(fontSize, "px")
-		if size, err := strconv.ParseFloat(fontSize, 64); err == nil && size > 0 {
-			return size
-		}
-	}
-
-	// Handle plain numbers (treat as pixels)
-	if size, err := strconv.ParseFloat(fontSize, 64); err == nil && size > 0 {
+	if size := css.ParseFontSize(fontSize); size > 0 {
 		return size
 	}
 
-	// Handle named sizes (CSS 2.1 §15.7)
-	namedSizes := map[string]float64{
-		"xx-small": 9.0,
-		"x-small":  10.0,
-		"small":    12.0,
-		"medium":   baseFontHeight,
-		"large":    16.0,
-		"x-large":  20.0,
-		"xx-large": 24.0,
-	}
-
-	if size, ok := namedSizes[fontSize]; ok {
-		return size
-	}
-
-	return baseFontHeight // Default font size
+	return css.BaseFontHeight // Default font size
 }
 
 // collapseWhitespace collapses consecutive whitespace characters into a single space.
@@ -810,7 +786,7 @@ func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 				// CSS 2.1 §16.6.1: Collapse whitespace for width calculations
 				text := collapseWhitespace(child.StyledNode.Node.Data)
 				fontSize := extractFontSize(child.StyledNode.Styles)
-				scale := fontSize / baseFontHeight
+				scale := fontSize / css.BaseFontHeight
 				textWidth := float64(len(text)) * charWidth * scale
 				width += textWidth
 			} else {
