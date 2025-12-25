@@ -18,22 +18,13 @@ import (
 
 // Table layout constants
 const (
-	// baseFontHeight is the height in pixels of basicfont.Face7x13
-	// This is used for text dimension calculations throughout the layout engine
-	// CSS 2.1 §15.7: The default 'medium' font size is typically 16px, but we use
-	// 13px to match the available basicfont.Face7x13 from golang.org/x/image/font/basicfont
+	// CSS 2.1 §15.7: Default 'medium' font size (using basicfont.Face7x13)
 	baseFontHeight = 13.0
 	
-	// maxColumnWidth is the maximum width any table column can have.
-	// This prevents extremely wide content from creating unusable layouts.
-	// CSS 2.1 §17.5.2.2 does not specify a maximum, but practical implementations
-	// need limits to prevent performance issues. Set to 400px as a reasonable maximum.
+	// CSS 2.1 §17.5.2.2: Maximum table column width to prevent unusable layouts
 	maxColumnWidth = 400.0
 	
-	// maxColspan is the maximum number of columns a cell can span.
-	// HTML5 §4.9.9 specifies that user agents may choose to limit colspan
-	// to prevent denial of service attacks. The recommended maximum is 1000.
-	// See: https://html.spec.whatwg.org/multipage/tables.html#attributes-common-to-td-and-th-elements
+	// HTML5 §4.9.9: Maximum colspan to prevent DoS attacks
 	maxColspan = 1000
 )
 

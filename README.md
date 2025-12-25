@@ -78,7 +78,6 @@ go test ./...
 
 - **[MILESTONES.md](MILESTONES.md)** - Implementation milestones and progress tracking
 - **[IMPLEMENTATION.md](IMPLEMENTATION.md)** - Detailed implementation summary and architecture
-- **[IMAGE_RENDERING.md](IMAGE_RENDERING.md)** - Image rendering capabilities and usage
 - **[TESTING.md](TESTING.md)** - Testing strategy and public test suite integration
 
 ## Current Status

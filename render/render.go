@@ -20,32 +20,19 @@ import (
 
 // Font rendering constants
 const (
-	// baseFontHeight is the height in pixels of basicfont.Face7x13
-	// CSS 2.1 §15.7: The default 'medium' font size is typically 16px, but we use
-	// 13px to match the available basicfont.Face7x13 from golang.org/x/image/font/basicfont
+	// CSS 2.1 §15.7: Default 'medium' font size (using basicfont.Face7x13)
 	baseFontHeight = 13.0
 	
-	// italicSlantFactor determines the angle of italic text
-	// CSS 2.1 §15.7: "Oblique faces are typically rendered by slanting a normal face."
-	// Value of 0.2 approximates a 15-degree slant (tan(15°) ≈ 0.27, reduced for readability)
-	// This is a common approach for synthetic italic rendering in the absence of true italic fonts.
+	// CSS 2.1 §15.7: Slant factor for synthetic italic rendering
 	italicSlantFactor = 0.2
 	
-	// underlineOffset is the distance below the baseline to draw underlines
-	// CSS 2.1 §16.3.1: "This property describes decorations that are added to the text of an element."
-	// The spec doesn't mandate exact positioning, but 1-2px below baseline is standard practice.
-	// We use 2px for better visibility across different font sizes.
+	// CSS 2.1 §16.3.1: Distance below baseline for underlines
 	underlineOffset = 2.0
 )
 
-// defaultFontStyle represents the default font style as per CSS 2.1 initial values
-// CSS 2.1 §15: Default font properties when no stylesheet is applied
-// - font-size: medium (§15.7 initial value)
-// - font-weight: normal (§15.6 initial value)
-// - font-style: normal (§15.7 initial value)
-// - text-decoration: none (§16.3.1 initial value)
+// defaultFontStyle represents CSS 2.1 initial values for font properties
 var defaultFontStyle = FontStyle{
-	Size:       baseFontHeight, // 'medium' size
+	Size:       baseFontHeight,
 	Weight:     "normal",
 	Style:      "normal",
 	Decoration: "none",
@@ -145,10 +132,9 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	scaledWidth := int(float64(baseWidth) * scale)
 	scaledHeight := int(float64(baseHeight) * scale)
 	
-	// Create a temporary image for the base text
+	// Create temporary image for the base text
 	baseImg := image.NewRGBA(image.Rect(0, 0, baseWidth, baseHeight))
 	
-	// Create a drawer for the text
 	drawer := &font.Drawer{
 		Dst:  baseImg,
 		Src:  image.NewUniform(col),
@@ -156,17 +142,15 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 		Dot:  fixed.Point26_6{X: 0, Y: fixed.I(baseFace.Ascent)},
 	}
 	
-	// Draw the base text
 	drawer.DrawString(text)
 	
-	// Apply bold effect by drawing text with slight offset
-	// CSS 2.1 §15.6: Synthetic bold can be created by drawing twice with offset
+	// CSS 2.1 §15.6: Apply bold effect by drawing with offset
 	if style.Weight == "bold" {
 		drawer.Dot = fixed.Point26_6{X: fixed.I(1), Y: fixed.I(baseFace.Ascent)}
 		drawer.DrawString(text)
 	}
 	
-	// Create scaled image if needed
+	// Scale image if needed
 	var textImg *image.RGBA
 	if scale != 1.0 {
 		textImg = scaleImage(baseImg, scaledWidth, scaledHeight)
@@ -180,11 +164,9 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	// Copy text pixels to canvas with italic slant if needed
 	for dy := 0; dy < scaledHeight; dy++ {
 		for dx := 0; dx < scaledWidth; dx++ {
-			// Apply italic slant: shift pixels based on vertical position
-			// CSS 2.1 §15.7: Synthetic italic can be created by slanting
+			// CSS 2.1 §15.7: Apply italic slant
 			slant := 0
 			if style.Style == "italic" {
-				// Shift more at the top, less at the bottom
 				slant = int(float64(scaledHeight-dy) * italicSlantFactor)
 			}
 			
@@ -193,7 +175,6 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 			
 			if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
 				r, g, b, a := textImg.At(dx, dy).RGBA()
-				// Only copy non-transparent pixels (text)
 				if a > 0 {
 					c.Pixels[py*c.Width+px] = color.RGBA{
 						R: uint8(r >> 8),
@@ -206,8 +187,7 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 		}
 	}
 	
-	// Draw underline if needed
-	// CSS 2.1 §16.3.1: Underline is drawn below the baseline
+	// CSS 2.1 §16.3.1: Draw underline if needed
 	if style.Decoration == "underline" {
 		underlineY := y + int(underlineOffset*scale)
 		underlineThickness := max(1, int(scale*0.5))
@@ -537,22 +517,17 @@ func extractFontStyle(styles map[string]string) FontStyle {
 		}
 	}
 	
-	// Parse font-weight (CSS 2.1 §15.6)
+	// CSS 2.1 §15.6: Parse font-weight
 	if fontWeight := styles["font-weight"]; fontWeight != "" {
 		fontWeight = strings.TrimSpace(strings.ToLower(fontWeight))
-		// Check for keyword values
 		if fontWeight == "bold" || fontWeight == "bolder" {
 			fontStyle.Weight = "bold"
-		} else {
-			// Check for numeric values (600-900 are bold)
-			// CSS 2.1 §15.6: Values 100-900 indicate weight, 400 is normal, 700 is bold
-			if weight, err := strconv.Atoi(fontWeight); err == nil && weight >= 600 {
-				fontStyle.Weight = "bold"
-			}
+		} else if weight, err := strconv.Atoi(fontWeight); err == nil && weight >= 600 {
+			fontStyle.Weight = "bold"
 		}
 	}
 	
-	// Parse font-style (CSS 2.1 §15.7)
+	// CSS 2.1 §15.7: Parse font-style
 	if fontStyleVal := styles["font-style"]; fontStyleVal != "" {
 		fontStyleVal = strings.TrimSpace(strings.ToLower(fontStyleVal))
 		if fontStyleVal == "italic" || fontStyleVal == "oblique" {
@@ -560,7 +535,7 @@ func extractFontStyle(styles map[string]string) FontStyle {
 		}
 	}
 	
-	// Parse text-decoration (CSS 2.1 §16.3.1)
+	// CSS 2.1 §16.3.1: Parse text-decoration
 	if textDecoration := styles["text-decoration"]; textDecoration != "" {
 		textDecoration = strings.TrimSpace(strings.ToLower(textDecoration))
 		if strings.Contains(textDecoration, "underline") {
@@ -576,7 +551,6 @@ func extractFontStyle(styles map[string]string) FontStyle {
 func parseFontSize(value string) float64 {
 	value = strings.TrimSpace(strings.ToLower(value))
 	
-	// Handle pixel values (e.g., "14px")
 	if strings.HasSuffix(value, "px") {
 		value = strings.TrimSuffix(value, "px")
 		if size, err := strconv.ParseFloat(value, 64); err == nil {
@@ -584,12 +558,11 @@ func parseFontSize(value string) float64 {
 		}
 	}
 	
-	// Handle plain numbers (treat as pixels)
 	if size, err := strconv.ParseFloat(value, 64); err == nil {
 		return size
 	}
 	
-	// Handle named sizes (CSS 2.1 §15.7)
+	// CSS 2.1 §15.7: Named sizes
 	namedSizes := map[string]float64{
 		"xx-small": 9.0,
 		"x-small":  10.0,
@@ -604,16 +577,15 @@ func parseFontSize(value string) float64 {
 		return size
 	}
 	
-	return 0 // Return 0 for invalid values (will use default)
+	return 0
 }
 
 // parseColor parses a CSS color value and returns a color.RGBA.
-// Supports basic color names and hex colors.
-// CSS 2.1 §4.3.6 Colors
+// CSS 2.1 §4.3.6: Supports basic color names and hex colors
 func parseColor(value string) color.RGBA {
 	value = strings.TrimSpace(strings.ToLower(value))
 
-	// Named colors (CSS 2.1 §4.3.6)
+	// CSS 2.1 §4.3.6: Named colors
 	namedColors := map[string]color.RGBA{
 		"black":   {0, 0, 0, 255},
 		"white":   {255, 255, 255, 255},
