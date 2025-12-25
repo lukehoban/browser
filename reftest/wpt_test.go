@@ -42,8 +42,7 @@ func TestWPTCSSReftests(t *testing.T) {
 	// Note: We don't fail the test on reftest failures since this is a benchmark
 	// to track progress. Instead, we document expected failures.
 	expectedFailures := map[string]bool{
-		"padding-shorthand-001.html": true, // Shorthand property expansion not implemented
-		"margin-shorthand-001.html":  true, // Shorthand property expansion not implemented
+		// All tests currently pass!
 	}
 
 	unexpectedFailures := 0
