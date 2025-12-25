@@ -175,3 +175,150 @@ func TestParseMixedContent(t *testing.T) {
 		t.Errorf("Expected '!', got %v", p.Children[2].Data)
 	}
 }
+
+// SKIPPED TESTS FOR KNOWN BROKEN/UNIMPLEMENTED FEATURES
+// These tests document known limitations that need to be implemented.
+// See MILESTONES.md for more details.
+
+func TestParseCharacterReferences_Skipped(t *testing.T) {
+	t.Skip("Character references not implemented - HTML5 §12.2.4.2")
+	// HTML5 §12.2.4.2 Character reference state
+	// Character references like &amp;, &lt;, &gt;, &nbsp; should be decoded
+	
+	input := "<div>&lt;p&gt; &amp; &quot;</div>"
+	doc := Parse(input)
+	
+	div := doc.Children[0]
+	if len(div.Children) != 1 {
+		t.Fatalf("Expected 1 child, got %d", len(div.Children))
+	}
+	
+	text := div.Children[0]
+	expected := "<p> & \""
+	if text.Data != expected {
+		t.Errorf("Expected text '%s', got '%s'", expected, text.Data)
+	}
+}
+
+func TestParseNumericCharacterReferences_Skipped(t *testing.T) {
+	t.Skip("Numeric character references not implemented - HTML5 §12.2.4.3")
+	// HTML5 §12.2.4.3 Numeric character reference state
+	// Both decimal (&#NNN;) and hexadecimal (&#xHHH;) forms should be supported
+	
+	input := "<div>&#60;&#x3E;&#169;</div>"
+	doc := Parse(input)
+	
+	div := doc.Children[0]
+	text := div.Children[0]
+	expected := "<>©" // <, >, copyright symbol
+	if text.Data != expected {
+		t.Errorf("Expected text '%s', got '%s'", expected, text.Data)
+	}
+}
+
+func TestParseScriptCDATA_Skipped(t *testing.T) {
+	t.Skip("Script CDATA sections not implemented - HTML5 §12.2.5.14")
+	// HTML5 §12.2.5.14 Script data state
+	// Script tags should handle <![CDATA[ sections specially
+	
+	input := "<script><![CDATA[var x = 1 < 2;]]></script>"
+	doc := Parse(input)
+	
+	if len(doc.Children) != 1 {
+		t.Fatalf("Expected 1 child, got %d", len(doc.Children))
+	}
+	
+	script := doc.Children[0]
+	if script.Data != "script" {
+		t.Errorf("Expected 'script', got %v", script.Data)
+	}
+	
+	if len(script.Children) != 1 {
+		t.Fatalf("Expected 1 text child, got %d", len(script.Children))
+	}
+	
+	text := script.Children[0]
+	expected := "var x = 1 < 2;"
+	if text.Data != expected {
+		t.Errorf("Expected text '%s', got '%s'", expected, text.Data)
+	}
+}
+
+func TestParseStyleCDATA_Skipped(t *testing.T) {
+	t.Skip("Style CDATA sections not implemented - HTML5 §12.2.5.16")
+	// HTML5 §12.2.5.16 Style data state
+	// Style tags should handle content without HTML parsing
+	
+	input := "<style>div > p { color: red; }</style>"
+	doc := Parse(input)
+	
+	if len(doc.Children) != 1 {
+		t.Fatalf("Expected 1 child, got %d", len(doc.Children))
+	}
+	
+	style := doc.Children[0]
+	if style.Data != "style" {
+		t.Errorf("Expected 'style', got %v", style.Data)
+	}
+	
+	if len(style.Children) != 1 {
+		t.Fatalf("Expected 1 text child, got %d", len(style.Children))
+	}
+	
+	text := style.Children[0]
+	expected := "div > p { color: red; }"
+	if text.Data != expected {
+		t.Errorf("Expected text '%s', got '%s'", expected, text.Data)
+	}
+}
+
+func TestParseSVGNamespace_Skipped(t *testing.T) {
+	t.Skip("Namespace support not implemented - HTML5 §12.2.6.5")
+	// HTML5 §12.2.6.5 Foreign elements
+	// SVG and MathML elements should be parsed with proper namespace handling
+	
+	input := "<svg><circle cx='50' cy='50' r='40'/></svg>"
+	doc := Parse(input)
+	
+	if len(doc.Children) != 1 {
+		t.Fatalf("Expected 1 child, got %d", len(doc.Children))
+	}
+	
+	svg := doc.Children[0]
+	if svg.Data != "svg" {
+		t.Errorf("Expected 'svg', got %v", svg.Data)
+	}
+	
+	// Should have SVG namespace (when namespace support is added)
+	// Expected: svg.Namespace == "http://www.w3.org/2000/svg"
+	
+	if len(svg.Children) != 1 {
+		t.Fatalf("Expected 1 child (circle), got %d", len(svg.Children))
+	}
+	
+	circle := svg.Children[0]
+	if circle.Data != "circle" {
+		t.Errorf("Expected 'circle', got %v", circle.Data)
+	}
+}
+
+func TestParseMathMLNamespace_Skipped(t *testing.T) {
+	t.Skip("Namespace support not implemented - HTML5 §12.2.6.5")
+	// HTML5 §12.2.6.5 Foreign elements
+	// MathML elements should be parsed with proper namespace
+	
+	input := "<math><mrow><mi>x</mi></mrow></math>"
+	doc := Parse(input)
+	
+	if len(doc.Children) != 1 {
+		t.Fatalf("Expected 1 child, got %d", len(doc.Children))
+	}
+	
+	math := doc.Children[0]
+	if math.Data != "math" {
+		t.Errorf("Expected 'math', got %v", math.Data)
+	}
+	
+	// Should have MathML namespace (when namespace support is added)
+	// Expected: math.Namespace == "http://www.w3.org/1998/Math/MathML"
+}

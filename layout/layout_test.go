@@ -741,3 +741,412 @@ t.Errorf("Cells should be on same row. Cell1 Y=%v, Cell2 Y=%v",
 cell1.Dimensions.Content.Y, cell2.Dimensions.Content.Y)
 }
 }
+
+// SKIPPED TESTS FOR KNOWN BROKEN/UNIMPLEMENTED FEATURES
+// These tests document known limitations that need to be implemented.
+// See MILESTONES.md for more details.
+
+func TestInlineLayout_Skipped(t *testing.T) {
+	t.Skip("Inline layout not implemented - CSS 2.1 §9.4.2")
+	// CSS 2.1 §9.4.2 Inline formatting contexts
+	// Inline elements should flow horizontally within line boxes
+	
+	// Create DOM: p with inline spans
+	p := dom.NewElement("p")
+	span1 := dom.NewElement("span")
+	text1 := dom.NewText("Hello ")
+	span1.AppendChild(text1)
+	span2 := dom.NewElement("span")
+	text2 := dom.NewText("World")
+	span2.AppendChild(text2)
+	p.AppendChild(span1)
+	p.AppendChild(span2)
+	
+	styledP := &style.StyledNode{
+		Node: p,
+		Styles: map[string]string{
+			"display": "block",
+			"width":   "200px",
+		},
+		Children: []*style.StyledNode{
+			{
+				Node: span1,
+				Styles: map[string]string{
+					"display": "inline",
+				},
+				Children: []*style.StyledNode{
+					{Node: text1, Styles: map[string]string{}},
+				},
+			},
+			{
+				Node: span2,
+				Styles: map[string]string{
+					"display": "inline",
+				},
+				Children: []*style.StyledNode{
+					{Node: text2, Styles: map[string]string{}},
+				},
+			},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledP)
+	box.Layout(containingBlock)
+	
+	// Spans should be laid out inline (horizontally)
+	if len(box.Children) != 2 {
+		t.Fatalf("Expected 2 children, got %d", len(box.Children))
+	}
+	
+	span1Box := box.Children[0]
+	span2Box := box.Children[1]
+	
+	// Span2 should be to the right of span1, not below it
+	if span2Box.Dimensions.Content.X <= span1Box.Dimensions.Content.X {
+		t.Errorf("Span2 should be to the right of span1")
+	}
+	
+	// Both spans should be on the same line (same Y)
+	if span1Box.Dimensions.Content.Y != span2Box.Dimensions.Content.Y {
+		t.Errorf("Spans should be on the same line")
+	}
+}
+
+func TestAbsolutePositioning_Skipped(t *testing.T) {
+	t.Skip("Absolute positioning not implemented - CSS 2.1 §9.6")
+	// CSS 2.1 §9.6 Absolute positioning
+	// Elements with position: absolute should be positioned relative to containing block
+	
+	parent := dom.NewElement("div")
+	child := dom.NewElement("div")
+	parent.AppendChild(child)
+	
+	styledParent := &style.StyledNode{
+		Node: parent,
+		Styles: map[string]string{
+			"position": "relative",
+			"width":    "400px",
+			"height":   "300px",
+		},
+		Children: []*style.StyledNode{
+			{
+				Node: child,
+				Styles: map[string]string{
+					"position": "absolute",
+					"top":      "20px",
+					"left":     "30px",
+					"width":    "100px",
+					"height":   "50px",
+				},
+			},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 600},
+	}
+	
+	box := buildLayoutTree(styledParent)
+	box.Layout(containingBlock)
+	
+	if len(box.Children) != 1 {
+		t.Fatalf("Expected 1 child, got %d", len(box.Children))
+	}
+	
+	childBox := box.Children[0]
+	
+	// Child should be positioned at (30, 20) relative to parent
+	if childBox.Dimensions.Content.X != 30.0 {
+		t.Errorf("Expected X position 30, got %v", childBox.Dimensions.Content.X)
+	}
+	if childBox.Dimensions.Content.Y != 20.0 {
+		t.Errorf("Expected Y position 20, got %v", childBox.Dimensions.Content.Y)
+	}
+	
+	// Child should not affect parent's height (out of flow)
+	if box.Dimensions.Content.Height > 300.0 {
+		t.Errorf("Absolute positioned child should not affect parent height")
+	}
+}
+
+func TestRelativePositioning_Skipped(t *testing.T) {
+	t.Skip("Relative positioning not implemented - CSS 2.1 §9.4.3")
+	// CSS 2.1 §9.4.3 Relative positioning
+	// Elements with position: relative should be offset from their normal position
+	
+	parent := dom.NewElement("div")
+	child := dom.NewElement("div")
+	parent.AppendChild(child)
+	
+	styledParent := &style.StyledNode{
+		Node: parent,
+		Styles: map[string]string{
+			"width":  "400px",
+			"height": "300px",
+		},
+		Children: []*style.StyledNode{
+			{
+				Node: child,
+				Styles: map[string]string{
+					"position": "relative",
+					"top":      "10px",
+					"left":     "20px",
+					"width":    "100px",
+					"height":   "50px",
+				},
+			},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 600},
+	}
+	
+	box := buildLayoutTree(styledParent)
+	box.Layout(containingBlock)
+	
+	childBox := box.Children[0]
+	
+	// Child should be offset by (20, 10) from its normal position
+	// Normal position would be (0, 0) within parent
+	if childBox.Dimensions.Content.X != 20.0 {
+		t.Errorf("Expected X position 20 (0 + 20 offset), got %v", childBox.Dimensions.Content.X)
+	}
+	if childBox.Dimensions.Content.Y != 10.0 {
+		t.Errorf("Expected Y position 10 (0 + 10 offset), got %v", childBox.Dimensions.Content.Y)
+	}
+}
+
+func TestFixedPositioning_Skipped(t *testing.T) {
+	t.Skip("Fixed positioning not implemented - CSS 2.1 §9.6")
+	// CSS 2.1 §9.6.1 Fixed positioning
+	// Elements with position: fixed should be positioned relative to viewport
+	
+	div := dom.NewElement("div")
+	styledDiv := &style.StyledNode{
+		Node: div,
+		Styles: map[string]string{
+			"position": "fixed",
+			"top":      "10px",
+			"right":    "20px",
+			"width":    "100px",
+			"height":   "50px",
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 600},
+	}
+	
+	box := buildLayoutTree(styledDiv)
+	box.Layout(containingBlock)
+	
+	// Should be positioned at (680, 10) - 20px from right edge
+	expectedX := 680.0 // 800 - 20 - 100
+	if box.Dimensions.Content.X != expectedX {
+		t.Errorf("Expected X position %v, got %v", expectedX, box.Dimensions.Content.X)
+	}
+	if box.Dimensions.Content.Y != 10.0 {
+		t.Errorf("Expected Y position 10, got %v", box.Dimensions.Content.Y)
+	}
+}
+
+func TestFloatLayout_Skipped(t *testing.T) {
+	t.Skip("Float layout not implemented - CSS 2.1 §9.5")
+	// CSS 2.1 §9.5 Floats
+	// Floated elements should be moved to the left or right edge
+	
+	container := dom.NewElement("div")
+	float1 := dom.NewElement("div")
+	float2 := dom.NewElement("div")
+	content := dom.NewElement("p")
+	container.AppendChild(float1)
+	container.AppendChild(float2)
+	container.AppendChild(content)
+	
+	styledContainer := &style.StyledNode{
+		Node: container,
+		Styles: map[string]string{
+			"width": "400px",
+		},
+		Children: []*style.StyledNode{
+			{
+				Node: float1,
+				Styles: map[string]string{
+					"float":  "left",
+					"width":  "100px",
+					"height": "50px",
+				},
+			},
+			{
+				Node: float2,
+				Styles: map[string]string{
+					"float":  "left",
+					"width":  "100px",
+					"height": "50px",
+				},
+			},
+			{
+				Node: content,
+				Styles: map[string]string{
+					"width": "auto",
+				},
+			},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledContainer)
+	box.Layout(containingBlock)
+	
+	float1Box := box.Children[0]
+	float2Box := box.Children[1]
+	contentBox := box.Children[2]
+	
+	// Float1 should be at left edge
+	if float1Box.Dimensions.Content.X != 0.0 {
+		t.Errorf("Expected float1 X at 0, got %v", float1Box.Dimensions.Content.X)
+	}
+	
+	// Float2 should be to the right of float1
+	expectedFloat2X := 100.0
+	if float2Box.Dimensions.Content.X != expectedFloat2X {
+		t.Errorf("Expected float2 X at %v, got %v", expectedFloat2X, float2Box.Dimensions.Content.X)
+	}
+	
+	// Content should flow around the floats
+	expectedContentX := 200.0 // After both floats
+	if contentBox.Dimensions.Content.X != expectedContentX {
+		t.Errorf("Expected content X at %v, got %v", expectedContentX, contentBox.Dimensions.Content.X)
+	}
+	
+	// Content width should be reduced by float widths
+	expectedContentWidth := 200.0 // 400 - 100 - 100
+	if contentBox.Dimensions.Content.Width != expectedContentWidth {
+		t.Errorf("Expected content width %v, got %v", expectedContentWidth, contentBox.Dimensions.Content.Width)
+	}
+}
+
+func TestFlexboxLayout_Skipped(t *testing.T) {
+	t.Skip("Flexbox not implemented - CSS Flexible Box Layout Module Level 1")
+	// CSS Flexible Box Layout Module Level 1
+	// Flexbox provides efficient layout for complex alignments
+	
+	container := dom.NewElement("div")
+	item1 := dom.NewElement("div")
+	item2 := dom.NewElement("div")
+	item3 := dom.NewElement("div")
+	container.AppendChild(item1)
+	container.AppendChild(item2)
+	container.AppendChild(item3)
+	
+	styledContainer := &style.StyledNode{
+		Node: container,
+		Styles: map[string]string{
+			"display":         "flex",
+			"flex-direction":  "row",
+			"justify-content": "space-between",
+			"width":           "400px",
+		},
+		Children: []*style.StyledNode{
+			{Node: item1, Styles: map[string]string{"width": "100px", "height": "50px"}},
+			{Node: item2, Styles: map[string]string{"width": "100px", "height": "50px"}},
+			{Node: item3, Styles: map[string]string{"width": "100px", "height": "50px"}},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledContainer)
+	box.Layout(containingBlock)
+	
+	// Items should be distributed with space between them
+	item1Box := box.Children[0]
+	item2Box := box.Children[1]
+	item3Box := box.Children[2]
+	
+	// Item1 at start
+	if item1Box.Dimensions.Content.X != 0.0 {
+		t.Errorf("Expected item1 X at 0, got %v", item1Box.Dimensions.Content.X)
+	}
+	
+	// Item2 in middle
+	expectedItem2X := 150.0 // (400 - 300) / 2 + 100
+	if item2Box.Dimensions.Content.X != expectedItem2X {
+		t.Errorf("Expected item2 X at %v, got %v", expectedItem2X, item2Box.Dimensions.Content.X)
+	}
+	
+	// Item3 at end
+	expectedItem3X := 300.0
+	if item3Box.Dimensions.Content.X != expectedItem3X {
+		t.Errorf("Expected item3 X at %v, got %v", expectedItem3X, item3Box.Dimensions.Content.X)
+	}
+}
+
+func TestGridLayout_Skipped(t *testing.T) {
+	t.Skip("Grid layout not implemented - CSS Grid Layout Module Level 1")
+	// CSS Grid Layout Module Level 1
+	// Grid provides two-dimensional layout system
+	
+	container := dom.NewElement("div")
+	for i := 0; i < 6; i++ {
+		item := dom.NewElement("div")
+		container.AppendChild(item)
+	}
+	
+	children := make([]*style.StyledNode, 6)
+	for i := range children {
+		children[i] = &style.StyledNode{
+			Node:   container.Children[i],
+			Styles: map[string]string{},
+		}
+	}
+	
+	styledContainer := &style.StyledNode{
+		Node: container,
+		Styles: map[string]string{
+			"display":               "grid",
+			"grid-template-columns": "1fr 1fr 1fr",
+			"grid-gap":              "10px",
+			"width":                 "400px",
+		},
+		Children: children,
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledContainer)
+	box.Layout(containingBlock)
+	
+	// Items should be arranged in 3 columns, 2 rows
+	// Each column should be approximately 130px wide (400 - 20 gap) / 3
+	
+	// First row items
+	item0 := box.Children[0]
+	item1 := box.Children[1]
+	item2 := box.Children[2]
+	
+	// All first row items should be on same Y
+	if item0.Dimensions.Content.Y != item1.Dimensions.Content.Y ||
+		item1.Dimensions.Content.Y != item2.Dimensions.Content.Y {
+		t.Error("First row items should be on same Y position")
+	}
+	
+	// Items should be spaced horizontally with gaps
+	expectedGap := 10.0
+	gap1 := item1.Dimensions.Content.X - (item0.Dimensions.Content.X + item0.Dimensions.Content.Width)
+	if gap1 < expectedGap-1 || gap1 > expectedGap+1 {
+		t.Errorf("Expected gap of %v between items 0 and 1, got %v", expectedGap, gap1)
+	}
+}
