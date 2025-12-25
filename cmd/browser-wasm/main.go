@@ -1,3 +1,6 @@
+//go:build js && wasm
+// +build js,wasm
+
 // Package main provides a WebAssembly entry point for the browser.
 // It exposes browser rendering functions to JavaScript via syscall/js.
 //
