@@ -306,18 +306,26 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Fix failing tests
 
 ### Current Test Results:
-- **WPT CSS Tests**: 100% pass rate (30/30 tests) 🎉
+- **WPT CSS Tests**: 94.9% pass rate (37/39 tests passing, 2 expected failures) 
 - **Unit Test Coverage**: 90%+ across all modules
 - **Test Categories Passing**:
   - ✅ css-borders: 100% (1/1 test)
   - ✅ css-box: 100% (9/9 tests)
   - ✅ css-cascade: 100% (3/3 tests)
+  - ✅ css-cascade-advanced: 100% (1/1 test)
   - ✅ css-color: 100% (2/2 tests)
   - ✅ css-display: 100% (2/2 tests)
+  - ✅ css-float: 100% (1/1 test - graceful degradation)
   - ✅ css-fonts: 100% (4/4 tests)
   - ✅ css-inheritance: 100% (3/3 tests)
+  - ✅ css-position: 100% (2/2 tests - graceful degradation)
   - ✅ css-selectors: 100% (5/5 tests)
+  - ⚠️ css-selectors-advanced: 60% (3/5 tests - 2 expected failures)
   - ✅ css-text-decor: 100% (1/1 test)
+
+**Expected Failures (Documenting Implementation Gaps)**:
+- ❌ Adjacent sibling combinator (`+`) - CSS 2.1 §5.7
+- ❌ General sibling combinator (`~`) - CSS Selectors Level 3
 
 ### Completed Features:
 
