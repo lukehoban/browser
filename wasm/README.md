@@ -1,0 +1,66 @@
+# Browser WebAssembly Demo
+
+This directory contains a WebAssembly build of the browser that runs entirely in your web browser.
+
+## Live Demo
+
+The demo is automatically deployed to GitHub Pages and available at:
+**https://lukehoban.github.io/browser/**
+
+The deployment happens automatically via GitHub Actions whenever changes are pushed to the `main` branch.
+
+## Files
+
+- `index.html` - The demo web page
+- `wasm_exec.js` - Go's WebAssembly JavaScript support file
+- `browser.wasm` - The compiled WebAssembly binary (generated during build)
+
+## Building and Running Locally
+
+From the repository root:
+
+```bash
+GOOS=js GOARCH=wasm go build -o wasm/browser.wasm ./cmd/browser-wasm
+cd wasm && python3 -m http.server 8080
+```
+
+Then open http://localhost:8080 in your web browser.
+
+## Usage
+
+1. Enter HTML (with inline CSS in `<style>` tags) in the left panel
+2. Adjust viewport width and height if desired
+3. Click "Render" to see the result
+4. The rendered image will appear in the right panel
+
+## Example Pages
+
+The demo includes several example pages:
+- **Simple** - Basic HTML with minimal styling
+- **Colors** - Colored boxes demonstrating CSS colors
+- **Layout** - Header/content/footer layout
+- **Text Styles** - Various text styling options (bold, italic, underline, different sizes)
+
+## Browser Support
+
+Requires a modern browser with WebAssembly support:
+- Chrome 57+
+- Firefox 52+
+- Safari 11+
+- Edge 79+
+
+## Limitations
+
+- The browser renders HTML/CSS to a PNG image
+- Only inline CSS in `<style>` tags is supported (no external stylesheets)
+- Network features (loading external resources) are not available in WASM mode
+- Image support is limited due to cross-origin restrictions
+
+## GitHub Pages Setup
+
+To enable GitHub Pages for this repository:
+
+1. Go to repository **Settings** → **Pages**
+2. Under "Build and deployment", set Source to **GitHub Actions**
+3. The `.github/workflows/pages.yml` workflow will automatically build and deploy the WASM demo
+4. After the workflow runs, the demo will be available at `https://[username].github.io/[repository]/`
