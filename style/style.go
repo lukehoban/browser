@@ -50,11 +50,17 @@ func (s Specificity) Compare(other Specificity) int {
 // StyleTree computes styles for a DOM tree using a stylesheet.
 // CSS 2.1 §6 Assigning property values
 func StyleTree(root *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
-	return styleNode(root, stylesheet)
+	return styleNodeWithParent(root, stylesheet, nil)
 }
 
 // styleNode computes styles for a single node and its children.
 func styleNode(node *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
+	return styleNodeWithParent(node, stylesheet, nil)
+}
+
+// styleNodeWithParent computes styles for a single node with parent context.
+// CSS 2.1 §6.2: Inheritance - text nodes inherit from their parent element
+func styleNodeWithParent(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[string]string) *StyledNode {
 	styled := &StyledNode{
 		Node:     node,
 		Styles:   make(map[string]string),
@@ -72,11 +78,23 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
 				styled.Styles[decl.Property] = decl.Value
 			}
 		}
+	} else if node.Type == dom.TextNode && parentStyles != nil {
+		// For text nodes, inherit specific properties from parent
+		// CSS 2.1 §6.2: Inherited properties
+		inheritedProperties := []string{
+			"color", "font-family", "font-size", "font-weight", "font-style",
+			"line-height", "text-align", "text-indent", "white-space",
+		}
+		for _, prop := range inheritedProperties {
+			if val, ok := parentStyles[prop]; ok {
+				styled.Styles[prop] = val
+			}
+		}
 	}
 
-	// Recursively style children
+	// Recursively style children, passing current element's styles as parent
 	for _, child := range node.Children {
-		styledChild := styleNode(child, stylesheet)
+		styledChild := styleNodeWithParent(child, stylesheet, styled.Styles)
 		styled.Children = append(styled.Children, styledChild)
 	}
 
