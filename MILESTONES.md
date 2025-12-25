@@ -399,6 +399,12 @@ The browser can now load Hacker News from the network and render content with pr
   - Italic text rendering (CSS font-style property)
   - Text underline (CSS text-decoration property)
   - CSS inheritance for font properties
+- [x] **HTML Alignment Attributes** ✅ COMPLETE (December 2025)
+  - HTML `align` attribute support (left, center, right)
+  - HTML `valign` attribute support (top, middle, bottom)
+  - `<center>` element support for centering content
+  - Rank numbers properly right-aligned
+  - Vote arrows properly centered
 
 ### Required Features for Full Fidelity:
 - [ ] **Text Layout Improvements**
@@ -437,16 +443,18 @@ The browser can now load Hacker News from the network and render content with pr
   - [x] Load remote images
 
 ### Current Status:
-The browser successfully loads and renders Hacker News from the network with improved table layout and font rendering. Tables use content-based column sizing. Text now supports variable font sizes, bold, italic, and underline styles, with proper CSS inheritance of font properties from parent to child elements.
-The browser successfully loads and renders Hacker News from the network with proper table layout. Tables now use content-based column sizing, so narrow columns like rank numbers and vote arrows stay narrow, while title columns expand to fill available space. Colspan support allows subtext rows to properly span across multiple columns.
+The browser successfully loads and renders Hacker News from the network with excellent table layout, font rendering, and alignment support. Tables use content-based column sizing. Text supports variable font sizes, bold, italic, and underline styles, with proper CSS inheritance. HTML alignment attributes (`align`, `valign`) and the `<center>` element provide proper horizontal and vertical alignment of cell content.
 
-**Latest Assessment (2025-12-24)**: Hacker News homepage renders successfully with good visual fidelity:
+**Latest Assessment (2025-12-25)**: Hacker News homepage renders successfully with excellent visual fidelity:
 - ✅ Table structure detected and laid out correctly
 - ✅ Three-column layout working (rank | vote | title+metadata)
 - ✅ Text is readable and properly positioned
 - ✅ Story rows alternate with metadata rows as expected
+- ✅ Rank numbers are right-aligned (HTML `align="right"`)
+- ✅ Vote arrows are centered (HTML `<center>` element)
+- ✅ Vertical alignment works correctly (HTML `valign="top"`)
 - ⚠️ Vote arrows show as black squares (CSS background-image not supported, which is expected)
-- ⚠️ Some minor spacing differences due to limited CSS property support (text-align, line-height, font-family)
+- ⚠️ Some minor spacing differences due to limited CSS property support (line-height, font-family)
 
 The rendering quality is appropriate for the browser's current CSS 2.1 implementation scope.
 
@@ -464,4 +472,5 @@ The rendering quality is appropriate for the browser's current CSS 2.1 implement
 
 ## Current Status
 **Completed**: Milestones 1-9 (Foundation through Network Support, including Testing & Validation)  
-**Last Updated**: 2025-12-24
+**Recent Update**: Added HTML alignment attribute support (align, valign) and `<center>` element (December 2025)  
+**Last Updated**: 2025-12-25
