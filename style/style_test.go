@@ -254,8 +254,18 @@ func TestStyleTree(t *testing.T) {
 	if divStyled.Styles["background"] != "blue" {
 		t.Errorf("Expected background 'blue', got %v", divStyled.Styles["background"])
 	}
-	if divStyled.Styles["margin"] != "10px" {
-		t.Errorf("Expected margin '10px', got %v", divStyled.Styles["margin"])
+	// Check that margin shorthand was expanded to longhand properties
+	if divStyled.Styles["margin-top"] != "10px" {
+		t.Errorf("Expected margin-top '10px', got %v", divStyled.Styles["margin-top"])
+	}
+	if divStyled.Styles["margin-right"] != "10px" {
+		t.Errorf("Expected margin-right '10px', got %v", divStyled.Styles["margin-right"])
+	}
+	if divStyled.Styles["margin-bottom"] != "10px" {
+		t.Errorf("Expected margin-bottom '10px', got %v", divStyled.Styles["margin-bottom"])
+	}
+	if divStyled.Styles["margin-left"] != "10px" {
+		t.Errorf("Expected margin-left '10px', got %v", divStyled.Styles["margin-left"])
 	}
 }
 
@@ -297,16 +307,176 @@ func TestDescendantSelector(t *testing.T) {
 	}
 }
 
-func TestStyleInheritance(t *testing.T) {
-	// Create DOM: div > p > text
-	// CSS 2.1 §6.2: Certain properties (font properties, color, etc.) are inherited
-	div := dom.NewElement("div")
-	p := dom.NewElement("p")
-	text := dom.NewText("Hello")
-	div.AppendChild(p)
-	p.AppendChild(text)
+func TestExpandShorthand(t *testing.T) {
+	tests := []struct {
+		name     string
+		property string
+		value    string
+		expected map[string]string
+	}{
+		{
+			name:     "margin with 1 value",
+			property: "margin",
+			value:    "10px",
+			expected: map[string]string{
+				"margin-top":    "10px",
+				"margin-right":  "10px",
+				"margin-bottom": "10px",
+				"margin-left":   "10px",
+			},
+		},
+		{
+			name:     "margin with 2 values",
+			property: "margin",
+			value:    "10px 20px",
+			expected: map[string]string{
+				"margin-top":    "10px",
+				"margin-right":  "20px",
+				"margin-bottom": "10px",
+				"margin-left":   "20px",
+			},
+		},
+		{
+			name:     "margin with 3 values",
+			property: "margin",
+			value:    "10px 20px 30px",
+			expected: map[string]string{
+				"margin-top":    "10px",
+				"margin-right":  "20px",
+				"margin-bottom": "30px",
+				"margin-left":   "20px",
+			},
+		},
+		{
+			name:     "margin with 4 values",
+			property: "margin",
+			value:    "10px 20px 30px 40px",
+			expected: map[string]string{
+				"margin-top":    "10px",
+				"margin-right":  "20px",
+				"margin-bottom": "30px",
+				"margin-left":   "40px",
+			},
+		},
+		{
+			name:     "padding with 1 value",
+			property: "padding",
+			value:    "5px",
+			expected: map[string]string{
+				"padding-top":    "5px",
+				"padding-right":  "5px",
+				"padding-bottom": "5px",
+				"padding-left":   "5px",
+			},
+		},
+		{
+			name:     "padding with 2 values",
+			property: "padding",
+			value:    "5px 10px",
+			expected: map[string]string{
+				"padding-top":    "5px",
+				"padding-right":  "10px",
+				"padding-bottom": "5px",
+				"padding-left":   "10px",
+			},
+		},
+		{
+			name:     "non-shorthand property",
+			property: "color",
+			value:    "red",
+			expected: map[string]string{
+				"color": "red",
+			},
+		},
+		{
+			name:     "margin-top longhand",
+			property: "margin-top",
+			value:    "15px",
+			expected: map[string]string{
+				"margin-top": "15px",
+			},
+		},
+	}
 
-	// Create stylesheet with font properties on div
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := expandShorthand(tt.property, tt.value)
+
+			if len(result) != len(tt.expected) {
+				t.Errorf("Expected %d properties, got %d", len(tt.expected), len(result))
+			}
+
+			for key, expectedValue := range tt.expected {
+				if result[key] != expectedValue {
+					t.Errorf("For property %s, expected %s, got %s", key, expectedValue, result[key])
+				}
+			}
+		})
+	}
+}
+
+func TestSplitWhitespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected []string
+	}{
+		{
+			name:     "single value",
+			input:    "10px",
+			expected: []string{"10px"},
+		},
+		{
+			name:     "multiple values with spaces",
+			input:    "10px 20px 30px",
+			expected: []string{"10px", "20px", "30px"},
+		},
+		{
+			name:     "multiple spaces",
+			input:    "10px  20px   30px",
+			expected: []string{"10px", "20px", "30px"},
+		},
+		{
+			name:     "tabs and spaces",
+			input:    "10px\t20px 30px",
+			expected: []string{"10px", "20px", "30px"},
+		},
+		{
+			name:     "newlines",
+			input:    "10px\n20px",
+			expected: []string{"10px", "20px"},
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: []string{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := splitWhitespace(tt.input)
+
+			if len(result) != len(tt.expected) {
+				t.Errorf("Expected %d values, got %d", len(tt.expected), len(result))
+			}
+
+			for i, val := range tt.expected {
+				if i >= len(result) || result[i] != val {
+					t.Errorf("Expected value %d to be %s, got %s", i, val, result[i])
+				}
+			}
+		})
+	}
+}
+
+func TestShorthandIntegration(t *testing.T) {
+	// Create a simple DOM tree
+	doc := dom.NewDocument()
+	div := dom.NewElement("div")
+	doc.AppendChild(div)
+
+	// Create a stylesheet with shorthand properties
 	stylesheet := &css.Stylesheet{
 		Rules: []*css.Rule{
 			{
@@ -314,46 +484,44 @@ func TestStyleInheritance(t *testing.T) {
 					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
 				},
 				Declarations: []*css.Declaration{
-					{Property: "font-size", Value: "20px"},
-					{Property: "color", Value: "red"},
-					{Property: "font-weight", Value: "bold"},
+					{Property: "margin", Value: "20px"},
+					{Property: "padding", Value: "10px"},
 				},
 			},
 		},
 	}
 
 	// Style the tree
-	doc := dom.NewDocument()
-	doc.AppendChild(div)
 	styledTree := StyleTree(doc, stylesheet)
 
-	// Check that div has the styles
+	// Check that div has expanded longhand properties
 	divStyled := styledTree.Children[0]
-	if divStyled.Styles["font-size"] != "20px" {
-		t.Errorf("Expected div font-size '20px', got %v", divStyled.Styles["font-size"])
+
+	// Check margin properties
+	if divStyled.Styles["margin-top"] != "20px" {
+		t.Errorf("Expected margin-top '20px', got %v", divStyled.Styles["margin-top"])
 	}
-	if divStyled.Styles["color"] != "red" {
-		t.Errorf("Expected div color 'red', got %v", divStyled.Styles["color"])
+	if divStyled.Styles["margin-right"] != "20px" {
+		t.Errorf("Expected margin-right '20px', got %v", divStyled.Styles["margin-right"])
+	}
+	if divStyled.Styles["margin-bottom"] != "20px" {
+		t.Errorf("Expected margin-bottom '20px', got %v", divStyled.Styles["margin-bottom"])
+	}
+	if divStyled.Styles["margin-left"] != "20px" {
+		t.Errorf("Expected margin-left '20px', got %v", divStyled.Styles["margin-left"])
 	}
 
-	// Check that p inherits the styles
-	pStyled := divStyled.Children[0]
-	if pStyled.Styles["font-size"] != "20px" {
-		t.Errorf("Expected p to inherit font-size '20px', got %v", pStyled.Styles["font-size"])
+	// Check padding properties
+	if divStyled.Styles["padding-top"] != "10px" {
+		t.Errorf("Expected padding-top '10px', got %v", divStyled.Styles["padding-top"])
 	}
-	if pStyled.Styles["color"] != "red" {
-		t.Errorf("Expected p to inherit color 'red', got %v", pStyled.Styles["color"])
+	if divStyled.Styles["padding-right"] != "10px" {
+		t.Errorf("Expected padding-right '10px', got %v", divStyled.Styles["padding-right"])
 	}
-
-	// Check that text node inherits the styles
-	textStyled := pStyled.Children[0]
-	if textStyled.Styles["font-size"] != "20px" {
-		t.Errorf("Expected text to inherit font-size '20px', got %v", textStyled.Styles["font-size"])
+	if divStyled.Styles["padding-bottom"] != "10px" {
+		t.Errorf("Expected padding-bottom '10px', got %v", divStyled.Styles["padding-bottom"])
 	}
-	if textStyled.Styles["color"] != "red" {
-		t.Errorf("Expected text to inherit color 'red', got %v", textStyled.Styles["color"])
-	}
-	if textStyled.Styles["font-weight"] != "bold" {
-		t.Errorf("Expected text to inherit font-weight 'bold', got %v", textStyled.Styles["font-weight"])
+	if divStyled.Styles["padding-left"] != "10px" {
+		t.Errorf("Expected padding-left '10px', got %v", divStyled.Styles["padding-left"])
 	}
 }

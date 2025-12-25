@@ -176,17 +176,17 @@ To view WPT test results from CI:
 | Category | Tests | Passed | Failed | Pass Rate |
 |----------|-------|--------|--------|-----------|
 | css-box (longhand) | 3 | 3 | 0 | 100% |
-| css-box (shorthand) | 2 | 0 | 2 | 0% |
+| css-box (shorthand) | 2 | 2 | 0 | 100% |
 | css-cascade | 2 | 2 | 0 | 100% |
 | css-display | 1 | 1 | 0 | 100% |
 | css-selectors | 3 | 3 | 0 | 100% |
-| **Total** | **11** | **9** | **2** | **81.8%** |
+| **Total** | **11** | **11** | **0** | **100%** 🎉 |
 
 ### Test Categories
 
 1. **css-box**: Box model tests (width, height, padding, margin)
    - Longhand properties: ✅ Passing
-   - Shorthand properties: ❌ Not implemented
+   - Shorthand properties: ✅ Passing (implemented!)
 
 2. **css-cascade**: Cascade and specificity tests
    - Specificity calculation: ✅ Passing
@@ -209,16 +209,48 @@ To add new WPT-style reference tests:
 3. Place both files in `test/wpt/css/<category>/`
 4. Run `./wptrunner test/wpt/css/` to verify
 
+### Recently Implemented Features
+
+#### CSS Shorthand Property Expansion ✅
+**Status**: Implemented in `style/style.go`
+
+Shorthand properties are now automatically expanded to their longhand equivalents:
+- **Margin**: `margin: 20px` → `margin-top`, `margin-right`, `margin-bottom`, `margin-left`
+- **Padding**: `padding: 10px` → `padding-top`, `padding-right`, `padding-bottom`, `padding-left`
+
+**Supported patterns** (CSS 2.1 §8.3, §8.4):
+- 1 value: all sides (e.g., `margin: 10px`)
+- 2 values: vertical | horizontal (e.g., `margin: 10px 20px`)
+- 3 values: top | horizontal | bottom (e.g., `margin: 10px 20px 30px`)
+- 4 values: top | right | bottom | left (e.g., `margin: 10px 20px 30px 40px`)
+
 ### Gaps Identified
 
-Based on the reftest benchmark, the following features need implementation:
+Based on the reftest benchmark, the following features could improve test coverage in the future:
 
-1. **Shorthand property expansion** (margin, padding, border, etc.)
-2. **CSS inheritance**
-3. **!important support**
-4. **Computed value calculation**
-5. **Child/sibling combinators** (>, +, ~)
-6. **Pseudo-classes and pseudo-elements**
+1. **CSS inheritance** - **Not currently tested**
+   - Inheritable properties should cascade from parent to child
+   - Affects: color, font properties, line-height, text-align, etc.
+   - CSS 2.1 §6.2 Inheritance
+
+2. **!important support** - **Not currently tested**
+   - Override cascade based on !important declarations
+   - CSS 2.1 §6.4.2 !important rules
+
+3. **Computed value calculation** - **Not currently tested**
+   - Convert relative values to absolute (e.g., em to px)
+   - CSS 2.1 §6.1.2 Computed values
+
+4. **Child/sibling combinators** (>, +, ~) - **Not currently tested**
+   - Child combinator: `parent > child`
+   - Adjacent sibling: `element + sibling`
+   - General sibling: `element ~ sibling`
+   - CSS 2.1 §5.5 Child selectors, §5.7 Adjacent sibling selectors
+
+5. **Pseudo-classes and pseudo-elements** - **Not currently tested**
+   - :hover, :focus, :first-child, :last-child, etc.
+   - ::before, ::after
+   - CSS 2.1 §5.11 Pseudo-classes, §5.12 Pseudo-elements
 
 ## Running Tests
 

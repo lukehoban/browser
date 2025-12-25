@@ -89,7 +89,12 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		// Apply rules in order of specificity
 		for _, matched := range matchedRules {
 			for _, decl := range matched.Rule.Declarations {
-				styled.Styles[decl.Property] = decl.Value
+				// Expand shorthand properties
+				// CSS 2.1 §8.3 Margin properties, §8.4 Padding properties
+				expandedProps := expandShorthand(decl.Property, decl.Value)
+				for prop, val := range expandedProps {
+					styled.Styles[prop] = val
+				}
 			}
 		}
 	}
@@ -231,4 +236,101 @@ func calculateSpecificity(selector *css.Selector) Specificity {
 	}
 
 	return spec
+}
+
+// expandShorthand expands CSS shorthand properties to their longhand equivalents.
+// CSS 2.1 §8.3 Margin properties, §8.4 Padding properties
+//
+// Supported shorthand properties:
+//   - margin: Expands to margin-top, margin-right, margin-bottom, margin-left
+//   - padding: Expands to padding-top, padding-right, padding-bottom, padding-left
+//
+// The value patterns follow CSS 2.1 specification:
+//   - 1 value: applies to all four sides (e.g., "10px" → all sides 10px)
+//   - 2 values: vertical | horizontal (e.g., "10px 20px" → top/bottom 10px, left/right 20px)
+//   - 3 values: top | horizontal | bottom (e.g., "10px 20px 30px")
+//   - 4 values: top | right | bottom | left (e.g., "10px 20px 30px 40px")
+func expandShorthand(property, value string) map[string]string {
+	result := make(map[string]string)
+
+	// Check if this is a shorthand property
+	var prefix string
+	switch property {
+	case "margin":
+		prefix = "margin"
+	case "padding":
+		prefix = "padding"
+	default:
+		// Not a shorthand property, return as-is
+		result[property] = value
+		return result
+	}
+
+	// Parse the value into individual components
+	// Split on whitespace to get individual values
+	values := splitWhitespace(value)
+
+	var top, right, bottom, left string
+
+	switch len(values) {
+	case 1:
+		// All four sides
+		top = values[0]
+		right = values[0]
+		bottom = values[0]
+		left = values[0]
+	case 2:
+		// Vertical | Horizontal
+		top = values[0]
+		right = values[1]
+		bottom = values[0]
+		left = values[1]
+	case 3:
+		// Top | Horizontal | Bottom
+		top = values[0]
+		right = values[1]
+		bottom = values[2]
+		left = values[1]
+	case 4:
+		// Top | Right | Bottom | Left
+		top = values[0]
+		right = values[1]
+		bottom = values[2]
+		left = values[3]
+	default:
+		// Invalid number of values, return as-is
+		result[property] = value
+		return result
+	}
+
+	// Create longhand properties
+	result[prefix+"-top"] = top
+	result[prefix+"-right"] = right
+	result[prefix+"-bottom"] = bottom
+	result[prefix+"-left"] = left
+
+	return result
+}
+
+// splitWhitespace splits a string on whitespace characters.
+func splitWhitespace(s string) []string {
+	var result []string
+	var current string
+
+	for _, ch := range s {
+		if ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' {
+			if current != "" {
+				result = append(result, current)
+				current = ""
+			}
+		} else {
+			current += string(ch)
+		}
+	}
+
+	if current != "" {
+		result = append(result, current)
+	}
+
+	return result
 }
