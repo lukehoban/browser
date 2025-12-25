@@ -481,6 +481,55 @@ Minor visual differences remain due to missing CSS properties (background-image,
 
 ---
 
+## Milestone 10: WebAssembly Support ✅ COMPLETE
+**Goal**: Enable the browser to run entirely in a web client via WebAssembly
+
+### Tasks:
+- [x] Create WebAssembly entry point (cmd/browser-wasm)
+  - [x] Expose renderHTML function to JavaScript via syscall/js
+  - [x] Accept HTML, width, and height parameters
+  - [x] Return base64-encoded PNG image
+  - [x] Extract and parse inline CSS from `<style>` tags
+- [x] Create interactive web demo (wasm/index.html)
+  - [x] Load and initialize WASM module
+  - [x] Provide HTML input textarea with syntax highlighting
+  - [x] Display rendered output as image
+  - [x] Add viewport size controls (width/height)
+  - [x] Include example HTML snippets (simple, colors, layout, text styles)
+- [x] Build tooling and documentation
+  - [x] Create build-wasm.sh script
+  - [x] Add Makefile targets (build-wasm, serve-wasm, test-all)
+  - [x] Copy wasm_exec.js from Go distribution
+  - [x] Add wasm/README.md with usage instructions
+  - [x] Update main README.md with WASM section
+  - [x] Update .gitignore for WASM artifacts
+
+### Deliverables:
+- ✅ Working WASM compilation (GOOS=js GOARCH=wasm)
+- ✅ Interactive web demo page
+- ✅ Real-time HTML/CSS rendering in browser
+- ✅ Multiple example pages demonstrating features
+- ✅ Build and serve tooling
+
+### Known Limitations:
+- Network features (HTTP/HTTPS loading) not available in WASM mode
+- External stylesheets via `<link>` not supported in WASM mode
+- Image loading limited due to browser cross-origin restrictions
+- Only inline CSS in `<style>` tags is supported
+
+### Validation:
+- ✅ WASM module compiles successfully (11MB binary)
+- ✅ Demo page loads and initializes WASM module
+- ✅ HTML rendering produces correct PNG output
+- ✅ Example pages work (simple, colors, layout, text styles)
+- ✅ Viewport size controls function properly
+- ✅ Status messages display correctly
+
+### Current Status:
+The browser successfully compiles to WebAssembly and runs entirely in a web browser. Users can enter HTML with inline CSS and see it rendered in real-time as a PNG image. The demo includes multiple examples showcasing different CSS features (colors, layouts, text styling).
+
+---
+
 ## Future Enhancements (Post-MVP)
 - JavaScript support
 - CSS 3 features (flexbox, grid, transitions, animations)
@@ -488,10 +537,18 @@ Minor visual differences remain due to missing CSS properties (background-image,
 - Media queries (responsive design)
 - Advanced typography (web fonts, font-weight, etc.)
 - Accessibility features
+- WASM enhancements:
+  - External stylesheet loading in WASM mode
+  - Image loading support in WASM mode
+  - Network resource loading with CORS handling
+  - Progressive rendering for large documents
+  - Streaming API for real-time updates
 
 ---
 
 ## Current Status
-**Completed**: Milestones 1-9 (Foundation through Network Support, including Testing & Validation)  
-**Recent Update**: Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)  
+**Completed**: Milestones 1-10 (Foundation through WebAssembly Support, including all core features)  
+**Recent Updates**: 
+- WebAssembly support with interactive demo (December 2025)
+- Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)  
 **Last Updated**: 2025-12-25

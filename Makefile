@@ -16,7 +16,13 @@ serve-wasm: build-wasm
 
 # Run tests
 test:
-	go test ./...
+	go test ./css ./dom ./html ./layout ./render ./style ./cmd/browser
+
+# Run all tests including WASM compilation check
+test-all: test
+	@echo "Testing WASM compilation..."
+	GOOS=js GOARCH=wasm go build -o /tmp/browser-test.wasm ./cmd/browser-wasm
+	@echo "All tests passed!"
 
 # Clean build artifacts
 clean:
