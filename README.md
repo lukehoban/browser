@@ -84,32 +84,15 @@ Latest Hacker News render (1024x768):
 go test ./...
 ```
 
-## WebAssembly Build
+## WebAssembly
 
-The browser can be compiled to WebAssembly and run entirely in a web browser!
+The browser can be compiled to WebAssembly and run entirely in a web browser. A live demo is available at **https://lukehoban.github.io/browser/** and is automatically deployed via GitHub Actions.
 
-### Live Demo
-
-Try it now at: **https://lukehoban.github.io/browser/**
-
-The demo is automatically deployed to GitHub Pages via GitHub Actions.
-
-### Building for WASM
-
+To build locally:
 ```bash
-./build-wasm.sh
-# or
-make build-wasm
+GOOS=js GOARCH=wasm go build -o wasm/browser.wasm ./cmd/browser-wasm
+cd wasm && python3 -m http.server 8080
 ```
-
-### Running the WASM Demo Locally
-
-```bash
-# Build and serve in one command
-make serve-wasm
-```
-
-Then open http://localhost:8080 in your browser.
 
 See [wasm/README.md](wasm/README.md) for more details.
 
