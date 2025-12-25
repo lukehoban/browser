@@ -1,7 +1,7 @@
 # Hacker News Rendering Status
 
-**Date**: December 24, 2025  
-**Status**: ✅ **EXCELLENT** - Rendering successfully with proper table layout
+**Date**: December 25, 2025  
+**Status**: ✅ **EXCELLENT** - Rendering successfully with proper table layout and alignment
 
 ## Overview
 
@@ -18,6 +18,11 @@ The browser successfully renders the Hacker News homepage with high visual fidel
   - Wide columns (title) expand to fill space (~696px)
 - ✅ **Colspan support**: Metadata rows properly span multiple columns
 - ✅ **Vertical layout**: Rows stack correctly with proper heights
+- ✅ **Horizontal alignment**: HTML `align` attribute support (left, center, right)
+  - Rank numbers right-aligned with `align="right"`
+  - Vote arrows centered with `<center>` tag
+- ✅ **Vertical alignment**: HTML `valign` attribute support (top, middle, bottom)
+  - Cells properly aligned with `valign="top"`
 
 ### Content Rendering
 - ✅ **Text rendering**: All text readable and properly positioned
@@ -29,10 +34,11 @@ The browser successfully renders the Hacker News homepage with high visual fidel
 ## Current Visual Output
 
 The rendering shows:
-- Rank numbers in left column (1., 2., 3., etc.)
-- Vote arrows in center column (showing as black squares - expected limitation)
+- Rank numbers in left column (1., 2., 3., etc.) **right-aligned** ✅
+- Vote arrows in center column **centered** ✅ (showing as black squares - expected limitation)
 - Story titles and metadata in right column
 - Proper horizontal alignment across columns
+- Proper vertical alignment (content at top of cells)
 - Clean, readable layout
 
 ## Known Limitations (Expected)
@@ -42,13 +48,14 @@ These are features not yet implemented in the CSS 2.1 engine:
 ### CSS Properties
 - ⚠️ **background-image**: Not supported (vote arrows show as black squares)
 - ⚠️ **font-family**: No font selection (uses fixed-width default font)
-- ⚠️ **text-align**: Not implemented (all text left-aligned)
+- ⚠️ **text-align**: Not implemented (CSS property for text alignment within blocks)
 - ⚠️ **line-height**: Limited support (spacing differences)
 - ⚠️ **font-size**: Not implemented (uses default size)
 
 ### HTML Attributes
-- ⚠️ **align** attribute: Not processed (e.g., `align="right"` ignored)
-- ⚠️ **valign** attribute: Not processed (e.g., `valign="top"` ignored)
+- ✅ **align** attribute: Now supported! (left, center, right alignment in table cells)
+- ✅ **valign** attribute: Now supported! (top, middle, bottom alignment in table cells)
+- ✅ **center** element: Now supported! (centers content horizontally)
 
 ## Comparison with Real Hacker News
 
@@ -59,9 +66,10 @@ These are features not yet implemented in the CSS 2.1 engine:
 | Text readability | Good | Good | ✅ Match |
 | Column widths | Auto | Auto | ✅ Match |
 | Row alignment | Top | Top | ✅ Match |
+| Cell alignment (align) | Right/Center | Right/Center | ✅ Match |
+| Cell alignment (valign) | Top | Top | ✅ Match |
 | Font rendering | Verdana | Monospace | ⚠️ Different (expected) |
 | Vote arrows | SVG triangles | Black squares | ⚠️ Different (expected) |
-| Text alignment | Mixed (left/right) | All left | ⚠️ Different (expected) |
 
 ## Technical Details
 
@@ -99,21 +107,24 @@ The browser successfully parses and applies HN's external CSS including:
 ## Future Improvements (If Desired)
 
 ### Quick Wins (Low Effort, High Impact)
-1. **HTML align attribute** (~50 lines)
-   - Would right-align rank numbers
-   - Would center vote buttons
+1. ✅ **HTML align attribute** - COMPLETED!
+   - Right-aligns rank numbers
+   - Centers vote buttons
    
-2. **HTML valign attribute** (~30 lines)
-   - Would improve vertical alignment
+2. ✅ **HTML valign attribute** - COMPLETED!
+   - Improves vertical alignment
    
-3. **text-align CSS property** (~100 lines)
-   - Would match HN alignment exactly
+3. ✅ **HTML center element** - COMPLETED!
+   - Centers content within blocks
 
 ### Medium Effort
-4. **Simple colored divs** (~50 lines)
+4. **text-align CSS property** (~100 lines)
+   - Would provide CSS-based text alignment (currently only HTML attributes)
+   
+5. **Simple colored divs** (~50 lines)
    - Vote arrows could be colored boxes instead of black
    
-5. **font-size property** (~80 lines)
+6. **font-size property** (~80 lines)
    - Would improve typography
 
 ### Not Recommended (High Complexity)
@@ -132,5 +143,9 @@ The rendering quality demonstrates that:
 4. ✅ Complex nested tables are handled properly
 5. ✅ Colspan support is functional
 6. ✅ Content-based column sizing works well
+7. ✅ HTML align/valign attributes work correctly
+8. ✅ Horizontal alignment (left/center/right) is accurate
+9. ✅ Vertical alignment (top/middle/bottom) is accurate
+10. ✅ `<center>` element properly centers content
 
-**No immediate changes are needed.** The browser is functioning as designed within its CSS 2.1 specification scope.
+**Recent improvements (December 2025)**: Added HTML `align` and `valign` attribute support, plus `<center>` element support. This brings the visual fidelity much closer to the real Hacker News, with properly aligned rank numbers and centered vote arrows.
