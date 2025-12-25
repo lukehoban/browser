@@ -72,7 +72,15 @@ go build ./cmd/browser
 ./browser -output output.png -width 1024 -height 768 test/hackernews.html
 ```
 
-## Screenshot
+## Screenshots
+
+### Test Case Rendering
+
+Example of styled HTML with borders, colors, and text formatting:
+
+![Test Case Rendering](./test_case_screenshot.png)
+
+### Hacker News
 
 Latest Hacker News render (1024x768):
 

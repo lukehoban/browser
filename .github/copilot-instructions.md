@@ -25,51 +25,12 @@ This project renders HTML/CSS to PNG images. Visual changes are difficult to rev
 
 1. **Keep the README Hacker News screenshot current.** When you make meaningful rendering/layout changes, regenerate `hackernews_screenshot.png` (e.g., `./browser -output hackernews_screenshot.png https://news.ycombinator.com/`) and update the README reference.
 
-1. **Before submitting changes** that affect rendering, layout, or styling:
+2. **Before submitting changes** that affect rendering, layout, or styling:
    - Build the browser: `go build ./cmd/browser`
    - Render a test page: `./browser -output screenshot.png test/render_test.html`
    - Attach the screenshot to your PR or commit
 
-2. **Create comparison screenshots** when modifying existing behavior:
+3. **Create comparison screenshots** when modifying existing behavior:
    - Capture "before" screenshot using the main branch
    - Capture "after" screenshot with your changes
    - Include both in your PR description
-
-3. **Use descriptive test HTML files** to demonstrate changes:
-   - Create minimal HTML that showcases the specific feature
-   - Save test files in the `test/` directory
-
-## Rendering Commands
-
-```bash
-# Build the browser
-go build ./cmd/browser
-
-# Render HTML to PNG
-./browser -output output.png test/styled.html
-
-# Render with custom viewport size
-./browser -output output.png -width 1024 -height 768 test/styled.html
-
-# View layout tree without rendering
-./browser test/styled.html
-```
-
-## Test Files
-
-- `test/simple.html` - Basic HTML structure
-- `test/styled.html` - HTML with CSS styling
-- `test/render_test.html` - Visual rendering test with colored boxes
-- `test/hackernews.html` - HN-inspired layout test with image
-
-## Code Guidelines
-
-- Follow existing code style and patterns
-- **ALWAYS add spec references for CSS/HTML/DOM implementations** (see existing code for examples)
-  - For CSS features: Reference CSS 2.1 specification sections (e.g., "CSS 2.1 §5.8 Attribute selectors")
-  - For HTML features: Reference HTML5 specification sections (e.g., "HTML5 §2.5 URLs")
-  - For DOM features: Reference DOM Level 2 Core or relevant specs
-  - For non-standard or practical implementations: Document the reasoning
-- Write unit tests for new functionality
-- Run `go test ./...` before submitting changes
-- Update MILESTONES.md when completing tasks or discovering limitations
