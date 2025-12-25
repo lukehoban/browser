@@ -212,6 +212,51 @@ func TestParseComplexValue(t *testing.T) {
 	}
 }
 
+// TestParseHexColors tests that hex color values preserve the # prefix.
+// CSS 2.1 §4.3.6: Colors
+func TestParseHexColors(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "6-digit hex color",
+			input:    "div { color: #4CAF50; }",
+			expected: "#4CAF50",
+		},
+		{
+			name:     "3-digit hex color",
+			input:    "div { color: #fff; }",
+			expected: "#fff",
+		},
+		{
+			name:     "hex color in border shorthand",
+			input:    "div { border: 2px solid #2196F3; }",
+			expected: "2px solid #2196F3",
+		},
+		{
+			name:     "hex color in background",
+			input:    "div { background: #e3f2fd; }",
+			expected: "#e3f2fd",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stylesheet := Parse(tt.input)
+			if len(stylesheet.Rules) != 1 {
+				t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+			}
+
+			decl := stylesheet.Rules[0].Declarations[0]
+			if decl.Value != tt.expected {
+				t.Errorf("Expected value %q, got %q", tt.expected, decl.Value)
+			}
+		})
+	}
+}
+
 // TestParseAttributeSelector tests that attribute selectors are skipped gracefully.
 // CSS 2.1 §5.8 Attribute selectors
 func TestParseAttributeSelector(t *testing.T) {

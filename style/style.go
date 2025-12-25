@@ -6,6 +6,9 @@
 package style
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
 )
@@ -247,9 +250,23 @@ func calculateSpecificity(selector *css.Selector) Specificity {
 
 // expandShorthand expands CSS shorthand properties to their longhand equivalents.
 // CSS 2.1 §8.3, §8.4: Margin and padding shorthand expansion
+// CSS 2.1 §8.5: Border shorthand expansion
 // Supports 1-4 value patterns per CSS 2.1 specification
 func expandShorthand(property, value string) map[string]string {
 	result := make(map[string]string)
+
+	// Handle border shorthand properties
+	// CSS 2.1 §8.5.4: The border shorthand property
+	if property == "border" {
+		return expandBorderShorthand(value)
+	}
+
+	// Handle border-top, border-right, border-bottom, border-left shorthands
+	// CSS 2.1 §8.5.4: Border side shorthands
+	switch property {
+	case "border-top", "border-right", "border-bottom", "border-left":
+		return expandBorderSideShorthand(property, value)
+	}
 
 	var prefix string
 	switch property {
@@ -301,6 +318,95 @@ func expandShorthand(property, value string) map[string]string {
 	return result
 }
 
+// expandBorderShorthand expands the border shorthand property.
+// CSS 2.1 §8.5.4: border shorthand sets width, style, and color for all four sides.
+// Format: border: [width] [style] [color]
+func expandBorderShorthand(value string) map[string]string {
+	result := make(map[string]string)
+	width, style, color := parseBorderValue(value)
+
+	// Set all four sides
+	sides := []string{"top", "right", "bottom", "left"}
+	for _, side := range sides {
+		if width != "" {
+			result["border-"+side+"-width"] = width
+		}
+		if style != "" {
+			result["border-style"] = style // border-style applies to all sides
+		}
+		if color != "" {
+			result["border-color"] = color // border-color applies to all sides
+		}
+	}
+
+	return result
+}
+
+// expandBorderSideShorthand expands a border side shorthand property (e.g., border-top).
+// CSS 2.1 §8.5.4: border-top, border-right, etc. set width, style, and color for one side.
+// Format: border-side: [width] [style] [color]
+func expandBorderSideShorthand(property, value string) map[string]string {
+	result := make(map[string]string)
+	width, style, color := parseBorderValue(value)
+
+	// Extract side from property name (e.g., "top" from "border-top")
+	side := property[7:] // Skip "border-"
+
+	if width != "" {
+		result["border-"+side+"-width"] = width
+	}
+	if style != "" {
+		result["border-style"] = style
+	}
+	if color != "" {
+		result["border-color"] = color
+	}
+
+	return result
+}
+
+// parseBorderValue parses a border shorthand value into width, style, and color.
+// CSS 2.1 §8.5.4: The order of values doesn't matter; they are identified by type.
+// Returns (width, style, color) - any may be empty if not specified.
+func parseBorderValue(value string) (width, style, color string) {
+	parts := splitWhitespace(value)
+
+	// CSS 2.1 §8.5.3: border-style valid keywords
+	styleKeywords := map[string]bool{
+		"none": true, "hidden": true, "dotted": true, "dashed": true,
+		"solid": true, "double": true, "groove": true, "ridge": true,
+		"inset": true, "outset": true,
+	}
+
+	for _, part := range parts {
+		partLower := strings.ToLower(part)
+
+		// Check if it's a style keyword
+		if styleKeywords[partLower] {
+			style = partLower
+			continue
+		}
+
+		// Check if it's a width value (ends with px, em, or is a number, or is a width keyword)
+		if strings.HasSuffix(partLower, "px") || strings.HasSuffix(partLower, "em") ||
+			partLower == "thin" || partLower == "medium" || partLower == "thick" {
+			width = part
+			continue
+		}
+
+		// Check if it's a plain number (assume px)
+		if _, err := strconv.ParseFloat(part, 64); err == nil {
+			width = part
+			continue
+		}
+
+		// Otherwise, assume it's a color
+		color = part
+	}
+
+	return width, style, color
+}
+
 // splitWhitespace splits a string on whitespace characters.
 func splitWhitespace(s string) []string {
 	var result []string
@@ -336,7 +442,28 @@ func applyDeclaration(decl *css.Declaration, styles map[string]string) {
 // applyPresentationalHints converts HTML presentational attributes to CSS styles.
 // HTML5 §2.4.4: Presentational hints
 // These attributes have lower specificity than CSS rules.
+// Also applies default User-Agent styles for common HTML elements.
 func applyPresentationalHints(node *dom.Node, styles map[string]string) {
+	// HTML5 §10.3.1: Default styles for phrasing content elements
+	// Apply default font styling for text-related elements
+	switch node.Data {
+	case "strong", "b":
+		// HTML5 §10.3.1: strong and b elements are bold by default
+		if styles["font-weight"] == "" {
+			styles["font-weight"] = "bold"
+		}
+	case "em", "i":
+		// HTML5 §10.3.1: em and i elements are italic by default
+		if styles["font-style"] == "" {
+			styles["font-style"] = "italic"
+		}
+	case "u":
+		// HTML5 §10.3.1: u element is underlined by default
+		if styles["text-decoration"] == "" {
+			styles["text-decoration"] = "underline"
+		}
+	}
+
 	// <font color="..."> attribute
 	if node.Data == "font" {
 		if color := node.GetAttribute("color"); color != "" {
