@@ -97,7 +97,6 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ⚠️ No pseudo-elements (`::before`, `::after`)
 - ⚠️ No attribute selectors (`[attr="value"]`)
 - ⚠️ No child/adjacent sibling combinators (`>`, `+`, `~`)
-- ⚠️ No shorthand property expansion (e.g., `margin: 10px` → individual sides)
 
 ---
 
@@ -274,7 +273,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ---
 
-## Milestone 8: Testing & Validation 🔄 IN PROGRESS
+## Milestone 8: Testing & Validation ✅ COMPLETE
 **Goal**: Comprehensive testing with public test suites
 
 **Spec References**:
@@ -285,25 +284,44 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Integrate WPT reftest harness
 - [x] Add CSS 2.1 reference tests
 - [x] Document test results
-- [ ] Expand test coverage
-- [ ] Fix failing tests
+- [x] Verify reftest status and document requirements for failing tests
+- [x] Implement CSS shorthand property expansion
+- [x] Fix failing tests
 
 ### Current Test Results:
-- **WPT CSS Tests**: 81.8% pass rate (9/11 tests)
+- **WPT CSS Tests**: 100% pass rate (11/11 tests) 🎉
 - **Unit Test Coverage**: 90%+ across all modules
 - **Test Categories Passing**:
-  - ✅ css-box (longhand properties): 100%
-  - ✅ css-cascade: 100%
-  - ✅ css-display: 100%
-  - ✅ css-selectors: 100%
-- **Test Categories Failing**:
-  - ❌ css-box (shorthand properties): 0% (not implemented)
+  - ✅ css-box (longhand properties): 100% (3/3 tests)
+  - ✅ css-box (shorthand properties): 100% (2/2 tests)
+  - ✅ css-cascade: 100% (2/2 tests)
+  - ✅ css-display: 100% (1/1 test)
+  - ✅ css-selectors: 100% (3/3 tests)
+
+### Completed Features:
+
+#### CSS Shorthand Property Expansion ✅
+**Implementation**: CSS 2.1 §8.3 Margin properties, §8.4 Padding properties
+
+Shorthand properties are now automatically expanded to their longhand equivalents during style computation:
+
+- **Margin shorthand**: `margin: 20px` → `margin-top`, `margin-right`, `margin-bottom`, `margin-left`
+- **Padding shorthand**: `padding: 10px` → `padding-top`, `padding-right`, `padding-bottom`, `padding-left`
+
+**Supported value patterns** (CSS 2.1 specification):
+- 1 value: applies to all sides (e.g., `margin: 10px`)
+- 2 values: vertical | horizontal (e.g., `margin: 10px 20px`)
+- 3 values: top | horizontal | bottom (e.g., `margin: 10px 20px 30px`)
+- 4 values: top | right | bottom | left (e.g., `margin: 10px 20px 30px 40px`)
+
+**Implementation location**: `style/style.go` - expansion occurs during style computation for clean separation of concerns
 
 ### Deliverables:
 - ✅ Test coverage report
 - ✅ Documentation of spec compliance
 - ✅ Known limitations documented
 - ✅ CI integration with WPT tests
+- ✅ All WPT CSS reftests passing
 
 ---
 
@@ -411,6 +429,5 @@ The browser successfully loads and renders Hacker News from the network with imp
 ---
 
 ## Current Status
-**Completed**: Milestones 1-7.5 (Foundation through Basic Table Layout), Milestone 9 (Network Support)  
-**In Progress**: Milestone 8 (Testing & Validation)  
+**Completed**: Milestones 1-9 (Foundation through Network Support, including Testing & Validation)  
 **Last Updated**: 2025-12-24
