@@ -21,16 +21,35 @@ import (
 // Font rendering constants
 const (
 	// baseFontHeight is the height in pixels of basicfont.Face7x13
+	// CSS 2.1 §15.7: The default 'medium' font size is typically 16px, but we use
+	// 13px to match the available basicfont.Face7x13 from golang.org/x/image/font/basicfont
 	baseFontHeight = 13.0
 	
 	// italicSlantFactor determines the angle of italic text
+	// CSS 2.1 §15.7: "Oblique faces are typically rendered by slanting a normal face."
 	// Value of 0.2 approximates a 15-degree slant (tan(15°) ≈ 0.27, reduced for readability)
+	// This is a common approach for synthetic italic rendering in the absence of true italic fonts.
 	italicSlantFactor = 0.2
 	
 	// underlineOffset is the distance below the baseline to draw underlines
-	// CSS 2.1 §16.3.1: Underlines should be positioned below the baseline
+	// CSS 2.1 §16.3.1: "This property describes decorations that are added to the text of an element."
+	// The spec doesn't mandate exact positioning, but 1-2px below baseline is standard practice.
+	// We use 2px for better visibility across different font sizes.
 	underlineOffset = 2.0
 )
+
+// defaultFontStyle represents the default font style as per CSS 2.1 initial values
+// CSS 2.1 §15: Default font properties when no stylesheet is applied
+// - font-size: medium (§15.7 initial value)
+// - font-weight: normal (§15.6 initial value)
+// - font-style: normal (§15.7 initial value)
+// - text-decoration: none (§16.3.1 initial value)
+var defaultFontStyle = FontStyle{
+	Size:       baseFontHeight, // 'medium' size
+	Weight:     "normal",
+	Style:      "normal",
+	Decoration: "none",
+}
 
 // Canvas represents the rendering surface.
 type Canvas struct {
@@ -98,14 +117,9 @@ type FontStyle struct {
 
 // DrawText draws text at the given position with the given color.
 // CSS 2.1 §16 Text
+// Uses default font style for backward compatibility with code that doesn't specify font properties.
 func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
-	// Use default font style for backward compatibility
-	c.DrawStyledText(text, x, y, col, FontStyle{
-		Size:       13.0,
-		Weight:     "normal",
-		Style:      "normal",
-		Decoration: "none",
-	})
+	c.DrawStyledText(text, x, y, col, defaultFontStyle)
 }
 
 // DrawStyledText draws text with font styling at the given position.

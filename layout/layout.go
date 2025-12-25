@@ -20,6 +20,8 @@ import (
 const (
 	// baseFontHeight is the height in pixels of basicfont.Face7x13
 	// This is used for text dimension calculations throughout the layout engine
+	// CSS 2.1 §15.7: The default 'medium' font size is typically 16px, but we use
+	// 13px to match the available basicfont.Face7x13 from golang.org/x/image/font/basicfont
 	baseFontHeight = 13.0
 	
 	// maxColumnWidth is the maximum width any table column can have.
