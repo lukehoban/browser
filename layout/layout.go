@@ -129,6 +129,7 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 
 	// Determine box type based on display property or HTML element
 	// CSS 2.1 §17.2.1: The table element generates a principal table box
+	// CSS 2.1 §9.2.2: Inline-level elements
 	boxType := BlockBox
 	display := styledNode.Styles["display"]
 	
@@ -141,6 +142,11 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 			display = "table-row"
 		case "td", "th":
 			display = "table-cell"
+		// CSS 2.1 §9.2.2: Inline-level elements and inline boxes
+		// These elements generate inline boxes by default
+		case "a", "span", "b", "strong", "i", "em", "font", "code", "small", "big",
+			"abbr", "cite", "kbd", "samp", "var", "sub", "sup", "mark", "u", "s", "del", "ins":
+			display = "inline"
 		}
 	}
 	
