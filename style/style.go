@@ -54,8 +54,7 @@ func StyleTree(root *dom.Node, stylesheet *css.Stylesheet) *StyledNode {
 }
 
 // styleNode computes styles for a single node and its children.
-// CSS 2.1 §6.2 Inheritance
-// Font properties are inherited from parent to child
+// CSS 2.1 §6.2: Font properties are inherited from parent to child
 func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[string]string) *StyledNode {
 	styled := &StyledNode{
 		Node:     node,
@@ -63,8 +62,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		Children: make([]*StyledNode, 0),
 	}
 
-	// Inherit font properties from parent (CSS 2.1 §6.2)
-	// These properties are inherited by default
+	// CSS 2.1 §6.2: Inherit font properties from parent
 	inheritedProps := []string{
 		"color",
 		"font-size",
@@ -89,8 +87,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		// Apply rules in order of specificity
 		for _, matched := range matchedRules {
 			for _, decl := range matched.Rule.Declarations {
-				// Expand shorthand properties
-				// CSS 2.1 §8.3 Margin properties, §8.4 Padding properties
+				// CSS 2.1 §8.3, §8.4: Expand shorthand properties
 				expandedProps := expandShorthand(decl.Property, decl.Value)
 				for prop, val := range expandedProps {
 					styled.Styles[prop] = val
@@ -99,7 +96,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		}
 	}
 
-	// Recursively style children, passing this node's styles as parent styles
+	// Recursively style children
 	for _, child := range node.Children {
 		styledChild := styleNode(child, stylesheet, styled.Styles)
 		styled.Children = append(styled.Children, styledChild)
@@ -239,21 +236,11 @@ func calculateSpecificity(selector *css.Selector) Specificity {
 }
 
 // expandShorthand expands CSS shorthand properties to their longhand equivalents.
-// CSS 2.1 §8.3 Margin properties, §8.4 Padding properties
-//
-// Supported shorthand properties:
-//   - margin: Expands to margin-top, margin-right, margin-bottom, margin-left
-//   - padding: Expands to padding-top, padding-right, padding-bottom, padding-left
-//
-// The value patterns follow CSS 2.1 specification:
-//   - 1 value: applies to all four sides (e.g., "10px" → all sides 10px)
-//   - 2 values: vertical | horizontal (e.g., "10px 20px" → top/bottom 10px, left/right 20px)
-//   - 3 values: top | horizontal | bottom (e.g., "10px 20px 30px")
-//   - 4 values: top | right | bottom | left (e.g., "10px 20px 30px 40px")
+// CSS 2.1 §8.3, §8.4: Margin and padding shorthand expansion
+// Supports 1-4 value patterns per CSS 2.1 specification
 func expandShorthand(property, value string) map[string]string {
 	result := make(map[string]string)
 
-	// Check if this is a shorthand property
 	var prefix string
 	switch property {
 	case "margin":
@@ -261,26 +248,20 @@ func expandShorthand(property, value string) map[string]string {
 	case "padding":
 		prefix = "padding"
 	default:
-		// Not a shorthand property, return as-is
 		result[property] = value
 		return result
 	}
 
-	// Parse the value into individual components
-	// Split on whitespace to get individual values
 	values := splitWhitespace(value)
-
 	var top, right, bottom, left string
 
 	switch len(values) {
 	case 1:
-		// All four sides
 		top = values[0]
 		right = values[0]
 		bottom = values[0]
 		left = values[0]
 	case 2:
-		// Vertical | Horizontal
 		top = values[0]
 		right = values[1]
 		bottom = values[0]
@@ -292,13 +273,11 @@ func expandShorthand(property, value string) map[string]string {
 		bottom = values[2]
 		left = values[1]
 	case 4:
-		// Top | Right | Bottom | Left
 		top = values[0]
 		right = values[1]
 		bottom = values[2]
 		left = values[3]
 	default:
-		// Invalid number of values, return as-is
 		result[property] = value
 		return result
 	}

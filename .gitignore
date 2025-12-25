@@ -44,3 +44,8 @@ testdata/output/
 /*.png
 !/*_screenshot.png
 
+# Test output images
+test/*_output.png
+test/*_before.png
+test/*_after.png
+
