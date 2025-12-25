@@ -42,7 +42,9 @@ func TestWPTCSSReftests(t *testing.T) {
 	// Note: We don't fail the test on reftest failures since this is a benchmark
 	// to track progress. Instead, we document expected failures.
 	expectedFailures := map[string]bool{
-		// All tests currently pass!
+		// Sibling combinators not implemented (CSS 2.1 §5.7, CSS Selectors Level 3)
+		"adjacent-sibling-001.html": true,
+		"general-sibling-001.html":  true,
 	}
 
 	unexpectedFailures := 0
