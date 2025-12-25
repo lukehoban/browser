@@ -293,15 +293,11 @@ func TestParsePseudoClasses_Skipped(t *testing.T) {
 	// Common pseudo-classes include :hover, :active, :focus, :first-child, :last-child, :nth-child
 	
 	input := "a:hover { color: red; } p:first-child { margin-top: 0; }"
-	stylesheet := Parse(input)
+	_ = Parse(input)
 	
 	// When implemented, parser should recognize pseudo-classes
 	// Expected structure would include PseudoClass field in SimpleSelector
 	// For now, this gracefully fails/skips the selector
-	
-	if len(stylesheet.Rules) < 0 {
-		t.Fatalf("Expected parsing to complete without panic")
-	}
 }
 
 func TestParsePseudoElements_Skipped(t *testing.T) {
@@ -310,15 +306,11 @@ func TestParsePseudoElements_Skipped(t *testing.T) {
 	// Common pseudo-elements include ::before, ::after, ::first-line, ::first-letter
 	
 	input := "p::before { content: '→ '; } p::after { content: ' ←'; }"
-	stylesheet := Parse(input)
+	_ = Parse(input)
 	
 	// When implemented, parser should recognize pseudo-elements
 	// Expected structure would include PseudoElement field in SimpleSelector
 	// For now, this gracefully fails/skips the selector
-	
-	if len(stylesheet.Rules) < 0 {
-		t.Fatalf("Expected parsing to complete without panic")
-	}
 }
 
 func TestParseChildCombinator_Skipped(t *testing.T) {
@@ -327,15 +319,11 @@ func TestParseChildCombinator_Skipped(t *testing.T) {
 	// The child combinator (>) selects direct children only
 	
 	input := "div > p { color: blue; }"
-	stylesheet := Parse(input)
+	_ = Parse(input)
 	
 	// When implemented, the Selector structure would include a Combinator field
 	// to distinguish between descendant (space) and child (>) combinators
 	// For now, this might parse but treat '>' as a descendant combinator
-	
-	if len(stylesheet.Rules) < 0 {
-		t.Fatalf("Expected parsing to complete without panic")
-	}
 }
 
 func TestParseAdjacentSiblingCombinator_Skipped(t *testing.T) {
@@ -344,14 +332,10 @@ func TestParseAdjacentSiblingCombinator_Skipped(t *testing.T) {
 	// The adjacent sibling combinator (+) selects the immediately following sibling
 	
 	input := "h1 + p { margin-top: 0; }"
-	stylesheet := Parse(input)
+	_ = Parse(input)
 	
 	// When implemented, would need Combinator field to distinguish sibling selectors
 	// For now, this might not parse correctly
-	
-	if len(stylesheet.Rules) < 0 {
-		t.Fatalf("Expected parsing to complete without panic")
-	}
 }
 
 func TestParseGeneralSiblingCombinator_Skipped(t *testing.T) {
@@ -360,14 +344,10 @@ func TestParseGeneralSiblingCombinator_Skipped(t *testing.T) {
 	// The general sibling combinator (~) selects all following siblings
 	
 	input := "h1 ~ p { color: gray; }"
-	stylesheet := Parse(input)
+	_ = Parse(input)
 	
 	// When implemented, would need Combinator field for general sibling matching
 	// For now, this might not parse correctly
-	
-	if len(stylesheet.Rules) < 0 {
-		t.Fatalf("Expected parsing to complete without panic")
-	}
 }
 
 func TestParseAttributeSelectorMatching_Skipped(t *testing.T) {
@@ -379,12 +359,8 @@ func TestParseAttributeSelectorMatching_Skipped(t *testing.T) {
 	// The parser skips attribute selectors, but they should be parsed
 	// into the data structure and matched during style computation
 	input := `input[type="text"] { border: 1px solid black; }`
-	stylesheet := Parse(input)
+	_ = Parse(input)
 	
 	// When implemented, SimpleSelector would have Attributes field
 	// For now, attribute selectors are skipped during parsing
-	
-	if len(stylesheet.Rules) < 0 {
-		t.Fatalf("Expected parsing to complete without panic")
-	}
 }
