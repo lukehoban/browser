@@ -92,11 +92,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		// Apply rules in order of specificity
 		for _, matched := range matchedRules {
 			for _, decl := range matched.Rule.Declarations {
-				// CSS 2.1 §8.3, §8.4: Expand shorthand properties
-				expandedProps := expandShorthand(decl.Property, decl.Value)
-				for prop, val := range expandedProps {
-					styled.Styles[prop] = val
-				}
+				applyDeclaration(decl, styled.Styles)
 			}
 		}
 		
@@ -105,11 +101,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		if styleAttr := node.GetAttribute("style"); styleAttr != "" {
 			inlineDecls := css.ParseInlineStyle(styleAttr)
 			for _, decl := range inlineDecls {
-				// CSS 2.1 §8.3, §8.4: Expand shorthand properties
-				expandedProps := expandShorthand(decl.Property, decl.Value)
-				for prop, val := range expandedProps {
-					styled.Styles[prop] = val
-				}
+				applyDeclaration(decl, styled.Styles)
 			}
 		}
 	}
@@ -330,6 +322,15 @@ func splitWhitespace(s string) []string {
 	}
 
 	return result
+}
+
+// applyDeclaration applies a CSS declaration to a styles map, expanding shorthand properties.
+// CSS 2.1 §8.3, §8.4: Shorthand properties are expanded to their longhand equivalents.
+func applyDeclaration(decl *css.Declaration, styles map[string]string) {
+	expandedProps := expandShorthand(decl.Property, decl.Value)
+	for prop, val := range expandedProps {
+		styles[prop] = val
+	}
 }
 
 // applyPresentationalHints converts HTML presentational attributes to CSS styles.
