@@ -7,6 +7,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -143,9 +144,6 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	scaledWidth := int(float64(baseWidth) * scale)
 	scaledHeight := int(float64(baseHeight) * scale)
 	
-	// Create temporary image for the supersampled text
-	supersampledImg := image.NewRGBA(image.Rect(0, 0, supersampledWidth, supersampledHeight))
-	
 	// Render at high resolution using nearest-neighbor upscaling
 	baseImg := image.NewRGBA(image.Rect(0, 0, baseWidth, baseHeight))
 	drawer := &font.Drawer{
@@ -164,7 +162,7 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	}
 	
 	// Upscale to supersampled resolution using nearest-neighbor
-	supersampledImg = scaleImage(baseImg, supersampledWidth, supersampledHeight)
+	supersampledImg := scaleImage(baseImg, supersampledWidth, supersampledHeight)
 	
 	// Downsample with bilinear interpolation for antialiasing
 	textImg := downsampleImage(supersampledImg, scaledWidth, scaledHeight)
@@ -306,12 +304,12 @@ func downsampleImage(src *image.RGBA, newWidth, newHeight int) *image.RGBA {
 			b := b0*(1-yFrac) + b1*yFrac
 			a := a0*(1-yFrac) + a1*yFrac
 			
-			// Set the destination pixel
+			// Set the destination pixel with clamping to prevent overflow
 			dst.SetRGBA(dx, dy, color.RGBA{
-				R: uint8(r + 0.5), // Round to nearest integer
-				G: uint8(g + 0.5),
-				B: uint8(b + 0.5),
-				A: uint8(a + 0.5),
+				R: uint8(math.Min(255, r+0.5)), // Round and clamp to [0, 255]
+				G: uint8(math.Min(255, g+0.5)),
+				B: uint8(math.Min(255, b+0.5)),
+				A: uint8(math.Min(255, a+0.5)),
 			})
 		}
 	}
