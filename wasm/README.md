@@ -53,24 +53,8 @@ Requires a modern browser with WebAssembly support:
 
 - The browser renders HTML/CSS to a PNG image
 - Only inline CSS in `<style>` tags is supported (no external stylesheets)
-- **Network features (loading external resources) are not available in WASM mode** due to browser security restrictions (CORS)
+- Network features (loading external resources) are not available in WASM mode
 - Image support is limited due to cross-origin restrictions
-
-### Why Can't WASM Load Live Pages?
-
-WebAssembly runs in the browser's sandbox and cannot make arbitrary HTTP requests due to CORS (Cross-Origin Resource Sharing) policies. The Go `http.Get()` function used by the CLI browser doesn't work in WASM because:
-
-1. **CORS restrictions**: Websites must explicitly allow cross-origin requests
-2. **Browser security**: WASM cannot bypass browser security policies
-3. **Network APIs**: Go's standard library HTTP client isn't available in WASM
-
-### Alternatives for Loading Live Content
-
-If you want to render live web pages:
-
-1. **Use the CLI browser**: The native CLI binary (`./browser https://news.ycombinator.com/`) has full network support
-2. **Proxy server**: Create a server that fetches content and serves it to the WASM app (not implemented in this demo)
-3. **Browser extension**: Build a browser extension that can bypass CORS restrictions (not implemented)
 
 ## GitHub Pages Setup
 
