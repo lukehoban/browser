@@ -7,7 +7,6 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -16,6 +15,8 @@ import (
 	"github.com/lukehoban/browser/dom"
 	browserfont "github.com/lukehoban/browser/font"
 	"github.com/lukehoban/browser/layout"
+	"github.com/srwiley/oksvg"
+	"github.com/srwiley/rasterx"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/font/opentype"
@@ -100,42 +101,71 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 	c.FillRect(x+width-thickness, y, thickness, height, col)
 }
 
-// DrawTriangle draws a filled upward-pointing triangle.
-// Used for rendering simple geometric shapes like vote arrows.
-func (c *Canvas) DrawTriangle(x, y, width, height int, col color.RGBA) {
+// DrawSVG renders an SVG image onto the canvas at the specified position.
+// Supports SVG rendering via oksvg library.
+func (c *Canvas) DrawSVG(svgData []byte, x, y, width, height int) error {
 	if width <= 0 || height <= 0 {
-		return
+		return nil
 	}
-	
-	// Draw an upward-pointing triangle
-	// Top vertex is at (centerX, y)
-	// Bottom left is at (x, y+height-1)
-	// Bottom right is at (x+width-1, y+height-1)
-	centerX := x + width/2
-	
-	// For each row from top to bottom, calculate the horizontal span
+
+	// Parse the SVG
+	icon, err := oksvg.ReadIconStream(bytes.NewReader(svgData))
+	if err != nil {
+		return err
+	}
+
+	// Set the target size
+	icon.SetTarget(0, 0, float64(width), float64(height))
+
+	// Create an RGBA image for rasterization
+	rgba := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	// Create a scanner for rasterization
+	scanner := rasterx.NewScannerGV(width, height, rgba, rgba.Bounds())
+
+	// Rasterize the SVG
+	raster := rasterx.NewDasher(width, height, scanner)
+	icon.Draw(raster, 1.0)
+
+	// Draw the rasterized SVG onto the canvas
 	for dy := 0; dy < height; dy++ {
-		// Calculate how wide the triangle should be at this height
-		// Use float arithmetic for better precision, then round
-		// At dy=0 (top), draw at least 1 pixel at the apex
-		// At dy=height-1 (bottom), draw full width
-		rowWidthFloat := float64(dy+1) * float64(width) / float64(height)
-		rowWidth := int(math.Round(rowWidthFloat))
-		
-		leftX := centerX - rowWidth/2
-		rightX := centerX + rowWidth/2
-		
-		// Ensure we draw at least one pixel per row
-		if leftX > rightX {
-			leftX = centerX
-			rightX = centerX
-		}
-		
-		// Draw the horizontal line for this row
-		for dx := leftX; dx <= rightX; dx++ {
-			c.SetPixel(dx, y+dy, col)
+		for dx := 0; dx < width; dx++ {
+			srcColor := rgba.At(dx, dy)
+			r, g, b, a := srcColor.RGBA()
+
+			if a > 0 {
+				destX := x + dx
+				destY := y + dy
+
+				if destX >= 0 && destX < c.Width && destY >= 0 && destY < c.Height {
+					// Convert from 16-bit to 8-bit color
+					rgbaColor := color.RGBA{
+						R: uint8(r >> 8),
+						G: uint8(g >> 8),
+						B: uint8(b >> 8),
+						A: uint8(a >> 8),
+					}
+
+					// Handle alpha blending
+					if rgbaColor.A == 255 {
+						c.SetPixel(destX, destY, rgbaColor)
+					} else if rgbaColor.A > 0 {
+						existing := c.Pixels[destY*c.Width+destX]
+						alpha := float64(rgbaColor.A) / 255.0
+						blended := color.RGBA{
+							R: uint8(float64(rgbaColor.R)*alpha + float64(existing.R)*(1-alpha)),
+							G: uint8(float64(rgbaColor.G)*alpha + float64(existing.G)*(1-alpha)),
+							B: uint8(float64(rgbaColor.B)*alpha + float64(existing.B)*(1-alpha)),
+							A: 255,
+						}
+						c.SetPixel(destX, destY, blended)
+					}
+				}
+			}
 		}
 	}
+
+	return nil
 }
 
 // DrawText draws text at the given position with the given color.
@@ -515,7 +545,7 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 	bgImage := box.StyledNode.Styles["background-image"]
 	
 	// Check for background-image in the background shorthand or as a separate property
-	// Handle simple case of url() for rendering triangles (e.g., HN vote arrows)
+	// CSS 2.1 §14.2.1 Background properties: 'background-image'
 	if (bg != "" && strings.Contains(bg, "url(")) || (bgImage != "" && strings.Contains(bgImage, "url(")) {
 		// Extract the URL from url(...)
 		urlValue := bg
@@ -523,24 +553,36 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 			urlValue = bgImage
 		}
 		
-		// Simple heuristic: if the URL contains "triangle" or the box is small (likely an icon),
-		// render a simple upward-pointing triangle
-		contentBox := box.Dimensions.Content
-		isSmallBox := contentBox.Width <= 20 && contentBox.Height <= 20
-		hasTriangle := strings.Contains(strings.ToLower(urlValue), "triangle")
-		
-		if isSmallBox || hasTriangle {
-			// Render a triangle (like HN's vote arrow)
-			// Use gray color #999999 as in HN's triangle.svg
-			triangleColor := color.RGBA{0x99, 0x99, 0x99, 255}
-			canvas.DrawTriangle(
-				int(contentBox.X),
-				int(contentBox.Y),
-				int(contentBox.Width),
-				int(contentBox.Height),
-				triangleColor,
-			)
-			return
+		// Parse the URL from url(...)
+		url := extractURLFromCSS(urlValue)
+		if url != "" {
+			// Load the image/SVG data
+			// Note: URLs in attributes are already resolved by dom.ResolveURLs
+			// For CSS background-image, we need to resolve them here
+			loader := dom.NewResourceLoader("")
+			data, err := loader.LoadResource(url)
+			if err == nil {
+				contentBox := box.Dimensions.Content
+				width := int(contentBox.Width)
+				height := int(contentBox.Height)
+				
+				// Check if it's an SVG (simple check for SVG content)
+				if bytes.Contains(data, []byte("<svg")) || bytes.Contains(data, []byte("<?xml")) {
+					// Render as SVG
+					err := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height)
+					if err == nil {
+						return
+					}
+					// If SVG rendering fails, fall through to regular background handling
+				} else {
+					// Try to render as regular image (PNG, JPEG, GIF)
+					img, _, err := image.Decode(bytes.NewReader(data))
+					if err == nil {
+						canvas.DrawImage(img, int(contentBox.X), int(contentBox.Y), width, height)
+						return
+					}
+				}
+			}
 		}
 	}
 	
@@ -564,6 +606,29 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 			bgColor,
 		)
 	}
+}
+
+// extractURLFromCSS extracts the URL from a CSS url() function.
+// Returns empty string if no valid URL is found.
+func extractURLFromCSS(value string) string {
+	// Find url( and )
+	start := strings.Index(value, "url(")
+	if start == -1 {
+		return ""
+	}
+	start += 4 // Skip "url("
+	
+	end := strings.Index(value[start:], ")")
+	if end == -1 {
+		return ""
+	}
+	
+	url := strings.TrimSpace(value[start : start+end])
+	
+	// Remove quotes if present
+	url = strings.Trim(url, "\"'")
+	
+	return url
 }
 
 // renderBorders renders the borders of a layout box.
