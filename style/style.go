@@ -82,13 +82,13 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 	}
 
 	// CSS 2.1 §6.2: Inherit font properties from parent
+	// Note: text-decoration is NOT inherited per CSS 2.1 §16.3.1
 	inheritedProps := []string{
 		"color",
 		"font-size",
 		"font-family",
 		"font-weight",
 		"font-style",
-		"text-decoration",
 		"line-height",
 	}
 	
