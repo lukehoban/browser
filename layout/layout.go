@@ -14,6 +14,7 @@ import (
 
 	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
+	"github.com/lukehoban/browser/font"
 	"github.com/lukehoban/browser/style"
 	"golang.org/x/image/font/basicfont"
 )
@@ -536,18 +537,19 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 		return
 	}
 
-	// Calculate text dimensions using basicfont.Face7x13 as base
-	// Note: For basicfont.Face7x13, all characters have fixed width (Advance)
-	// For more accurate measurement, we could use font.Drawer.MeasureString()
-	// but basicfont is monospaced so character count * Advance is accurate
-	face := basicfont.Face7x13
-
-	// Get font size from styles (CSS 2.1 §15.7)
+	// Get font size and style from CSS styles (CSS 2.1 §15 Fonts)
 	fontSize := extractFontSize(box.StyledNode.Styles)
-	scale := fontSize / css.BaseFontHeight
-
-	width := float64(len(text)*face.Advance) * scale
-	height := float64(face.Height) * scale
+	fontWeight := extractFontWeight(box.StyledNode.Styles)
+	fontStyleStr := extractFontStyle(box.StyledNode.Styles)
+	
+	// Measure text using shared font.MeasureText
+	// This ensures layout and rendering use the same measurements
+	fontStyle := font.Style{
+		Size:   fontSize,
+		Weight: fontWeight,
+		Style:  fontStyleStr,
+	}
+	width, height := font.MeasureText(text, fontStyle)
 
 	// Position the text node
 	box.Dimensions.Content.X = containingBlock.Content.X
@@ -1131,4 +1133,40 @@ func (box *LayoutBox) applyVerticalAlignment(valign string) {
 	for _, child := range box.Children {
 		child.Dimensions.Content.Y += offset
 	}
+}
+
+// extractFontWeight extracts font-weight from CSS styles.
+// CSS 2.1 §15.6: Parse font-weight
+func extractFontWeight(styles map[string]string) string {
+	fontWeight := styles["font-weight"]
+	if fontWeight == "" {
+		return "normal"
+	}
+	
+	fontWeight = strings.TrimSpace(strings.ToLower(fontWeight))
+	if fontWeight == "bold" || fontWeight == "bolder" {
+		return "bold"
+	}
+	
+	if weight, err := strconv.Atoi(fontWeight); err == nil && weight >= 600 {
+		return "bold"
+	}
+	
+	return "normal"
+}
+
+// extractFontStyle extracts font-style from CSS styles.
+// CSS 2.1 §15.7: Parse font-style
+func extractFontStyle(styles map[string]string) string {
+	fontStyle := styles["font-style"]
+	if fontStyle == "" {
+		return "normal"
+	}
+	
+	fontStyle = strings.TrimSpace(strings.ToLower(fontStyle))
+	if fontStyle == "italic" || fontStyle == "oblique" {
+		return "italic"
+	}
+	
+	return "normal"
 }

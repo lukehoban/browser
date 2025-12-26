@@ -117,17 +117,21 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Implement cascade by specificity
 - [x] Basic style property application
 - [x] Inline style attribute support (CSS 2.1 §6.4.3) - December 2025
+- [x] User-agent stylesheet (CSS 2.1 §6.4.4) - December 2025
 
 ### Deliverables:
 - ✅ Style computation engine
 - ✅ Styled DOM tree with computed styles
 - ✅ Inline `style` attribute parsing and application
+- ✅ Default user-agent stylesheet with HTML element defaults
 
 ### Validation:
 - ✅ Correct selector matching
 - ✅ Proper cascade order by specificity
 - ✅ Descendant selectors work correctly
 - ✅ Inline styles override all CSS rules (highest specificity)
+- ✅ User-agent styles apply as lowest priority in cascade
+- ✅ Default styles for headings, links, lists, and text elements
 
 ### Known Limitations:
 - ⚠️ No inheritance implementation (partially complete - font properties inherit)
@@ -213,11 +217,13 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Underlined text has line below it
 - ✅ Combined styles (bold + italic + underline) work correctly
 - ✅ Font properties inherit from parent elements to text nodes
+- ✅ TrueType font rendering with Go fonts (proportional sans-serif)
+- ✅ Proper text spacing and line-height
+- ✅ User-agent stylesheet with default styles for HTML elements
 
 ### Known Limitations:
-- ⚠️ No font-family support (uses single built-in font: basicfont.Face7x13)
-- ⚠️ Synthetic bold/italic (not true font variants)
-- ⚠️ Limited text layout (no text-align, line-height control)
+- ⚠️ Limited font-family support (uses Go fonts, no external font loading)
+- ⚠️ No text-align support
 - ⚠️ No background-image support (CSS property)
 - ⚠️ No support for other text-decoration values (overline, line-through)
 
