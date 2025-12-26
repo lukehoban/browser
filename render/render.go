@@ -7,6 +7,7 @@ import (
 	_ "image/gif"
 	_ "image/jpeg"
 	"image/png"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -119,7 +120,7 @@ func (c *Canvas) DrawTriangle(x, y, width, height int, col color.RGBA) {
 		// At dy=0 (top), draw at least 1 pixel at the apex
 		// At dy=height-1 (bottom), draw full width
 		rowWidthFloat := float64(dy+1) * float64(width) / float64(height)
-		rowWidth := int(rowWidthFloat + 0.5) // Round to nearest integer
+		rowWidth := int(math.Round(rowWidthFloat))
 		
 		leftX := centerX - rowWidth/2
 		rightX := centerX + rowWidth/2
