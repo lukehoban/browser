@@ -392,16 +392,22 @@ func (c *Canvas) fillPolygon(offsetX, offsetY int, points [][2]float64, col colo
 			y1, y2 := points[i][1], points[j][1]
 			x1, x2 := points[i][0], points[j][0]
 			
-			// Check if edge crosses scanline
+			// Skip horizontal edges (y1 == y2) to avoid division by zero
+			if y1 == y2 {
+				continue
+			}
+			
+			// Check if edge crosses scanline (excluding horizontal edges)
 			if (y1 <= float64(scanY) && float64(scanY) < y2) || (y2 <= float64(scanY) && float64(scanY) < y1) {
-				// Calculate x intersection
+				// Calculate x intersection (safe since y1 != y2)
 				t := (float64(scanY) - y1) / (y2 - y1)
 				x := x1 + t*(x2-x1)
 				intersections = append(intersections, x)
 			}
 		}
 		
-		// Sort intersections
+		// Sort intersections using bubble sort (simple and adequate for small lists)
+		// For most SVG paths, intersection count per scanline is small (typically 2-4)
 		for i := 0; i < len(intersections)-1; i++ {
 			for j := i + 1; j < len(intersections); j++ {
 				if intersections[i] > intersections[j] {
@@ -415,8 +421,14 @@ func (c *Canvas) fillPolygon(offsetX, offsetY int, points [][2]float64, col colo
 			x1 := int(intersections[i])
 			x2 := int(intersections[i+1])
 			
+			// Bounds checking is handled by SetPixel, but optimize by checking canvas bounds
 			for x := x1; x <= x2; x++ {
-				c.SetPixel(offsetX+x, offsetY+scanY, col)
+				px := offsetX + x
+				py := offsetY + scanY
+				// SetPixel already does bounds checking, but we can skip the call entirely
+				if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
+					c.SetPixel(px, py, col)
+				}
 			}
 		}
 	}
