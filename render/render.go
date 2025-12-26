@@ -15,6 +15,7 @@ import (
 	"github.com/lukehoban/browser/dom"
 	browserfont "github.com/lukehoban/browser/font"
 	"github.com/lukehoban/browser/layout"
+	"github.com/lukehoban/browser/svg"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/font/opentype"
@@ -97,6 +98,38 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 	c.FillRect(x, y, thickness, height, col)
 	// Right border
 	c.FillRect(x+width-thickness, y, thickness, height, col)
+}
+
+// DrawSVG renders an SVG image onto the canvas at the specified position.
+// Uses the svg package for parsing and rasterization.
+func (c *Canvas) DrawSVG(svgData []byte, x, y, width, height int) error {
+	if width <= 0 || height <= 0 {
+		return nil
+	}
+
+	// Parse the SVG using the svg package
+	parsed, err := svg.Parse(svgData)
+	if err != nil || parsed == nil {
+		return err
+	}
+
+	// Set default viewBox if not specified
+	viewBox := parsed.ViewBox
+	if viewBox == nil {
+		viewBox = []float64{0, 0, float64(width), float64(height)}
+	}
+
+	// Transform points from viewBox coordinates to target dimensions
+	rasterizer := svg.Rasterizer{Width: width, Height: height}
+	transformedPoints := svg.TransformPoints(parsed.PathPoints, viewBox, width, height)
+
+	// Rasterize the polygon
+	fillFunc := func(px, py int, col color.RGBA) {
+		c.SetPixel(x+px, y+py, col)
+	}
+	rasterizer.FillPolygon(transformedPoints, fillFunc, parsed.FillColor)
+
+	return nil
 }
 
 // DrawText draws text at the given position with the given color.
@@ -473,6 +506,60 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 	}
 
 	bg := box.StyledNode.Styles["background"]
+	bgImage := box.StyledNode.Styles["background-image"]
+	
+	// Check for background-image in the background shorthand or as a separate property
+	// CSS 2.1 §14.2.1 Background properties: 'background-image'
+	if (bg != "" && strings.Contains(bg, "url(")) || (bgImage != "" && strings.Contains(bgImage, "url(")) {
+		// Extract the URL from url(...)
+		urlValue := bg
+		if bgImage != "" {
+			urlValue = bgImage
+		}
+		
+		// Parse the URL from url(...)
+		url := extractURLFromCSS(urlValue)
+		if url != "" {
+			// Load the image/SVG data
+			// Note: URLs in attributes are already resolved by dom.ResolveURLs
+			// For CSS background-image, we need to resolve them here
+			loader := dom.NewResourceLoader("")
+			data, err := loader.LoadResource(url)
+			if err == nil {
+				contentBox := box.Dimensions.Content
+				width := int(contentBox.Width)
+				height := int(contentBox.Height)
+				
+				// Check if it's an SVG by looking for SVG XML structure
+				// Look for <svg tag with word boundaries to avoid false positives
+				isSVG := false
+				dataStr := string(data)
+				if strings.Contains(dataStr, "<svg ") || 
+				   strings.Contains(dataStr, "<svg>") || 
+				   strings.HasPrefix(strings.TrimSpace(dataStr), "<svg") ||
+				   strings.Contains(dataStr, "<?xml") && strings.Contains(dataStr, "<svg") {
+					isSVG = true
+				}
+				
+				if isSVG {
+					// Render as SVG
+					err := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height)
+					if err == nil {
+						return
+					}
+					// If SVG rendering fails, fall through to regular background handling
+				} else {
+					// Try to render as regular image (PNG, JPEG, GIF)
+					img, _, err := image.Decode(bytes.NewReader(data))
+					if err == nil {
+						canvas.DrawImage(img, int(contentBox.X), int(contentBox.Y), width, height)
+						return
+					}
+				}
+			}
+		}
+	}
+	
 	if bg == "" {
 		bg = box.StyledNode.Styles["background-color"]
 	}
@@ -493,6 +580,29 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 			bgColor,
 		)
 	}
+}
+
+// extractURLFromCSS extracts the URL from a CSS url() function.
+// Returns empty string if no valid URL is found.
+func extractURLFromCSS(value string) string {
+	// Find url( and )
+	start := strings.Index(value, "url(")
+	if start == -1 {
+		return ""
+	}
+	start += 4 // Skip "url("
+	
+	end := strings.Index(value[start:], ")")
+	if end == -1 {
+		return ""
+	}
+	
+	url := strings.TrimSpace(value[start : start+end])
+	
+	// Remove quotes if present
+	url = strings.Trim(url, "\"'")
+	
+	return url
 }
 
 // renderBorders renders the borders of a layout box.

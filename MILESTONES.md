@@ -224,8 +224,13 @@ This document tracks the milestones for implementing a simple web browser in Go,
 ### Known Limitations:
 - ⚠️ Limited font-family support (uses Go fonts, no external font loading)
 - ⚠️ No text-align support
-- ⚠️ No background-image support (CSS property)
 - ⚠️ No support for other text-decoration values (overline, line-through)
+
+### New Features (Added):
+- ✅ Custom SVG parser and rasterizer for background-image (no external dependencies)
+- ✅ Supports subset of SVG spec: path element with move-to, line-to commands and fill colors
+- ✅ Background-image support for both SVG and raster images (PNG, JPEG, GIF)
+- ✅ Scanline polygon rasterization with viewBox coordinate transformation
 
 ---
 
@@ -488,7 +493,7 @@ The browser successfully loads and renders Hacker News from the network with exc
 - HTML alignment attributes (`align`, `valign`, `<center>`) work correctly
 - **Inline style attributes** (`style="color: red"`) now supported with highest specificity
 
-Minor visual differences remain due to missing CSS properties (background-image, line-height, font-family).
+Minor visual differences remain due to missing CSS properties (line-height, font-family).
 
 ---
 

@@ -112,6 +112,33 @@ func TestCanvasDrawRect(t *testing.T) {
 	}
 }
 
+func TestCanvasDrawSVG(t *testing.T) {
+	c := NewCanvas(32, 16)
+	white := color.RGBA{255, 255, 255, 255}
+	c.Clear(white)
+
+	// Simple SVG triangle (similar to HN's vote arrow)
+	svgData := []byte(`<svg height="32" viewBox="0 0 32 16" width="32" xmlns="http://www.w3.org/2000/svg"><path d="m2 27 14-29 14 29z" fill="#999"/></svg>`)
+	
+	err := c.DrawSVG(svgData, 0, 0, 32, 16)
+	if err != nil {
+		t.Fatalf("DrawSVG failed: %v", err)
+	}
+
+	// Check that some pixels have been drawn (not all white)
+	hasNonWhite := false
+	for _, px := range c.Pixels {
+		if px != white {
+			hasNonWhite = true
+			break
+		}
+	}
+	
+	if !hasNonWhite {
+		t.Error("expected some non-white pixels after drawing SVG, but canvas is all white")
+	}
+}
+
 func TestParseColor(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -539,6 +566,44 @@ func TestLineHeight_Skipped(t *testing.T) {
 	}
 }
 
+func TestBackgroundImageTriangle(t *testing.T) {
+	// Note: This test verifies the rendering pipeline for background-image
+	// but doesn't actually fetch the SVG file since it's a unit test
+	// The actual SVG rendering is tested in TestCanvasDrawSVG
+	
+	layoutBox := &layout.LayoutBox{
+		BoxType: layout.BlockBox,
+		Dimensions: layout.Dimensions{
+			Content: layout.Rect{X: 10, Y: 10, Width: 10, Height: 10},
+		},
+		StyledNode: &style.StyledNode{
+			Styles: map[string]string{
+				"background": "url(triangle.svg)",
+			},
+		},
+	}
+	
+	canvas := Render(layoutBox, 50, 50)
+	
+	// Check that the canvas was created
+	if canvas == nil {
+		t.Fatal("Expected canvas to be created")
+	}
+	
+	// Note: The triangle.svg file doesn't exist in the test environment,
+	// so the background won't actually be rendered. This test just verifies
+	// the code path doesn't panic.
+}
+
+func TestBackgroundImageSVG(t *testing.T) {
+	t.Skip("Background-image SVG integration test - requires network/file access")
+	// This would test the full integration of:
+	// 1. URL extraction from CSS
+	// 2. SVG file loading
+	// 3. SVG rendering
+	// For now, TestCanvasDrawSVG tests the core SVG rendering functionality
+}
+
 func TestBackgroundImage_Skipped(t *testing.T) {
 	t.Skip("Background-image not implemented - CSS 2.1 §14.2.1")
 	// CSS 2.1 §14.2.1 Background properties: 'background-image'
@@ -789,4 +854,30 @@ func TestAntialiasingQuality(t *testing.T) {
 	// Note: The antialiasing may produce subtle gray values that are difficult
 	// to detect in small test canvases. Visual inspection of rendered output
 	// shows improved text quality with smoother edges.
+}
+
+func TestExtractURLFromCSS(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"url(triangle.svg)", "triangle.svg"},
+		{"url('triangle.svg')", "triangle.svg"},
+		{"url(\"triangle.svg\")", "triangle.svg"},
+		{"url( triangle.svg )", "triangle.svg"},
+		{"url( 'triangle.svg' )", "triangle.svg"},
+		{"url(https://example.com/image.svg)", "https://example.com/image.svg"},
+		{"background: url(image.png) no-repeat", "image.png"},
+		{"no url here", ""},
+		{"url()", ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := extractURLFromCSS(tt.input)
+			if result != tt.expected {
+				t.Errorf("extractURLFromCSS(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
 }
