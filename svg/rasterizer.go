@@ -1,7 +1,10 @@
 // Package svg provides scanline rasterization for SVG shapes.
 package svg
 
-import "image/color"
+import (
+	"image/color"
+	"sort"
+)
 
 // Rasterizer provides polygon rasterization functionality.
 type Rasterizer struct {
@@ -57,15 +60,8 @@ func (r *Rasterizer) FillPolygon(points [][2]float64, fillFunc func(x, y int, co
 			}
 		}
 		
-		// Sort intersections using bubble sort (simple and adequate for small lists)
-		// For most SVG paths, intersection count per scanline is small (typically 2-4)
-		for i := 0; i < len(intersections)-1; i++ {
-			for j := i + 1; j < len(intersections); j++ {
-				if intersections[i] > intersections[j] {
-					intersections[i], intersections[j] = intersections[j], intersections[i]
-				}
-			}
-		}
+		// Sort intersections
+		sort.Float64s(intersections)
 		
 		// Fill between pairs of intersections
 		for i := 0; i+1 < len(intersections); i += 2 {
