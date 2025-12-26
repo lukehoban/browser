@@ -524,8 +524,31 @@ func applyPresentationalHints(node *dom.Node, styles map[string]string) {
 		styles["background-color"] = bgcolor
 	}
 	
+	// width attribute (used on many elements including <table>, <td>, <img>)
+	// HTML5 §14.3.9: Maps to CSS width property
+	if width := node.GetAttribute("width"); width != "" {
+		// Check if it's a percentage or pixel value
+		if strings.Contains(width, "%") {
+			styles["width"] = width
+		} else {
+			// Plain number means pixels
+			styles["width"] = width + "px"
+		}
+	}
+	
+	// height attribute (used on many elements including <table>, <td>, <img>)
+	// HTML5 §14.3.9: Maps to CSS height property
+	if height := node.GetAttribute("height"); height != "" {
+		// Check if it's a percentage or pixel value
+		if strings.Contains(height, "%") {
+			styles["height"] = height
+		} else {
+			// Plain number means pixels
+			styles["height"] = height + "px"
+		}
+	}
+	
 	// Note: cellspacing and cellpadding are handled after CSS rules are applied
 	// to ensure they override user-agent stylesheet defaults
-	// Other presentational attributes like width, height, align, valign
-	// are already handled elsewhere in the codebase
+	// align and valign are also handled in the layout phase
 }
