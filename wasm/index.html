@@ -168,6 +168,48 @@
         .examples button:hover {
             background: #1976d2;
         }
+
+        /* Mobile responsive styles */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .container {
+                flex-direction: column;
+            }
+
+            textarea {
+                min-height: 250px;
+            }
+
+            .controls {
+                flex-wrap: wrap;
+            }
+
+            .size-inputs {
+                flex-wrap: wrap;
+                width: 100%;
+                margin-top: 10px;
+            }
+
+            .size-inputs input {
+                width: 60px;
+            }
+
+            #output {
+                min-height: 300px;
+            }
+
+            .examples button {
+                padding: 8px 10px;
+                font-size: 12px;
+            }
+        }
     </style>
 </head>
 <body>
