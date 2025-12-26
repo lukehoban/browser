@@ -115,6 +115,38 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 			}
 		}
 		
+		// cellpadding and cellspacing attribute handling
+		// HTML5 §14.3.9: These attributes override user-agent defaults
+		// Applied after CSS rules but before inline styles (similar to author CSS with higher specificity)
+		
+		// cellspacing attribute (used on <table>)
+		if node.Data == "table" {
+			if cellspacing := node.GetAttribute("cellspacing"); cellspacing != "" {
+				// Convert to CSS border-spacing (applies to horizontal and vertical spacing)
+				styled.Styles["border-spacing"] = cellspacing + "px"
+			}
+		}
+		
+		// cellpadding attribute inheritance from table to cells
+		if (node.Data == "td" || node.Data == "th") && node.Parent != nil {
+			// Walk up to find the containing table
+			parent := node.Parent
+			for parent != nil {
+				if parent.Data == "table" {
+					if cellpadding := parent.GetAttribute("cellpadding"); cellpadding != "" {
+						// Apply as padding to all sides of the cell
+						paddingValue := cellpadding + "px"
+						styled.Styles["padding-top"] = paddingValue
+						styled.Styles["padding-right"] = paddingValue
+						styled.Styles["padding-bottom"] = paddingValue
+						styled.Styles["padding-left"] = paddingValue
+					}
+					break
+				}
+				parent = parent.Parent
+			}
+		}
+		
 		// Apply inline styles last - they have highest specificity
 		// CSS 2.1 §6.4.3: Inline styles have specificity A=1, higher than any selector
 		if styleAttr := node.GetAttribute("style"); styleAttr != "" {
@@ -492,6 +524,8 @@ func applyPresentationalHints(node *dom.Node, styles map[string]string) {
 		styles["background-color"] = bgcolor
 	}
 	
-	// Note: Other presentational attributes like width, height, align, valign
+	// Note: cellspacing and cellpadding are handled after CSS rules are applied
+	// to ensure they override user-agent stylesheet defaults
+	// Other presentational attributes like width, height, align, valign
 	// are already handled elsewhere in the codebase
 }
