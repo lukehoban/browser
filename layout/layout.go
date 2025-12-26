@@ -19,13 +19,19 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
-// Table layout constants
+// Layout constants
 const (
 	// CSS 2.1 §17.5.2.2: Maximum table column width to prevent unusable layouts
 	maxColumnWidth = 400.0
-	
+
 	// HTML5 §4.9.9: Maximum colspan to prevent DoS attacks
 	maxColspan = 1000
+
+	// CSS 2.1 §16.4: Default word spacing as a fraction of font size (em units).
+	// The spec states word-spacing 'normal' uses the font's default inter-word space,
+	// which is typically around 0.25em (approximately the width of a space character).
+	// Reference: https://www.w3.org/TR/CSS2/text.html#propdef-word-spacing
+	defaultWordSpacingEm = 0.25
 )
 
 // LayoutBox represents a box in the layout tree.
@@ -439,14 +445,13 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 
 // calculateWordSpacing calculates the word spacing to add between inline elements.
 // CSS 2.1 §16.4: Word spacing accounts for whitespace that was collapsed between elements.
-// Returns 0.25em based on the element's font size.
+// Returns defaultWordSpacingEm (0.25em) based on the element's font size.
 func calculateWordSpacing(child *LayoutBox) float64 {
 	fontSize := css.BaseFontHeight
 	if child.StyledNode != nil {
 		fontSize = extractFontSize(child.StyledNode.Styles)
 	}
-	// Add approximately 0.25em of word spacing (standard inter-word space)
-	return fontSize * 0.25
+	return fontSize * defaultWordSpacingEm
 }
 
 // isInlineLevel returns true for inline boxes and text nodes.
