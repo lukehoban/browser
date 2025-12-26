@@ -108,18 +108,27 @@ func (c *Canvas) DrawTriangle(x, y, width, height int, col color.RGBA) {
 	
 	// Draw an upward-pointing triangle
 	// Top vertex is at (centerX, y)
-	// Bottom left is at (x, y+height)
-	// Bottom right is at (x+width, y+height)
+	// Bottom left is at (x, y+height-1)
+	// Bottom right is at (x+width-1, y+height-1)
 	centerX := x + width/2
 	
 	// For each row from top to bottom, calculate the horizontal span
 	for dy := 0; dy < height; dy++ {
 		// Calculate how wide the triangle should be at this height
-		// At y=0 (top), width=0
-		// At y=height (bottom), width=full width
-		rowWidth := (dy * width) / height
+		// Use float arithmetic for better precision, then round
+		// At dy=0 (top), draw at least 1 pixel at the apex
+		// At dy=height-1 (bottom), draw full width
+		rowWidthFloat := float64(dy+1) * float64(width) / float64(height)
+		rowWidth := int(rowWidthFloat + 0.5) // Round to nearest integer
+		
 		leftX := centerX - rowWidth/2
 		rightX := centerX + rowWidth/2
+		
+		// Ensure we draw at least one pixel per row
+		if leftX > rightX {
+			leftX = centerX
+			rightX = centerX
+		}
 		
 		// Draw the horizontal line for this row
 		for dx := leftX; dx <= rightX; dx++ {
