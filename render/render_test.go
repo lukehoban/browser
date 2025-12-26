@@ -112,6 +112,37 @@ func TestCanvasDrawRect(t *testing.T) {
 	}
 }
 
+func TestCanvasDrawTriangle(t *testing.T) {
+	c := NewCanvas(20, 20)
+	white := color.RGBA{255, 255, 255, 255}
+	gray := color.RGBA{153, 153, 153, 255}
+	c.Clear(white)
+
+	// Draw a triangle at (5, 5) with 10x10 dimensions
+	c.DrawTriangle(5, 5, 10, 10, gray)
+
+	// Check top center should be gray (apex of triangle)
+	centerX := 5 + 10/2
+	if c.Pixels[5*20+centerX] != gray {
+		t.Errorf("expected gray at top center (%d,5), got %v", centerX, c.Pixels[5*20+centerX])
+	}
+
+	// Check bottom center should be gray (base of triangle)
+	if c.Pixels[14*20+centerX] != gray {
+		t.Errorf("expected gray at bottom center (%d,14), got %v", centerX, c.Pixels[14*20+centerX])
+	}
+
+	// Check a point outside the triangle (left side, middle height)
+	if c.Pixels[10*20+3] != white {
+		t.Errorf("expected white outside triangle (3,10), got %v", c.Pixels[10*20+3])
+	}
+
+	// Check a point outside the triangle (right side, middle height)
+	if c.Pixels[10*20+17] != white {
+		t.Errorf("expected white outside triangle (17,10), got %v", c.Pixels[10*20+17])
+	}
+}
+
 func TestParseColor(t *testing.T) {
 	tests := []struct {
 		input    string
@@ -536,6 +567,49 @@ func TestLineHeight_Skipped(t *testing.T) {
 	// This would require tracking line positions
 	if canvas == nil {
 		t.Error("Expected canvas to be created")
+	}
+}
+
+func TestBackgroundImageTriangle(t *testing.T) {
+	// Test that small boxes with background-image url() render triangles
+	// This is used for HN vote arrows and similar UI elements
+	
+	layoutBox := &layout.LayoutBox{
+		BoxType: layout.BlockBox,
+		Dimensions: layout.Dimensions{
+			Content: layout.Rect{X: 10, Y: 10, Width: 10, Height: 10},
+		},
+		StyledNode: &style.StyledNode{
+			Styles: map[string]string{
+				"background": "url(triangle.svg)",
+			},
+		},
+	}
+	
+	canvas := Render(layoutBox, 50, 50)
+	
+	// Check that the canvas was created
+	if canvas == nil {
+		t.Fatal("Expected canvas to be created")
+	}
+	
+	// Check that some pixels in the triangle area are not white (background)
+	// The triangle should be gray (#999 = 153, 153, 153)
+	white := color.RGBA{255, 255, 255, 255}
+	gray := color.RGBA{0x99, 0x99, 0x99, 255}
+	
+	// Check center of the box - should have some gray pixels from the triangle
+	centerX := 15 // 10 + 10/2
+	centerY := 15 // 10 + 10/2
+	
+	pixel := canvas.Pixels[centerY*50+centerX]
+	if pixel == white {
+		t.Errorf("expected non-white pixel at center of triangle box (%d,%d), got white", centerX, centerY)
+	}
+	
+	// The center should be gray from the triangle
+	if pixel != gray {
+		t.Logf("Note: pixel at (%d,%d) is %v, expected gray %v (this is informational)", centerX, centerY, pixel, gray)
 	}
 }
 

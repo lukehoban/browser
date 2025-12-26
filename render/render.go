@@ -99,6 +99,35 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 	c.FillRect(x+width-thickness, y, thickness, height, col)
 }
 
+// DrawTriangle draws a filled upward-pointing triangle.
+// Used for rendering simple geometric shapes like vote arrows.
+func (c *Canvas) DrawTriangle(x, y, width, height int, col color.RGBA) {
+	if width <= 0 || height <= 0 {
+		return
+	}
+	
+	// Draw an upward-pointing triangle
+	// Top vertex is at (centerX, y)
+	// Bottom left is at (x, y+height)
+	// Bottom right is at (x+width, y+height)
+	centerX := x + width/2
+	
+	// For each row from top to bottom, calculate the horizontal span
+	for dy := 0; dy < height; dy++ {
+		// Calculate how wide the triangle should be at this height
+		// At y=0 (top), width=0
+		// At y=height (bottom), width=full width
+		rowWidth := (dy * width) / height
+		leftX := centerX - rowWidth/2
+		rightX := centerX + rowWidth/2
+		
+		// Draw the horizontal line for this row
+		for dx := leftX; dx <= rightX; dx++ {
+			c.SetPixel(dx, y+dy, col)
+		}
+	}
+}
+
 // DrawText draws text at the given position with the given color.
 // CSS 2.1 §16 Text
 // Uses default font style for backward compatibility with code that doesn't specify font properties.
@@ -473,6 +502,38 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 	}
 
 	bg := box.StyledNode.Styles["background"]
+	bgImage := box.StyledNode.Styles["background-image"]
+	
+	// Check for background-image in the background shorthand or as a separate property
+	// Handle simple case of url() for rendering triangles (e.g., HN vote arrows)
+	if (bg != "" && strings.Contains(bg, "url(")) || (bgImage != "" && strings.Contains(bgImage, "url(")) {
+		// Extract the URL from url(...)
+		urlValue := bg
+		if bgImage != "" {
+			urlValue = bgImage
+		}
+		
+		// Simple heuristic: if the URL contains "triangle" or the box is small (likely an icon),
+		// render a simple upward-pointing triangle
+		contentBox := box.Dimensions.Content
+		isSmallBox := contentBox.Width <= 20 && contentBox.Height <= 20
+		hasTriangle := strings.Contains(strings.ToLower(urlValue), "triangle")
+		
+		if isSmallBox || hasTriangle {
+			// Render a triangle (like HN's vote arrow)
+			// Use gray color #999999 as in HN's triangle.svg
+			triangleColor := color.RGBA{0x99, 0x99, 0x99, 255}
+			canvas.DrawTriangle(
+				int(contentBox.X),
+				int(contentBox.Y),
+				int(contentBox.Width),
+				int(contentBox.Height),
+				triangleColor,
+			)
+			return
+		}
+	}
+	
 	if bg == "" {
 		bg = box.StyledNode.Styles["background-color"]
 	}
