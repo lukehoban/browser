@@ -563,3 +563,79 @@ func applyPresentationalHints(node *dom.Node, styles map[string]string) {
 	// to ensure they override user-agent stylesheet defaults
 	// align and valign are also handled in the layout phase
 }
+
+// ResolveCSSURLs resolves relative URLs in CSS properties against a base URL.
+// This handles background-image and other CSS properties that contain URLs.
+// Per HTML5 §2.5.1, URLs should be resolved against the document's base URL.
+func ResolveCSSURLs(root *StyledNode, baseURL string) {
+	if root == nil {
+		return
+	}
+	
+	// Resolve URLs in background and background-image properties
+	for _, prop := range []string{"background", "background-image"} {
+		if value, ok := root.Styles[prop]; ok && strings.Contains(value, "url(") {
+			root.Styles[prop] = resolveURLsInValue(value, baseURL)
+		}
+	}
+	
+	// Recursively process children
+	for _, child := range root.Children {
+		ResolveCSSURLs(child, baseURL)
+	}
+}
+
+// resolveURLsInValue resolves URLs within a CSS property value.
+// Handles both url(...) and url("...") and url('...') formats.
+func resolveURLsInValue(value, baseURL string) string {
+	// Find all url(...) occurrences and resolve them
+	result := value
+	start := 0
+	for {
+		idx := strings.Index(result[start:], "url(")
+		if idx == -1 {
+			break
+		}
+		idx += start
+		
+		// Find the end of url(...)
+		end := idx + 4 // len("url(")
+		parenCount := 1
+		inQuote := false
+		quoteChar := byte(0)
+		
+		for end < len(result) && parenCount > 0 {
+			ch := result[end]
+			if !inQuote {
+				if ch == '"' || ch == '\'' {
+					inQuote = true
+					quoteChar = ch
+				} else if ch == '(' {
+					parenCount++
+				} else if ch == ')' {
+					parenCount--
+				}
+			} else {
+				if ch == quoteChar {
+					inQuote = false
+				}
+			}
+			end++
+		}
+		
+		// Extract the URL
+		urlPart := result[idx+4 : end-1] // Skip "url(" and ")"
+		urlPart = strings.TrimSpace(urlPart)
+		urlPart = strings.Trim(urlPart, "\"'")
+		
+		// Resolve the URL using dom package logic
+		resolvedURL := dom.ResolveURLString(baseURL, urlPart)
+		
+		// Replace in the result
+		newURLValue := "url(" + resolvedURL + ")"
+		result = result[:idx] + newURLValue + result[end:]
+		start = idx + len(newURLValue)
+	}
+	
+	return result
+}
