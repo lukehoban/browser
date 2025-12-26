@@ -197,53 +197,6 @@ func extractFillColorFromElement(element string) color.RGBA {
 	return parseColor(fillStr)
 }
 
-// extractPathData extracts the 'd' attribute from a <path> element.
-// SVG 1.1 §8.3.1: The 'd' attribute defines the outline of a shape.
-func extractPathData(svg string) string {
-	// Look for d="..." in path element
-	start := strings.Index(svg, " d=\"")
-	if start == -1 {
-		start = strings.Index(svg, " d='")
-		if start == -1 {
-			return ""
-		}
-		start += 4 // len(" d='")
-	} else {
-		start += 4 // len(" d=\"")
-	}
-	
-	end := start
-	for end < len(svg) && svg[end] != '"' && svg[end] != '\'' {
-		end++
-	}
-	
-	return svg[start:end]
-}
-
-// extractFillColor extracts the fill attribute from SVG.
-// SVG 1.1 §11.2: The 'fill' property paints the interior of a shape.
-func extractFillColor(svg string) color.RGBA {
-	// Look for fill="..."
-	start := strings.Index(svg, "fill=\"")
-	if start == -1 {
-		start = strings.Index(svg, "fill='")
-		if start == -1 {
-			return color.RGBA{0, 0, 0, 255} // default black per SVG 1.1 §11.2
-		}
-		start += 6 // len("fill='")
-	} else {
-		start += 6 // len("fill=\"")
-	}
-	
-	end := start
-	for end < len(svg) && svg[end] != '"' && svg[end] != '\'' {
-		end++
-	}
-	
-	fillStr := svg[start:end]
-	return parseColor(fillStr)
-}
-
 // parsePath parses SVG path data and returns polygon points.
 // SVG 1.1 §8.3.2: Path data consists of commands (letters) followed by parameters (numbers).
 //
