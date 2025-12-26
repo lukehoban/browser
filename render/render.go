@@ -478,12 +478,58 @@ func (c *Canvas) SavePNG(filename string) error {
 // Render renders a layout tree to a canvas.
 func Render(root *layout.LayoutBox, width, height int) *Canvas {
 	canvas := NewCanvas(width, height)
-	// Default white background
-	canvas.Clear(color.RGBA{255, 255, 255, 255})
+	
+	// CSS 2.1 §14.2: The background of the root element becomes the canvas background.
+	// First try to find the body's background, then fall back to root's background.
+	canvasBg := findCanvasBackground(root)
+	canvas.Clear(canvasBg)
 
 	renderLayoutBox(canvas, root)
 
 	return canvas
+}
+
+// findCanvasBackground finds the background color for the canvas.
+// CSS 2.1 §14.2: The background of the root element covers the entire canvas.
+// If the root has no background, the body's background is used instead.
+func findCanvasBackground(root *layout.LayoutBox) color.RGBA {
+	white := color.RGBA{255, 255, 255, 255}
+
+	if root == nil || root.StyledNode == nil {
+		return white
+	}
+
+	// Check root element's background
+	if bg := getBackgroundColor(root.StyledNode.Styles); bg.A != 0 {
+		return bg
+	}
+
+	// Check body element's background
+	for _, child := range root.Children {
+		if child.StyledNode != nil && child.StyledNode.Node != nil &&
+			child.StyledNode.Node.Data == "body" {
+			if bg := getBackgroundColor(child.StyledNode.Styles); bg.A != 0 {
+				return bg
+			}
+		}
+	}
+
+	return white
+}
+
+// getBackgroundColor extracts a solid background color from styles.
+// Returns transparent (A=0) if no valid color is found.
+func getBackgroundColor(styles map[string]string) color.RGBA {
+	bg := styles["background-color"]
+	if bg == "" {
+		bg = styles["background"]
+	}
+
+	if bg == "" || bg == "transparent" || bg == "none" || strings.Contains(bg, "url(") {
+		return color.RGBA{} // transparent
+	}
+
+	return parseColor(bg)
 }
 
 // renderLayoutBox renders a single layout box and its children.
