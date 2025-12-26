@@ -566,8 +566,18 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 				width := int(contentBox.Width)
 				height := int(contentBox.Height)
 				
-				// Check if it's an SVG (simple check for SVG content)
-				if bytes.Contains(data, []byte("<svg")) || bytes.Contains(data, []byte("<?xml")) {
+				// Check if it's an SVG by looking for SVG XML structure
+				// Look for <svg tag with word boundaries to avoid false positives
+				isSVG := false
+				dataStr := string(data)
+				if strings.Contains(dataStr, "<svg ") || 
+				   strings.Contains(dataStr, "<svg>") || 
+				   strings.HasPrefix(strings.TrimSpace(dataStr), "<svg") ||
+				   strings.Contains(dataStr, "<?xml") && strings.Contains(dataStr, "<svg") {
+					isSVG = true
+				}
+				
+				if isSVG {
 					// Render as SVG
 					err := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height)
 					if err == nil {

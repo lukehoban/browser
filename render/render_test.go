@@ -857,27 +857,27 @@ func TestAntialiasingQuality(t *testing.T) {
 }
 
 func TestExtractURLFromCSS(t *testing.T) {
-tests := []struct {
-input    string
-expected string
-}{
-{"url(triangle.svg)", "triangle.svg"},
-{"url('triangle.svg')", "triangle.svg"},
-{"url(\"triangle.svg\")", "triangle.svg"},
-{"url( triangle.svg )", "triangle.svg"},
-{"url( 'triangle.svg' )", "triangle.svg"},
-{"url(https://example.com/image.svg)", "https://example.com/image.svg"},
-{"background: url(image.png) no-repeat", "image.png"},
-{"no url here", ""},
-{"url()", ""},
-}
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"url(triangle.svg)", "triangle.svg"},
+		{"url('triangle.svg')", "triangle.svg"},
+		{"url(\"triangle.svg\")", "triangle.svg"},
+		{"url( triangle.svg )", "triangle.svg"},
+		{"url( 'triangle.svg' )", "triangle.svg"},
+		{"url(https://example.com/image.svg)", "https://example.com/image.svg"},
+		{"background: url(image.png) no-repeat", "image.png"},
+		{"no url here", ""},
+		{"url()", ""},
+	}
 
-for _, tt := range tests {
-t.Run(tt.input, func(t *testing.T) {
-result := extractURLFromCSS(tt.input)
-if result != tt.expected {
-t.Errorf("extractURLFromCSS(%q) = %q, want %q", tt.input, result, tt.expected)
-}
-})
-}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			result := extractURLFromCSS(tt.input)
+			if result != tt.expected {
+				t.Errorf("extractURLFromCSS(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
 }
