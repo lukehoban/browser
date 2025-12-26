@@ -614,10 +614,21 @@ func collapseWhitespace(text string) string {
 
 // layoutTable lays out a table element.
 // CSS 2.1 §17.5 Visual layout of table contents
+// CSS 2.1 §17.6.1: Border-spacing property adds space between cells
 func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 	// Calculate table width (similar to block)
 	box.calculateBlockWidth(containingBlock)
 	box.calculateBlockPosition(containingBlock)
+
+	// Get border-spacing value (CSS 2.1 §17.6.1)
+	// For simplicity, we use the same spacing for horizontal and vertical
+	// (full spec supports "horizontal vertical" syntax)
+	borderSpacing := 2.0 // Default from user-agent stylesheet
+	if spacing := box.StyledNode.Styles["border-spacing"]; spacing != "" {
+		if parsed := parseLength(spacing, 0); parsed >= 0 {
+			borderSpacing = parsed
+		}
+	}
 
 	// Calculate the number of columns in the table
 	// CSS 2.1 §17.2.1: The number of columns is determined by examining all rows
@@ -627,10 +638,10 @@ func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
 	// CSS 2.1 §17.5.2.2: Auto table layout
 	columnWidths := box.calculateColumnWidths(numColumns, box.Dimensions.Content.Width)
 
-	// Layout table rows with column widths
+	// Layout table rows with column widths and border spacing
 	for _, row := range box.Children {
 		if row.BoxType == TableRowBox {
-			row.layoutWithColumnWidths(box.Dimensions, columnWidths)
+			row.layoutWithColumnWidths(box.Dimensions, columnWidths, borderSpacing)
 			box.Dimensions.Content.Height += row.marginBox().Height
 		}
 	}
@@ -829,7 +840,7 @@ func (box *LayoutBox) layoutTableRow(containingBlock Dimensions) {
 
 // layoutWithColumnWidths lays out a table row with pre-calculated column widths.
 // CSS 2.1 §17.5.2.2: Auto table layout
-func (box *LayoutBox) layoutWithColumnWidths(containingBlock Dimensions, columnWidths []float64) {
+func (box *LayoutBox) layoutWithColumnWidths(containingBlock Dimensions, columnWidths []float64, borderSpacing float64) {
 	styles := box.StyledNode.Styles
 
 	// Calculate position
@@ -851,7 +862,8 @@ func (box *LayoutBox) layoutWithColumnWidths(containingBlock Dimensions, columnW
 	}
 
 	// Layout each cell horizontally using calculated widths
-	currentX := box.Dimensions.Content.X
+	// CSS 2.1 §17.6.1: border-spacing adds space between cells
+	currentX := box.Dimensions.Content.X + borderSpacing // Start with border-spacing on the left
 	currentCol := 0
 	maxHeight := 0.0
 
@@ -877,7 +889,8 @@ func (box *LayoutBox) layoutWithColumnWidths(containingBlock Dimensions, columnW
 			cell.Layout(cellContainingBlock)
 
 			// Update position for next cell
-			currentX += cell.marginBox().Width
+			// CSS 2.1 §17.6.1: Add cell width plus border-spacing
+			currentX += cell.marginBox().Width + borderSpacing
 			currentCol += colspan
 
 			// Track maximum height
