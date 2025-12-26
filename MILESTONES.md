@@ -224,7 +224,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 ### Known Limitations:
 - ⚠️ Limited font-family support (uses Go fonts, no external font loading)
 - ⚠️ No text-align support
-- ⚠️ No background-image support (CSS property)
+- ⚠️ Partial background-image support (simple triangles/arrows only, no full image/SVG rendering)
 - ⚠️ No support for other text-decoration values (overline, line-through)
 
 ---
@@ -488,7 +488,7 @@ The browser successfully loads and renders Hacker News from the network with exc
 - HTML alignment attributes (`align`, `valign`, `<center>`) work correctly
 - **Inline style attributes** (`style="color: red"`) now supported with highest specificity
 
-Minor visual differences remain due to missing CSS properties (background-image, line-height, font-family).
+Minor visual differences remain due to missing CSS properties (full background-image/SVG support, line-height, font-family).
 
 ---
 
