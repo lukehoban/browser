@@ -238,6 +238,11 @@
                 <button onclick="loadExample('colors')">Colors</button>
                 <button onclick="loadExample('layout')">Layout</button>
                 <button onclick="loadExample('text')">Text Styles</button>
+                <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; font-size: 12px; color: #856404;">
+                    <strong>Note:</strong> This WASM demo cannot load live web pages due to browser security restrictions (CORS). 
+                    To render live pages like <code>https://news.ycombinator.com/</code>, use the CLI browser: 
+                    <code style="display: block; margin-top: 5px; padding: 5px; background: #f8f9fa; border-radius: 3px;">./browser -output hn.png https://news.ycombinator.com/</code>
+                </div>
             </div>
 
             <div id="status"></div>
