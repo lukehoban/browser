@@ -246,6 +246,43 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 					break
 				}
 			}
+		} else if token.Type == ColonToken {
+			// Skip pseudo-classes and pseudo-elements (:hover, ::before, etc.)
+			// CSS 2.1 §5.11 Pseudo-classes, §5.12 Pseudo-elements
+			// Note: We treat selectors with pseudo-classes the same as without them
+			// (e.g., "a:link" is treated as "a", "a:visited" is treated as "a")
+			p.tokenizer.Next() // consume ':'
+			
+			// Check for double colon (pseudo-element ::before)
+			token = p.tokenizer.Peek()
+			if token.Type == ColonToken {
+				p.tokenizer.Next() // consume second ':'
+			}
+			
+			// Consume the pseudo-class/pseudo-element name
+			token = p.tokenizer.Peek()
+			if token.Type == IdentToken {
+				p.tokenizer.Next() // consume identifier (e.g., "link", "hover", "before")
+			}
+			
+			// Handle functional pseudo-classes like :nth-child(2n+1)
+			token = p.tokenizer.Peek()
+			if token.Type == LeftParenToken {
+				p.tokenizer.Next() // consume '('
+				// Skip everything until ')'
+				parenDepth := 1
+				for parenDepth > 0 {
+					token = p.tokenizer.Next()
+					if token.Type == EOFToken {
+						break
+					}
+					if token.Type == LeftParenToken {
+						parenDepth++
+					} else if token.Type == RightParenToken {
+						parenDepth--
+					}
+				}
+			}
 		} else {
 			break
 		}
