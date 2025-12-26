@@ -19,13 +19,19 @@ import (
 	"golang.org/x/image/font/basicfont"
 )
 
-// Table layout constants
+// Layout constants
 const (
 	// CSS 2.1 §17.5.2.2: Maximum table column width to prevent unusable layouts
 	maxColumnWidth = 400.0
-	
+
 	// HTML5 §4.9.9: Maximum colspan to prevent DoS attacks
 	maxColspan = 1000
+
+	// CSS 2.1 §16.4: Default word spacing as a fraction of font size (em units).
+	// The spec states word-spacing 'normal' uses the font's default inter-word space,
+	// which is typically around 0.25em (approximately the width of a space character).
+	// Reference: https://www.w3.org/TR/CSS2/text.html#propdef-word-spacing
+	defaultWordSpacingEm = 0.25
 )
 
 // LayoutBox represents a box in the layout tree.
@@ -103,7 +109,8 @@ func LayoutTree(styledNode *style.StyledNode, containingBlock Dimensions) *Layou
 // buildLayoutTree constructs the layout tree.
 func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 	// Skip whitespace-only text nodes
-	// CSS 2.1 §16.6.1: Whitespace-only text nodes should not affect layout
+	// CSS 2.1 §16.6.1: Whitespace-only text nodes are collapsed.
+	// However, they may contribute to word spacing in inline contexts.
 	if styledNode.Node != nil && styledNode.Node.Type == dom.TextNode {
 		text := styledNode.Node.Data
 		isWhitespaceOnly := true
@@ -337,7 +344,7 @@ func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 	currentY := box.Dimensions.Content.Y + box.Dimensions.Content.Height
 	maxHeight := 0.0
 
-	for _, child := range children {
+	for i, child := range children {
 		inlineCB := Dimensions{
 			Content: Rect{
 				X:      currentX,
@@ -354,6 +361,12 @@ func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 		child.Dimensions.Content.Y = currentY + child.Dimensions.Margin.Top + child.Dimensions.Border.Top + child.Dimensions.Padding.Top
 
 		currentX += child.marginBox().Width
+
+		// CSS 2.1 §16.4: Add word-spacing between adjacent inline elements
+		if i < len(children)-1 {
+			currentX += calculateWordSpacing(child)
+		}
+
 		if child.marginBox().Height > maxHeight {
 			maxHeight = child.marginBox().Height
 		}
@@ -398,7 +411,7 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 	currentY := box.Dimensions.Content.Y
 	maxHeight := 0.0
 
-	for _, child := range box.Children {
+	for i, child := range box.Children {
 		inlineCB := Dimensions{
 			Content: Rect{
 				X:      currentX,
@@ -415,6 +428,12 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 		child.Dimensions.Content.Y = currentY + child.Dimensions.Margin.Top + child.Dimensions.Border.Top + child.Dimensions.Padding.Top
 
 		currentX += child.marginBox().Width
+
+		// CSS 2.1 §16.4: Add word-spacing between adjacent inline elements
+		if i < len(box.Children)-1 {
+			currentX += calculateWordSpacing(child)
+		}
+
 		if child.marginBox().Height > maxHeight {
 			maxHeight = child.marginBox().Height
 		}
@@ -422,6 +441,17 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 
 	box.Dimensions.Content.Width = currentX - box.Dimensions.Content.X
 	box.Dimensions.Content.Height = maxHeight
+}
+
+// calculateWordSpacing calculates the word spacing to add between inline elements.
+// CSS 2.1 §16.4: Word spacing accounts for whitespace that was collapsed between elements.
+// Returns defaultWordSpacingEm (0.25em) based on the element's font size.
+func calculateWordSpacing(child *LayoutBox) float64 {
+	fontSize := css.BaseFontHeight
+	if child.StyledNode != nil {
+		fontSize = extractFontSize(child.StyledNode.Styles)
+	}
+	return fontSize * defaultWordSpacingEm
 }
 
 // isInlineLevel returns true for inline boxes and text nodes.
@@ -1101,9 +1131,19 @@ func (box *LayoutBox) applyHorizontalAlignment(align string) {
 		return // Unknown alignment, do nothing
 	}
 
-	// Adjust X position of all children
+	// Adjust X position of all children recursively
 	for _, child := range box.Children {
-		child.Dimensions.Content.X += offset
+		child.shiftX(offset)
+	}
+}
+
+// shiftX recursively shifts this box and all its descendants by the given offset.
+// This is used when applying horizontal alignment to ensure all nested elements
+// are moved together.
+func (box *LayoutBox) shiftX(offset float64) {
+	box.Dimensions.Content.X += offset
+	for _, child := range box.Children {
+		child.shiftX(offset)
 	}
 }
 
@@ -1142,9 +1182,19 @@ func (box *LayoutBox) applyVerticalAlignment(valign string) {
 		return // Unknown alignment, do nothing
 	}
 
-	// Adjust Y position of all children
+	// Adjust Y position of all children recursively
 	for _, child := range box.Children {
-		child.Dimensions.Content.Y += offset
+		child.shiftY(offset)
+	}
+}
+
+// shiftY recursively shifts this box and all its descendants by the given offset.
+// This is used when applying vertical alignment to ensure all nested elements
+// are moved together.
+func (box *LayoutBox) shiftY(offset float64) {
+	box.Dimensions.Content.Y += offset
+	for _, child := range box.Children {
+		child.shiftY(offset)
 	}
 }
 

@@ -81,15 +81,26 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		Children: make([]*StyledNode, 0),
 	}
 
-	// CSS 2.1 §6.2: Inherit font properties from parent
+	// CSS 2.1 §6.2: Inherited properties are passed from parent to child.
+	// Per CSS 2.1 property definitions, the following are inherited by default:
+	// - color (§14.1), font-* (§15), line-height (§10.8.1)
+	// - text-indent, text-align, text-transform (§16.1-16.5)
+	// - letter-spacing, word-spacing (§16.4)
+	// - white-space (§16.6), list-style-* (§12.5)
+	// Note: text-decoration is NOT inherited per CSS 2.1 §16.3.1
+	// We implement a subset relevant to current rendering capabilities.
 	inheritedProps := []string{
 		"color",
 		"font-size",
 		"font-family",
 		"font-weight",
 		"font-style",
-		"text-decoration",
 		"line-height",
+		"text-align",
+		"text-transform",
+		"letter-spacing",
+		"word-spacing",
+		"white-space",
 	}
 	
 	for _, prop := range inheritedProps {
