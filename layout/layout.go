@@ -357,16 +357,8 @@ func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 		currentX += child.marginBox().Width
 
 		// CSS 2.1 §16.4: Add word-spacing between adjacent inline elements
-		// This accounts for whitespace that was collapsed between elements
 		if i < len(children)-1 {
-			// Get font size for word spacing calculation (default to base font)
-			fontSize := css.BaseFontHeight
-			if child.StyledNode != nil {
-				fontSize = extractFontSize(child.StyledNode.Styles)
-			}
-			// Add approximately 0.25em of word spacing (standard inter-word space)
-			wordSpacing := fontSize * 0.25
-			currentX += wordSpacing
+			currentX += calculateWordSpacing(child)
 		}
 
 		if child.marginBox().Height > maxHeight {
@@ -432,16 +424,8 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 		currentX += child.marginBox().Width
 
 		// CSS 2.1 §16.4: Add word-spacing between adjacent inline elements
-		// This accounts for whitespace that was collapsed between elements
 		if i < len(box.Children)-1 {
-			// Get font size for word spacing calculation (default to base font)
-			fontSize := css.BaseFontHeight
-			if child.StyledNode != nil {
-				fontSize = extractFontSize(child.StyledNode.Styles)
-			}
-			// Add approximately 0.25em of word spacing (standard inter-word space)
-			wordSpacing := fontSize * 0.25
-			currentX += wordSpacing
+			currentX += calculateWordSpacing(child)
 		}
 
 		if child.marginBox().Height > maxHeight {
@@ -451,6 +435,18 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 
 	box.Dimensions.Content.Width = currentX - box.Dimensions.Content.X
 	box.Dimensions.Content.Height = maxHeight
+}
+
+// calculateWordSpacing calculates the word spacing to add between inline elements.
+// CSS 2.1 §16.4: Word spacing accounts for whitespace that was collapsed between elements.
+// Returns 0.25em based on the element's font size.
+func calculateWordSpacing(child *LayoutBox) float64 {
+	fontSize := css.BaseFontHeight
+	if child.StyledNode != nil {
+		fontSize = extractFontSize(child.StyledNode.Styles)
+	}
+	// Add approximately 0.25em of word spacing (standard inter-word space)
+	return fontSize * 0.25
 }
 
 // isInlineLevel returns true for inline boxes and text nodes.
