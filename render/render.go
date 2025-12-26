@@ -15,6 +15,7 @@ import (
 	"github.com/lukehoban/browser/dom"
 	browserfont "github.com/lukehoban/browser/font"
 	"github.com/lukehoban/browser/layout"
+	"github.com/lukehoban/browser/svg"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
 	"golang.org/x/image/font/opentype"
@@ -99,339 +100,36 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 	c.FillRect(x+width-thickness, y, thickness, height, col)
 }
 
-// DrawSVG renders a simple SVG image onto the canvas at the specified position.
-// Custom minimal SVG parser that supports a subset of SVG spec sufficient for rendering
-// simple shapes like the HN vote arrow triangle.
-//
-// Supported SVG features:
-// - <path> element with 'd' attribute (move-to and line-to commands)
-// - fill attribute for solid colors
-// - viewBox for coordinate transformation
+// DrawSVG renders an SVG image onto the canvas at the specified position.
+// Uses the svg package for parsing and rasterization.
 func (c *Canvas) DrawSVG(svgData []byte, x, y, width, height int) error {
 	if width <= 0 || height <= 0 {
 		return nil
 	}
 
-	// Parse the SVG to extract path data and fill color
-	svgStr := string(svgData)
-	
-	// Extract viewBox dimensions for coordinate transformation
-	viewBox := parseSVGViewBox(svgStr)
+	// Parse the SVG using the svg package
+	parsed, err := svg.Parse(svgData)
+	if err != nil || parsed == nil {
+		return err
+	}
+
+	// Set default viewBox if not specified
+	viewBox := parsed.ViewBox
 	if viewBox == nil {
-		// Default to target dimensions if no viewBox
 		viewBox = []float64{0, 0, float64(width), float64(height)}
 	}
-	
-	// Extract path data
-	pathData := extractSVGPathData(svgStr)
-	if pathData == "" {
-		return nil
-	}
-	
-	// Extract fill color
-	fillColor := extractSVGFillColor(svgStr)
-	
-	// Parse path commands to get polygon points
-	points := parseSVGPath(pathData)
-	if len(points) < 3 {
-		return nil // Need at least 3 points for a polygon
-	}
-	
+
 	// Transform points from viewBox coordinates to target dimensions
-	scaleX := float64(width) / (viewBox[2] - viewBox[0])
-	scaleY := float64(height) / (viewBox[3] - viewBox[1])
-	
-	transformedPoints := make([][2]float64, len(points))
-	for i, p := range points {
-		transformedPoints[i] = [2]float64{
-			(p[0] - viewBox[0]) * scaleX,
-			(p[1] - viewBox[1]) * scaleY,
-		}
-	}
-	
+	rasterizer := svg.Rasterizer{Width: width, Height: height}
+	transformedPoints := svg.TransformPoints(parsed.PathPoints, viewBox, width, height)
+
 	// Rasterize the polygon
-	c.fillPolygon(x, y, transformedPoints, fillColor)
-	
+	fillFunc := func(px, py int, col color.RGBA) {
+		c.SetPixel(x+px, y+py, col)
+	}
+	rasterizer.FillPolygon(transformedPoints, fillFunc, parsed.FillColor)
+
 	return nil
-}
-
-// parseSVGViewBox extracts viewBox dimensions from SVG string
-func parseSVGViewBox(svg string) []float64 {
-	// Look for viewBox="x y width height"
-	start := strings.Index(svg, "viewBox=\"")
-	if start == -1 {
-		start = strings.Index(svg, "viewBox='")
-		if start == -1 {
-			return nil
-		}
-		start += 9 // len("viewBox='")
-	} else {
-		start += 9 // len("viewBox=\"")
-	}
-	
-	end := start
-	for end < len(svg) && svg[end] != '"' && svg[end] != '\'' {
-		end++
-	}
-	
-	viewBoxStr := svg[start:end]
-	parts := strings.Fields(viewBoxStr)
-	if len(parts) != 4 {
-		return nil
-	}
-	
-	result := make([]float64, 4)
-	for i, p := range parts {
-		val, err := strconv.ParseFloat(p, 64)
-		if err != nil {
-			return nil
-		}
-		result[i] = val
-	}
-	
-	return result
-}
-
-// extractSVGPathData extracts the 'd' attribute from a <path> element
-func extractSVGPathData(svg string) string {
-	// Look for d="..." in path element
-	start := strings.Index(svg, " d=\"")
-	if start == -1 {
-		start = strings.Index(svg, " d='")
-		if start == -1 {
-			return ""
-		}
-		start += 4 // len(" d='")
-	} else {
-		start += 4 // len(" d=\"")
-	}
-	
-	end := start
-	for end < len(svg) && svg[end] != '"' && svg[end] != '\'' {
-		end++
-	}
-	
-	return svg[start:end]
-}
-
-// extractSVGFillColor extracts the fill attribute from SVG
-func extractSVGFillColor(svg string) color.RGBA {
-	// Look for fill="..."
-	start := strings.Index(svg, "fill=\"")
-	if start == -1 {
-		start = strings.Index(svg, "fill='")
-		if start == -1 {
-			return color.RGBA{0, 0, 0, 255} // default black
-		}
-		start += 6 // len("fill='")
-	} else {
-		start += 6 // len("fill=\"")
-	}
-	
-	end := start
-	for end < len(svg) && svg[end] != '"' && svg[end] != '\'' {
-		end++
-	}
-	
-	fillStr := svg[start:end]
-	return parseColor(fillStr)
-}
-
-// parseSVGPath parses SVG path data and returns polygon points
-// Supports a subset of path commands: M/m (move-to), L/l (line-to), Z/z (close-path)
-func parseSVGPath(pathData string) [][2]float64 {
-	var points [][2]float64
-	var currentX, currentY float64
-	var startX, startY float64
-	
-	// Tokenize the path data
-	pathData = strings.TrimSpace(pathData)
-	i := 0
-	
-	for i < len(pathData) {
-		// Skip whitespace
-		for i < len(pathData) && (pathData[i] == ' ' || pathData[i] == ',' || pathData[i] == '\t' || pathData[i] == '\n' || pathData[i] == '\r') {
-			i++
-		}
-		if i >= len(pathData) {
-			break
-		}
-		
-		cmd := pathData[i]
-		i++
-		
-		switch cmd {
-		case 'M': // Absolute move-to
-			nums := extractNumbers(pathData, &i)
-			if len(nums) >= 2 {
-				currentX = nums[0]
-				currentY = nums[1]
-				startX = currentX
-				startY = currentY
-				points = append(points, [2]float64{currentX, currentY})
-				
-				// After move-to, subsequent coordinate pairs are implicit line-to commands
-				for j := 2; j+1 < len(nums); j += 2 {
-					currentX = nums[j]
-					currentY = nums[j+1]
-					points = append(points, [2]float64{currentX, currentY})
-				}
-			}
-			
-		case 'm': // Relative move-to
-			nums := extractNumbers(pathData, &i)
-			if len(nums) >= 2 {
-				currentX += nums[0]
-				currentY += nums[1]
-				startX = currentX
-				startY = currentY
-				points = append(points, [2]float64{currentX, currentY})
-				
-				// After move-to, subsequent coordinate pairs are implicit line-to commands
-				for j := 2; j+1 < len(nums); j += 2 {
-					currentX += nums[j]
-					currentY += nums[j+1]
-					points = append(points, [2]float64{currentX, currentY})
-				}
-			}
-			
-		case 'L': // Absolute line-to
-			nums := extractNumbers(pathData, &i)
-			for j := 0; j+1 < len(nums); j += 2 {
-				currentX = nums[j]
-				currentY = nums[j+1]
-				points = append(points, [2]float64{currentX, currentY})
-			}
-			
-		case 'l': // Relative line-to
-			nums := extractNumbers(pathData, &i)
-			for j := 0; j+1 < len(nums); j += 2 {
-				currentX += nums[j]
-				currentY += nums[j+1]
-				points = append(points, [2]float64{currentX, currentY})
-			}
-			
-		case 'Z', 'z': // Close path
-			if len(points) > 0 && (currentX != startX || currentY != startY) {
-				points = append(points, [2]float64{startX, startY})
-			}
-		}
-	}
-	
-	return points
-}
-
-// extractNumbers extracts consecutive numbers from path data
-func extractNumbers(pathData string, i *int) []float64 {
-	var numbers []float64
-	
-	for *i < len(pathData) {
-		// Skip whitespace and commas
-		for *i < len(pathData) && (pathData[*i] == ' ' || pathData[*i] == ',' || pathData[*i] == '\t' || pathData[*i] == '\n' || pathData[*i] == '\r') {
-			*i++
-		}
-		
-		// Check if we hit a command letter
-		if *i < len(pathData) && ((pathData[*i] >= 'A' && pathData[*i] <= 'Z') || (pathData[*i] >= 'a' && pathData[*i] <= 'z')) {
-			break
-		}
-		
-		if *i >= len(pathData) {
-			break
-		}
-		
-		// Extract number (handle negative numbers that may appear without space)
-		start := *i
-		if *i < len(pathData) && (pathData[*i] == '-' || pathData[*i] == '+') {
-			*i++
-		}
-		
-		hasDigit := false
-		for *i < len(pathData) && ((pathData[*i] >= '0' && pathData[*i] <= '9') || pathData[*i] == '.') {
-			hasDigit = true
-			*i++
-		}
-		
-		if hasDigit {
-			num, err := strconv.ParseFloat(pathData[start:*i], 64)
-			if err == nil {
-				numbers = append(numbers, num)
-			}
-		} else {
-			break
-		}
-	}
-	
-	return numbers
-}
-
-// fillPolygon fills a polygon on the canvas using scanline algorithm
-func (c *Canvas) fillPolygon(offsetX, offsetY int, points [][2]float64, col color.RGBA) {
-	if len(points) < 3 {
-		return
-	}
-	
-	// Find bounding box
-	minY, maxY := points[0][1], points[0][1]
-	for _, p := range points {
-		if p[1] < minY {
-			minY = p[1]
-		}
-		if p[1] > maxY {
-			maxY = p[1]
-		}
-	}
-	
-	// Scanline algorithm
-	for scanY := int(minY); scanY <= int(maxY); scanY++ {
-		// Find intersections with polygon edges
-		var intersections []float64
-		
-		for i := 0; i < len(points); i++ {
-			j := (i + 1) % len(points)
-			y1, y2 := points[i][1], points[j][1]
-			x1, x2 := points[i][0], points[j][0]
-			
-			// Skip horizontal edges (y1 == y2) to avoid division by zero
-			if y1 == y2 {
-				continue
-			}
-			
-			// Check if edge crosses scanline (excluding horizontal edges)
-			if (y1 <= float64(scanY) && float64(scanY) < y2) || (y2 <= float64(scanY) && float64(scanY) < y1) {
-				// Calculate x intersection (safe since y1 != y2)
-				t := (float64(scanY) - y1) / (y2 - y1)
-				x := x1 + t*(x2-x1)
-				intersections = append(intersections, x)
-			}
-		}
-		
-		// Sort intersections using bubble sort (simple and adequate for small lists)
-		// For most SVG paths, intersection count per scanline is small (typically 2-4)
-		for i := 0; i < len(intersections)-1; i++ {
-			for j := i + 1; j < len(intersections); j++ {
-				if intersections[i] > intersections[j] {
-					intersections[i], intersections[j] = intersections[j], intersections[i]
-				}
-			}
-		}
-		
-		// Fill between pairs of intersections
-		for i := 0; i+1 < len(intersections); i += 2 {
-			x1 := int(intersections[i])
-			x2 := int(intersections[i+1])
-			
-			// Bounds checking is handled by SetPixel, but optimize by checking canvas bounds
-			for x := x1; x <= x2; x++ {
-				px := offsetX + x
-				py := offsetY + scanY
-				// SetPixel already does bounds checking, but we can skip the call entirely
-				if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
-					c.SetPixel(px, py, col)
-				}
-			}
-		}
-	}
 }
 
 // DrawText draws text at the given position with the given color.
