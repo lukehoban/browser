@@ -506,16 +506,34 @@ func findCanvasBackground(root *layout.LayoutBox) color.RGBA {
 
 	// If root has no background, look for body element
 	for _, child := range root.Children {
-		if child.StyledNode != nil && child.StyledNode.Node != nil &&
-			child.StyledNode.Node.Data == "body" {
-			if bg := extractBackgroundColor(child.StyledNode.Styles); bg != defaultBg {
-				return bg
-			}
+		if bg := getBodyBackground(child); bg != defaultBg {
+			return bg
 		}
 	}
 
 	return defaultBg
 }
+
+// getBodyBackground extracts background color from a body element.
+// Returns default white if the node is not a body element or has no background.
+func getBodyBackground(child *layout.LayoutBox) color.RGBA {
+	defaultBg := color.RGBA{255, 255, 255, 255}
+	
+	if child.StyledNode == nil || child.StyledNode.Node == nil {
+		return defaultBg
+	}
+	if child.StyledNode.Node.Data != "body" {
+		return defaultBg
+	}
+	return extractBackgroundColor(child.StyledNode.Styles)
+}
+
+// CSS background value constants
+const (
+	cssTransparent = "transparent"
+	cssNone        = "none"
+	cssURLPrefix   = "url("
+)
 
 // extractBackgroundColor extracts a background color from styles.
 func extractBackgroundColor(styles map[string]string) color.RGBA {
@@ -526,11 +544,13 @@ func extractBackgroundColor(styles map[string]string) color.RGBA {
 		bg = styles["background"]
 	}
 	
-	if bg != "" && bg != "transparent" && bg != "none" && !strings.Contains(bg, "url(") {
-		parsed := parseColor(bg)
-		if parsed != (color.RGBA{0, 0, 0, 0}) {
-			return parsed
-		}
+	if bg == "" || bg == cssTransparent || bg == cssNone || strings.Contains(bg, cssURLPrefix) {
+		return defaultBg
+	}
+	
+	parsed := parseColor(bg)
+	if parsed != (color.RGBA{0, 0, 0, 0}) {
+		return parsed
 	}
 	
 	return defaultBg

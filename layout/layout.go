@@ -546,6 +546,18 @@ func expandRect(rect Rect, edges EdgeSizes) Rect {
 	}
 }
 
+// applyExplicitRowHeight applies an explicit height style to an empty table row.
+// CSS 2.1 §17.5.3: Table row height can be explicitly set.
+// Returns true if height was applied (indicating the caller should return early).
+func applyExplicitRowHeight(box *LayoutBox, styles map[string]string) bool {
+	if height := styles["height"]; height != "" {
+		if h := parseLength(height, 0); h >= 0 {
+			box.Dimensions.Content.Height = h
+		}
+	}
+	return true
+}
+
 // layoutText lays out a text node.
 // CSS 2.1 §16 Text
 func (box *LayoutBox) layoutText(containingBlock Dimensions) {
@@ -887,14 +899,9 @@ func (box *LayoutBox) layoutWithColumnWidths(containingBlock Dimensions, columnW
 		box.Dimensions.Margin.Top + box.Dimensions.Border.Top + box.Dimensions.Padding.Top
 	box.Dimensions.Content.Width = containingBlock.Content.Width
 
-	// Handle explicit height for empty rows (e.g., spacer rows)
-	// CSS 2.1 §17.5.3: Table row height can be explicitly set
+	// Handle empty rows (e.g., spacer rows) - apply explicit height and return
 	if len(box.Children) == 0 {
-		if height := styles["height"]; height != "" {
-			if h := parseLength(height, 0); h >= 0 {
-				box.Dimensions.Content.Height = h
-			}
-		}
+		applyExplicitRowHeight(box, styles)
 		return
 	}
 
@@ -967,14 +974,9 @@ func (box *LayoutBox) layoutWithColumns(containingBlock Dimensions, numColumns i
 		box.Dimensions.Margin.Top + box.Dimensions.Border.Top + box.Dimensions.Padding.Top
 	box.Dimensions.Content.Width = containingBlock.Content.Width
 
-	// Handle explicit height for empty rows (e.g., spacer rows)
-	// CSS 2.1 §17.5.3: Table row height can be explicitly set
+	// Handle empty rows (e.g., spacer rows) - apply explicit height and return
 	if len(box.Children) == 0 || numColumns == 0 {
-		if height := styles["height"]; height != "" {
-			if h := parseLength(height, 0); h >= 0 {
-				box.Dimensions.Content.Height = h
-			}
-		}
+		applyExplicitRowHeight(box, styles)
 		return
 	}
 
