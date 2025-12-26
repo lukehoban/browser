@@ -238,6 +238,11 @@
                 <button onclick="loadExample('colors')">Colors</button>
                 <button onclick="loadExample('layout')">Layout</button>
                 <button onclick="loadExample('text')">Text Styles</button>
+                <div style="margin-top: 15px; padding: 10px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 4px; font-size: 12px; color: #856404;">
+                    <strong>Note:</strong> This WASM demo cannot load live web pages due to browser security restrictions (CORS). 
+                    To render live pages like <code>https://news.ycombinator.com/</code>, use the CLI browser: 
+                    <code style="display: block; margin-top: 5px; padding: 5px; background: #f8f9fa; border-radius: 3px;">./browser -output hn.png https://news.ycombinator.com/</code>
+                </div>
             </div>
 
             <div id="status"></div>
@@ -338,29 +343,36 @@
 <html lang="en" op="news">
 <head>
     <style>
-        body { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #828282; }
-        td { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #828282; }
+        body { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #828282; margin: 0; padding: 0; }
+        td { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; }
         a:link { color: #000000; text-decoration: none; }
         a:visited { color: #828282; text-decoration: none; }
-        .title { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #828282; }
-        .subtext { font-family: Verdana, Geneva, sans-serif; font-size: 7pt; color: #828282; }
         .pagetop { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; color: #222222; }
-        .comhead { font-family: Verdana, Geneva, sans-serif; font-size: 8pt; color: #828282; }
-        .hnname { margin-left: 1px; margin-right: 5px; }
+        .pagetop a { color: #000000; }
+        .hnname { margin-right: 5px; }
         .rank { font-size: 10pt; }
+        .title { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; }
+        .titleline { font-family: Verdana, Geneva, sans-serif; font-size: 10pt; }
+        .titleline a { color: #000000; }
         .sitebit { font-size: 8pt; color: #828282; }
         .sitestr { color: #828282; }
+        .subtext { font-family: Verdana, Geneva, sans-serif; font-size: 7pt; color: #828282; }
+        .subline { font-size: 7pt; }
         .hnuser { color: #828282; }
         .age { color: #828282; }
+        .age a { color: #828282; }
         .score { color: #828282; }
-        .subline { font-size: 7pt; }
+        .comhead { font-size: 8pt; color: #828282; }
+        .spacer { height: 5px; }
+        .athing td { color: #828282; }
+        .votelinks { text-align: center; }
     </style>
 </head>
 <body>
     <center>
         <table id="hnmain" border="0" cellpadding="0" cellspacing="0" width="85%" bgcolor="#f6f6ef">
             <tr>
-                <td bgcolor="#cc1010">
+                <td bgcolor="#ff6600">
                     <table border="0" cellpadding="0" cellspacing="0" width="100%" style="padding:2px">
                         <tr>
                             <td style="width:18px;padding-right:4px">
@@ -391,15 +403,17 @@
             <tr>
                 <td>
                     <table border="0" cellpadding="0" cellspacing="0">
-                        <tr class="athing">
+                        <tr class="athing submission" id="46394169">
                             <td align="right" valign="top" class="title">
-                                <font color="#be2828"><span class="rank">1.</span></font>
+                                <span class="rank">1.</span>
                             </td>
-                            <td valign="top" class="votelinks"></td>
+                            <td valign="top" class="votelinks">
+                                <center><a href="vote?id=46394169&amp;how=up&amp;goto=news"><div class="votearrow" title="upvote"></div></a></center>
+                            </td>
                             <td class="title">
                                 <span class="titleline">
-                                    <a href="https://fidget-spinner.github.io/posts/no-longer-sorry.html">Python 3.15's interpreter for Windows x86-64 should hopefully be 15% faster</a>
-                                    <span class="sitebit comhead"> (<span class="sitestr">fidget-spinner.github.io</span>)</span>
+                                    <a href="https://blog.nawaz.org/posts/2025/Dec/a-proclamation-regarding-the-restoration-of-the-dash/">A Proclamation Regarding the Restoration of the Em-Dash</a>
+                                    <span class="sitebit comhead"> (<a href="from?site=nawaz.org"><span class="sitestr">nawaz.org</span></a>)</span>
                                 </span>
                             </td>
                         </tr>
@@ -407,23 +421,26 @@
                             <td colspan="2"></td>
                             <td class="subtext">
                                 <span class="subline">
-                                    <span class="score">241 points</span> by 
-                                    <a href="user?id=lumpa" class="hnuser">lumpa</a> 
-                                    <span class="age"><a href="item?id=46384167">7 hours ago</a></span> | 
-                                    <a href="item?id=46384167">72 comments</a>
+                                    <span class="score" id="score_46394169">38 points</span> by 
+                                    <a href="user?id=BeetleB" class="hnuser">BeetleB</a> 
+                                    <span class="age"><a href="item?id=46394169">1 hour ago</a></span> | 
+                                    <a href="hide?id=46394169&amp;goto=news">hide</a> | 
+                                    <a href="item?id=46394169">29 comments</a>
                                 </span>
                             </td>
                         </tr>
                         <tr class="spacer" style="height:5px"></tr>
-                        <tr class="athing">
+                        <tr class="athing submission" id="46391514">
                             <td align="right" valign="top" class="title">
-                                <font color="#005a00"><span class="rank">2.</span></font>
+                                <span class="rank">2.</span>
                             </td>
-                            <td valign="top" class="votelinks"></td>
+                            <td valign="top" class="votelinks">
+                                <center><a href="vote?id=46391514&amp;how=up&amp;goto=news"><div class="votearrow" title="upvote"></div></a></center>
+                            </td>
                             <td class="title">
                                 <span class="titleline">
-                                    <a href="https://www.newyorker.com/news/press-room/the-entire-new-yorker-archive-is-now-fully-digitized">The entire New Yorker archive is now digitized</a>
-                                    <span class="sitebit comhead"> (<span class="sitestr">newyorker.com</span>)</span>
+                                    <a href="https://nesbitt.io/2025/12/24/package-managers-keep-using-git-as-a-database.html">Package managers keep using Git as a database, it never works out</a>
+                                    <span class="sitebit comhead"> (<a href="from?site=nesbitt.io"><span class="sitestr">nesbitt.io</span></a>)</span>
                                 </span>
                             </td>
                         </tr>
@@ -431,23 +448,26 @@
                             <td colspan="2"></td>
                             <td class="subtext">
                                 <span class="subline">
-                                    <span class="score">223 points</span> by 
-                                    <a href="user?id=thm" class="hnuser">thm</a> 
-                                    <span class="age"><a href="item?id=46336577">7 hours ago</a></span> | 
-                                    <a href="item?id=46336577">33 comments</a>
+                                    <span class="score" id="score_46391514">398 points</span> by 
+                                    <a href="user?id=bdcfuture" class="hnuser">bdcfuture</a> 
+                                    <span class="age"><a href="item?id=46391514">5 hours ago</a></span> | 
+                                    <a href="hide?id=46391514&amp;goto=news">hide</a> | 
+                                    <a href="item?id=46391514">228 comments</a>
                                 </span>
                             </td>
                         </tr>
                         <tr class="spacer" style="height:5px"></tr>
-                        <tr class="athing">
+                        <tr class="athing submission" id="46389365">
                             <td align="right" valign="top" class="title">
-                                <font color="#be2828"><span class="rank">3.</span></font>
+                                <span class="rank">3.</span>
                             </td>
-                            <td valign="top" class="votelinks"></td>
+                            <td valign="top" class="votelinks">
+                                <center><a href="vote?id=46389365&amp;how=up&amp;goto=news"><div class="votearrow" title="upvote"></div></a></center>
+                            </td>
                             <td class="title">
                                 <span class="titleline">
-                                    <a href="https://github.com/NVIDIA/cuda-tile">CUDA Tile Open Sourced</a>
-                                    <span class="sitebit comhead"> (<span class="sitestr">github.com/nvidia</span>)</span>
+                                    <a href="https://arko.net/2013/12/29/c-c++-embedded-files/">C/C++ Embedded Files (2013)</a>
+                                    <span class="sitebit comhead"> (<a href="from?site=arko.net"><span class="sitestr">arko.net</span></a>)</span>
                                 </span>
                             </td>
                         </tr>
@@ -455,23 +475,26 @@
                             <td colspan="2"></td>
                             <td class="subtext">
                                 <span class="subline">
-                                    <span class="score">63 points</span> by 
-                                    <a href="user?id=JonChesterfield" class="hnuser">JonChesterfield</a> 
-                                    <span class="age"><a href="item?id=46330732">4 hours ago</a></span> | 
-                                    <a href="item?id=46330732">4 comments</a>
+                                    <span class="score" id="score_46389365">26 points</span> by 
+                                    <a href="user?id=bobfry" class="hnuser">bobfry</a> 
+                                    <span class="age"><a href="item?id=46389365">1 hour ago</a></span> | 
+                                    <a href="hide?id=46389365&amp;goto=news">hide</a> | 
+                                    <a href="item?id=46389365">30 comments</a>
                                 </span>
                             </td>
                         </tr>
                         <tr class="spacer" style="height:5px"></tr>
-                        <tr class="athing">
+                        <tr class="athing submission" id="46393191">
                             <td align="right" valign="top" class="title">
-                                <font color="#005a00"><span class="rank">4.</span></font>
+                                <span class="rank">4.</span>
                             </td>
-                            <td valign="top" class="votelinks"></td>
+                            <td valign="top" class="votelinks">
+                                <center><a href="vote?id=46393191&amp;how=up&amp;goto=news"><div class="votearrow" title="upvote"></div></a></center>
+                            </td>
                             <td class="title">
                                 <span class="titleline">
-                                    <a href="https://www.deepsouthventures.com/i-sell-onions-on-the-internet/">I sell onions on the Internet (2019)</a>
-                                    <span class="sitebit comhead"> (<span class="sitestr">deepsouthventures.com</span>)</span>
+                                    <a href="https://learnikxos.com/">LearnIKXOS</a>
+                                    <span class="sitebit comhead"> (<a href="from?site=learnikxos.com"><span class="sitestr">learnikxos.com</span></a>)</span>
                                 </span>
                             </td>
                         </tr>
@@ -479,23 +502,26 @@
                             <td colspan="2"></td>
                             <td class="subtext">
                                 <span class="subline">
-                                    <span class="score">259 points</span> by 
-                                    <a href="user?id=sogen" class="hnuser">sogen</a> 
-                                    <span class="age"><a href="item?id=46385308">4 hours ago</a></span> | 
-                                    <a href="item?id=46385308">67 comments</a>
+                                    <span class="score" id="score_46393191">120 points</span> by 
+                                    <a href="user?id=grillopress" class="hnuser">grillopress</a> 
+                                    <span class="age"><a href="item?id=46393191">5 hours ago</a></span> | 
+                                    <a href="hide?id=46393191&amp;goto=news">hide</a> | 
+                                    <a href="item?id=46393191">42 comments</a>
                                 </span>
                             </td>
                         </tr>
                         <tr class="spacer" style="height:5px"></tr>
-                        <tr class="athing">
+                        <tr class="athing submission" id="46391077">
                             <td align="right" valign="top" class="title">
-                                <font color="#be2828"><span class="rank">5.</span></font>
+                                <span class="rank">5.</span>
                             </td>
-                            <td valign="top" class="votelinks"></td>
+                            <td valign="top" class="votelinks">
+                                <center><a href="vote?id=46391077&amp;how=up&amp;goto=news"><div class="votearrow" title="upvote"></div></a></center>
+                            </td>
                             <td class="title">
                                 <span class="titleline">
-                                    <a href="https://etc.octavore.com/2025/12/archiving-git-branches-as-tags/">Archiving Git Branches as Tags</a>
-                                    <span class="sitebit comhead"> (<span class="sitestr">octavore.com</span>)</span>
+                                    <a href="https://dfarq.homeip.net/the-first-web-server/">The First Web Server</a>
+                                    <span class="sitebit comhead"> (<a href="from?site=homeip.net"><span class="sitestr">homeip.net</span></a>)</span>
                                 </span>
                             </td>
                         </tr>
@@ -503,10 +529,11 @@
                             <td colspan="2"></td>
                             <td class="subtext">
                                 <span class="subline">
-                                    <span class="score">23 points</span> by 
-                                    <a href="user?id=octavore" class="hnuser">octavore</a> 
-                                    <span class="age"><a href="item?id=46357362">1 hour ago</a></span> | 
-                                    <a href="item?id=46357362">2 comments</a>
+                                    <span class="score" id="score_46391077">31 points</span> by 
+                                    <a href="user?id=giuliomagnifico" class="hnuser">giuliomagnifico</a> 
+                                    <span class="age"><a href="item?id=46391077">7 hours ago</a></span> | 
+                                    <a href="hide?id=46391077&amp;goto=news">hide</a> | 
+                                    <a href="item?id=46391077">6 comments</a>
                                 </span>
                             </td>
                         </tr>
