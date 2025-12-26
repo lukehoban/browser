@@ -227,8 +227,10 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ⚠️ No support for other text-decoration values (overline, line-through)
 
 ### New Features (Added):
-- ✅ Full SVG rendering support for background-image (using oksvg/rasterx)
+- ✅ Custom SVG parser and rasterizer for background-image (no external dependencies)
+- ✅ Supports subset of SVG spec: path element with move-to, line-to commands and fill colors
 - ✅ Background-image support for both SVG and raster images (PNG, JPEG, GIF)
+- ✅ Scanline polygon rasterization with viewBox coordinate transformation
 
 ---
 
