@@ -14,6 +14,7 @@ import (
 
 	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
+	"github.com/lukehoban/browser/font"
 	"github.com/lukehoban/browser/style"
 	"golang.org/x/image/font/basicfont"
 )
@@ -518,9 +519,6 @@ func expandRect(rect Rect, edges EdgeSizes) Rect {
 // layoutText lays out a text node.
 // CSS 2.1 §16 Text
 func (box *LayoutBox) layoutText(containingBlock Dimensions) {
-	// Import needed for text measurement - circular import avoided by keeping in separate step
-	// We'll measure text using a helper that accesses render.MeasureText
-	
 	// Get the text content
 	text := box.StyledNode.Node.Data
 	if text == "" {
@@ -542,11 +540,16 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	// Get font size and style from CSS styles (CSS 2.1 §15 Fonts)
 	fontSize := extractFontSize(box.StyledNode.Styles)
 	fontWeight := extractFontWeight(box.StyledNode.Styles)
-	fontStyle := extractFontStyle(box.StyledNode.Styles)
+	fontStyleStr := extractFontStyle(box.StyledNode.Styles)
 	
-	// Measure text using actual TrueType font metrics
-	// This provides accurate dimensions matching what will be rendered
-	width, height := measureTextForLayout(text, fontSize, fontWeight, fontStyle)
+	// Measure text using shared font.MeasureText
+	// This ensures layout and rendering use the same measurements
+	fontStyle := font.Style{
+		Size:   fontSize,
+		Weight: fontWeight,
+		Style:  fontStyleStr,
+	}
+	width, height := font.MeasureText(text, fontStyle)
 
 	// Position the text node
 	box.Dimensions.Content.X = containingBlock.Content.X
@@ -1166,34 +1169,4 @@ func extractFontStyle(styles map[string]string) string {
 	}
 	
 	return "normal"
-}
-
-// measureTextForLayout measures text dimensions for layout calculations.
-// This uses TrueType font metrics to provide accurate dimensions.
-// It avoids circular imports by implementing measurement directly.
-func measureTextForLayout(text string, fontSize float64, fontWeight, fontStyle string) (float64, float64) {
-	if text == "" {
-		return 0, 0
-	}
-	
-	// This is a simplified measurement that matches what render.MeasureText does
-	// We use an approximation based on typical proportional font characteristics
-	
-	// Proportional fonts like Go Regular average about 0.6 * font size per character
-	// This provides a good approximation for layout without loading the actual font
-	avgCharWidth := fontSize * 0.6
-	
-	// For bold text, characters are typically 5-10% wider
-	if fontWeight == "bold" {
-		avgCharWidth *= 1.08
-	}
-	
-	width := float64(len(text)) * avgCharWidth
-	
-	// Height should include line-height
-	// CSS 2.1 §10.8.1: line-height initial value is "normal", typically 1.2-1.4
-	// Use 1.3 for better vertical spacing
-	height := fontSize * 1.3
-	
-	return width, height
 }

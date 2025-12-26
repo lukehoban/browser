@@ -10,17 +10,13 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
+	browserfont "github.com/lukehoban/browser/font"
 	"github.com/lukehoban/browser/layout"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
-	"golang.org/x/image/font/gofont/gobold"
-	"golang.org/x/image/font/gofont/gobolditalic"
-	"golang.org/x/image/font/gofont/goitalic"
-	"golang.org/x/image/font/gofont/goregular"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
@@ -34,56 +30,11 @@ const (
 	underlineOffset = 2.0
 )
 
-var (
-	// Global font cache to avoid reloading fonts
-	// The Go fonts are embedded in the binary and always available
-	goRegularFont    *opentype.Font
-	goBoldFont       *opentype.Font
-	goItalicFont     *opentype.Font
-	goBoldItalicFont *opentype.Font
-	fontOnce         sync.Once
-	fontErr          error
-)
-
-// loadGoFonts loads the built-in Go fonts from the golang.org/x/image/font/gofont packages.
-// These fonts are embedded in the binary and always available.
-// The Go fonts are high-quality, open-source, sans-serif fonts designed for the Go project.
-// See https://blog.golang.org/go-fonts for details.
-func loadGoFonts() error {
-	fontOnce.Do(func() {
-		var err error
-		
-		// Load Go Regular font (default)
-		goRegularFont, err = opentype.Parse(goregular.TTF)
-		if err != nil {
-			fontErr = err
-			return
-		}
-		
-		// Load Go Bold font
-		goBoldFont, err = opentype.Parse(gobold.TTF)
-		if err != nil {
-			fontErr = err
-			return
-		}
-		
-		// Load Go Italic font
-		goItalicFont, err = opentype.Parse(goitalic.TTF)
-		if err != nil {
-			fontErr = err
-			return
-		}
-		
-		// Load Go Bold Italic font
-		goBoldItalicFont, err = opentype.Parse(gobolditalic.TTF)
-		if err != nil {
-			fontErr = err
-			return
-		}
-	})
-	
-	return fontErr
-}
+// FontStyle represents text rendering options.
+// CSS 2.1 §16 Text and §15 Fonts
+// This is a local alias for browserfont.Style to maintain backward compatibility
+// with existing render code.
+type FontStyle = browserfont.Style
 
 // defaultFontStyle represents CSS 2.1 initial values for font properties
 var defaultFontStyle = FontStyle{
@@ -91,66 +42,6 @@ var defaultFontStyle = FontStyle{
 	Weight:     "normal",
 	Style:      "normal",
 	Decoration: "none",
-}
-
-// MeasureText measures the dimensions of text using TrueType fonts.
-// This provides accurate width and height for layout calculations.
-// Returns (width, height) in pixels.
-func MeasureText(text string, style FontStyle) (float64, float64) {
-	if text == "" {
-		return 0, 0
-	}
-	
-	// Load the built-in Go fonts
-	err := loadGoFonts()
-	if err != nil {
-		// Fallback to basicfont dimensions with scaling
-		face := basicfont.Face7x13
-		scale := style.Size / css.BaseFontHeight
-		width := float64(len(text)*face.Advance) * scale
-		height := float64(face.Height) * scale
-		return width, height
-	}
-	
-	// Select the appropriate Go font based on weight and style
-	var selectedFont *opentype.Font
-	if style.Weight == "bold" && style.Style == "italic" {
-		selectedFont = goBoldItalicFont
-	} else if style.Weight == "bold" {
-		selectedFont = goBoldFont
-	} else if style.Style == "italic" {
-		selectedFont = goItalicFont
-	} else {
-		selectedFont = goRegularFont
-	}
-	
-	// Create face with proper DPI and size
-	face, err := opentype.NewFace(selectedFont, &opentype.FaceOptions{
-		Size:    style.Size,
-		DPI:     72,
-		Hinting: font.HintingFull,
-	})
-	if err != nil {
-		// Fallback to basicfont dimensions with scaling
-		basicFace := basicfont.Face7x13
-		scale := style.Size / css.BaseFontHeight
-		width := float64(len(text)*basicFace.Advance) * scale
-		height := float64(basicFace.Height) * scale
-		return width, height
-	}
-	defer face.Close()
-	
-	// Measure text using font drawer
-	metrics := face.Metrics()
-	drawer := &font.Drawer{
-		Face: face,
-	}
-	
-	width := drawer.MeasureString(text).Ceil()
-	// Use line-height for height (ascent + descent gives the font's natural line height)
-	height := (metrics.Ascent + metrics.Descent).Ceil()
-	
-	return float64(width), float64(height)
 }
 
 // Canvas represents the rendering surface.
@@ -208,15 +99,6 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 	c.FillRect(x+width-thickness, y, thickness, height, col)
 }
 
-// FontStyle represents text rendering options.
-// CSS 2.1 §16 Text and §15 Fonts
-type FontStyle struct {
-	Size           float64 // Font size in pixels
-	Weight         string  // Font weight: "normal" or "bold"
-	Style          string  // Font style: "normal" or "italic"
-	Decoration     string  // Text decoration: "none" or "underline"
-}
-
 // DrawText draws text at the given position with the given color.
 // CSS 2.1 §16 Text
 // Uses default font style for backward compatibility with code that doesn't specify font properties.
@@ -232,29 +114,15 @@ func (c *Canvas) DrawText(text string, x, y int, col color.RGBA) {
 //
 // Text is rendered directly at 1x resolution using TrueType fonts with built-in antialiasing.
 func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style FontStyle) {
-	// Load the built-in Go fonts
-	err := loadGoFonts()
+	// Select the appropriate Go font using shared font package
+	selectedFont := browserfont.SelectFont(style)
 	
 	var face font.Face
 	var metrics font.Metrics
 	
-	if err == nil {
-		// Select the appropriate Go font based on weight and style
-		var selectedFont *opentype.Font
-		
-		// CSS 2.1 §15.6 & §15.7: Choose font based on weight and style
-		// We have native fonts for all combinations: regular, bold, italic, and bold-italic
-		if style.Weight == "bold" && style.Style == "italic" {
-			selectedFont = goBoldItalicFont
-		} else if style.Weight == "bold" {
-			selectedFont = goBoldFont
-		} else if style.Style == "italic" {
-			selectedFont = goItalicFont
-		} else {
-			selectedFont = goRegularFont
-		}
-		
+	if selectedFont != nil {
 		// Create face with proper DPI and size
+		var err error
 		face, err = opentype.NewFace(selectedFont, &opentype.FaceOptions{
 			Size:    style.Size,
 			DPI:     72,
