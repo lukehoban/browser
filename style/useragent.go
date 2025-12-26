@@ -40,7 +40,10 @@ ul, ol { margin: 1em 0; padding-left: 40px; }
 li { display: list-item; }
 
 /* Links - CSS 2.1 §16.3.1 */
-a { color: #0000EE; text-decoration: underline; }
+/* Note: Modern browsers do not apply text-decoration in UA stylesheet.
+   Text decoration for links is applied via a different mechanism that
+   allows author styles to easily override it. */
+a { color: #0000EE; }
 a:visited { color: #551A8B; }
 
 /* Text formatting elements - HTML5 §10.3.1 */
