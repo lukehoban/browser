@@ -119,15 +119,24 @@ func (c *Canvas) DrawSVG(svgData []byte, x, y, width, height int) error {
 		viewBox = []float64{0, 0, float64(width), float64(height)}
 	}
 
-	// Transform points from viewBox coordinates to target dimensions
+	// Rasterizer for filling polygons
 	rasterizer := svg.Rasterizer{Width: width, Height: height}
-	transformedPoints := svg.TransformPoints(parsed.PathPoints, viewBox, width, height)
 
-	// Rasterize the polygon
+	// Fill function that applies offset
 	fillFunc := func(px, py int, col color.RGBA) {
 		c.SetPixel(x+px, y+py, col)
 	}
-	rasterizer.FillPolygon(transformedPoints, fillFunc, parsed.FillColor)
+
+	// Render all paths in order (first path is background, subsequent paths are foreground)
+	for _, path := range parsed.Paths {
+		if len(path.Points) < 3 {
+			continue
+		}
+		// Transform points from viewBox coordinates to target dimensions
+		transformedPoints := svg.TransformPoints(path.Points, viewBox, width, height)
+		// Rasterize the polygon
+		rasterizer.FillPolygon(transformedPoints, fillFunc, path.FillColor)
+	}
 
 	return nil
 }
