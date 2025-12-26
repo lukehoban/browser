@@ -489,71 +489,47 @@ func Render(root *layout.LayoutBox, width, height int) *Canvas {
 	return canvas
 }
 
-// findCanvasBackground finds the background color that should be used for the canvas.
-// CSS 2.1 §14.2: If the root element (html) has no background, the body's background
-// is used for the canvas background.
+// findCanvasBackground finds the background color for the canvas.
+// CSS 2.1 §14.2: The background of the root element covers the entire canvas.
+// If the root has no background, the body's background is used instead.
 func findCanvasBackground(root *layout.LayoutBox) color.RGBA {
-	defaultBg := color.RGBA{255, 255, 255, 255} // Default white
+	white := color.RGBA{255, 255, 255, 255}
 
 	if root == nil || root.StyledNode == nil {
-		return defaultBg
+		return white
 	}
 
-	// First check root element (html) for background
-	if bg := extractBackgroundColor(root.StyledNode.Styles); bg != defaultBg {
+	// Check root element's background
+	if bg := getBackgroundColor(root.StyledNode.Styles); bg.A != 0 {
 		return bg
 	}
 
-	// If root has no background, look for body element
+	// Check body element's background
 	for _, child := range root.Children {
-		if bg := getBodyBackground(child); bg != defaultBg {
-			return bg
+		if child.StyledNode != nil && child.StyledNode.Node != nil &&
+			child.StyledNode.Node.Data == "body" {
+			if bg := getBackgroundColor(child.StyledNode.Styles); bg.A != 0 {
+				return bg
+			}
 		}
 	}
 
-	return defaultBg
+	return white
 }
 
-// getBodyBackground extracts background color from a body element.
-// Returns default white if the node is not a body element or has no background.
-func getBodyBackground(child *layout.LayoutBox) color.RGBA {
-	defaultBg := color.RGBA{255, 255, 255, 255}
-	
-	if child.StyledNode == nil || child.StyledNode.Node == nil {
-		return defaultBg
-	}
-	if child.StyledNode.Node.Data != "body" {
-		return defaultBg
-	}
-	return extractBackgroundColor(child.StyledNode.Styles)
-}
-
-// CSS background value constants
-const (
-	cssTransparent = "transparent"
-	cssNone        = "none"
-	cssURLPrefix   = "url("
-)
-
-// extractBackgroundColor extracts a background color from styles.
-func extractBackgroundColor(styles map[string]string) color.RGBA {
-	defaultBg := color.RGBA{255, 255, 255, 255}
-	
+// getBackgroundColor extracts a solid background color from styles.
+// Returns transparent (A=0) if no valid color is found.
+func getBackgroundColor(styles map[string]string) color.RGBA {
 	bg := styles["background-color"]
 	if bg == "" {
 		bg = styles["background"]
 	}
-	
-	if bg == "" || bg == cssTransparent || bg == cssNone || strings.Contains(bg, cssURLPrefix) {
-		return defaultBg
+
+	if bg == "" || bg == "transparent" || bg == "none" || strings.Contains(bg, "url(") {
+		return color.RGBA{} // transparent
 	}
-	
-	parsed := parseColor(bg)
-	if parsed != (color.RGBA{0, 0, 0, 0}) {
-		return parsed
-	}
-	
-	return defaultBg
+
+	return parseColor(bg)
 }
 
 // renderLayoutBox renders a single layout box and its children.
