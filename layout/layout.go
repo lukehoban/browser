@@ -887,7 +887,14 @@ func (box *LayoutBox) layoutWithColumnWidths(containingBlock Dimensions, columnW
 		box.Dimensions.Margin.Top + box.Dimensions.Border.Top + box.Dimensions.Padding.Top
 	box.Dimensions.Content.Width = containingBlock.Content.Width
 
+	// Handle explicit height for empty rows (e.g., spacer rows)
+	// CSS 2.1 §17.5.3: Table row height can be explicitly set
 	if len(box.Children) == 0 {
+		if height := styles["height"]; height != "" {
+			if h := parseLength(height, 0); h >= 0 {
+				box.Dimensions.Content.Height = h
+			}
+		}
 		return
 	}
 
@@ -960,7 +967,14 @@ func (box *LayoutBox) layoutWithColumns(containingBlock Dimensions, numColumns i
 		box.Dimensions.Margin.Top + box.Dimensions.Border.Top + box.Dimensions.Padding.Top
 	box.Dimensions.Content.Width = containingBlock.Content.Width
 
+	// Handle explicit height for empty rows (e.g., spacer rows)
+	// CSS 2.1 §17.5.3: Table row height can be explicitly set
 	if len(box.Children) == 0 || numColumns == 0 {
+		if height := styles["height"]; height != "" {
+			if h := parseLength(height, 0); h >= 0 {
+				box.Dimensions.Content.Height = h
+			}
+		}
 		return
 	}
 

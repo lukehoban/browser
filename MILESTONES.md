@@ -454,15 +454,16 @@ The browser can now load Hacker News from the network and render content with pr
   - [ ] Line-height property
   - [ ] Proper inline box model
 
-- [ ] **Link Rendering**
-  - [ ] `<a>` element styling
+- [x] **Link Rendering** ✅ COMPLETE
+  - [x] `<a>` element styling (pseudo-class stripped, selector applies to element)
   - [x] Text decoration (underline) ✅ COMPLETE
-  - [ ] Color for links (needs selector support for elements)
+  - [x] Color for links (a:link selector support)
 
 - [ ] **Table Support**
   - [x] `<table>`, `<tr>`, `<td>`, `<th>` elements
   - [x] Basic table layout algorithm (auto layout)
   - [x] Colspan attribute support
+  - [x] Empty row height support (spacer rows with explicit height)
   - [ ] Auto table layout algorithm (full implementation with min/max widths)
   - [ ] Table spanning (rowspan)
   - [ ] Table captions and headers
@@ -492,6 +493,9 @@ The browser successfully loads and renders Hacker News from the network with exc
 - Text supports variable font sizes with bold/italic/underline styles
 - HTML alignment attributes (`align`, `valign`, `<center>`) work correctly
 - **Inline style attributes** (`style="color: red"`) now supported with highest specificity
+- **Body/HTML bgcolor** attribute now properly fills the canvas background (CSS 2.1 §14.2)
+- **Empty table rows** with explicit height (spacer rows) now render correctly
+- **Link colors** now properly applied via `a:link` selector support
 
 Minor visual differences remain due to missing CSS properties (line-height, font-family).
 
