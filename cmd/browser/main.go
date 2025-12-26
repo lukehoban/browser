@@ -98,6 +98,10 @@ func main() {
 	// Compute styles
 	styledTree := style.StyleTree(doc, stylesheet)
 
+	// Resolve CSS URLs (like background-image) against base URL
+	// HTML5 §2.5.1: URLs should be resolved against the document's base URL
+	style.ResolveCSSURLs(styledTree, baseURL)
+
 	// Build layout tree
 	// Note: Height starts at 0 - it accumulates as children are laid out
 	containingBlock := layout.Dimensions{

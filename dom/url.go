@@ -58,6 +58,13 @@ func resolveNode(node *Node, baseDir string) {
 // resolveURL resolves a potentially relative URL against a base URL.
 // HTML5 §2.5: URLs in documents are resolved against a base URL.
 func resolveURL(baseURL, relativeURL string) string {
+	return ResolveURLString(baseURL, relativeURL)
+}
+
+// ResolveURLString resolves a potentially relative URL against a base URL.
+// This is exported for use by other packages that need to resolve URLs.
+// HTML5 §2.5: URLs in documents are resolved against a base URL.
+func ResolveURLString(baseURL, relativeURL string) string {
 	// If the URL is already absolute (http:// or https://), return as-is
 	if strings.HasPrefix(relativeURL, "http://") || strings.HasPrefix(relativeURL, "https://") {
 		return relativeURL
