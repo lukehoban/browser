@@ -1085,10 +1085,39 @@ func renderImage(canvas *Canvas, box *layout.LayoutBox) {
 		return
 	}
 
-	// Load the image
-	img, err := canvas.LoadImage(src)
+	// Load the resource data first
+	loader := dom.NewResourceLoader("")
+	data, err := loader.LoadResource(src)
 	if err != nil {
-		// Silently fail if image can't be loaded
+		return
+	}
+
+	// Check if it's an SVG by extension or content
+	isSVG := strings.HasSuffix(strings.ToLower(src), ".svg")
+	if !isSVG {
+		// Also check content for SVG signature
+		dataStr := string(data)
+		isSVG = strings.Contains(dataStr, "<svg ") ||
+			strings.Contains(dataStr, "<svg>") ||
+			strings.HasPrefix(strings.TrimSpace(dataStr), "<svg") ||
+			(strings.Contains(dataStr, "<?xml") && strings.Contains(dataStr, "<svg"))
+	}
+
+	if isSVG {
+		// Render SVG
+		width := int(box.Dimensions.Content.Width)
+		height := int(box.Dimensions.Content.Height)
+		if width <= 0 || height <= 0 {
+			return
+		}
+
+		canvas.DrawSVG(data, int(box.Dimensions.Content.X), int(box.Dimensions.Content.Y), width, height)
+		return
+	}
+
+	// Try to decode as raster image (PNG, JPEG, GIF)
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
 		return
 	}
 
