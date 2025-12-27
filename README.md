@@ -12,7 +12,8 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - Visual formatting model (box model, block layout)
 - **High-quality text rendering** with Go fonts (proportional sans-serif)
 - Font styling support (bold, italic, underline, size)
-- Image rendering (PNG, JPEG, GIF support)
+- Image rendering (PNG, JPEG, GIF, SVG support)
+- **Data URLs**: Support for RFC 2397 data URLs (base64 and URL-encoded)
 - Background and border rendering
 - PNG image output
 - **Network support**: Load pages via HTTP/HTTPS
@@ -48,6 +49,7 @@ This browser implementation follows these W3C specifications:
   - [CSS 2.1 §6 Cascade](https://www.w3.org/TR/CSS21/cascade.html)
   - [CSS 2.1 §8 Box Model](https://www.w3.org/TR/CSS21/box.html)
   - [CSS 2.1 §9 Visual Formatting Model](https://www.w3.org/TR/CSS21/visuren.html)
+- **RFC 2397**: The "data" URL scheme for inline resources
 
 ## Quick Start
 
@@ -121,6 +123,7 @@ See [wasm/README.md](wasm/README.md) for more details.
 
 ✅ Milestones 1-7 Complete: Foundation, HTML Parsing, CSS Parsing, Style Computation, Layout Engine, Rendering, Image Rendering  
 ✅ Milestone 9 Complete: Network Support (HTTP/HTTPS, external CSS, remote images)  
+✅ Milestone 9.5 Complete: Data URL Support (RFC 2397, base64 & URL-encoded inline resources)  
 🔄 Milestone 8 In Progress: Testing & Validation (81.8% WPT pass rate)
 
 See [MILESTONES.md](MILESTONES.md) for detailed progress and known limitations.
