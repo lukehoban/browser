@@ -105,9 +105,11 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            align-items: flex-start;
+            justify-content: flex-start;
+            gap: 12px;
             min-height: 400px;
+            padding: 16px;
             background: #fafafa;
             border: 2px dashed #ddd;
             border-radius: 4px;
@@ -119,6 +121,38 @@
             height: auto;
             border-radius: 4px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .output-section {
+            width: 100%;
+        }
+
+        .tree-section {
+            width: 100%;
+        }
+
+        .tree-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 8px 0 4px;
+            color: #444;
+        }
+
+        .tree-output {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Menlo', 'Courier New', monospace;
+            font-size: 12px;
+            white-space: pre;
+            margin: 0;
+        }
+
+        .output-placeholder {
+            width: 100%;
+            text-align: center;
+            color: #999;
         }
 
         #output.empty {
@@ -223,8 +257,6 @@
 
             <div class="controls">
                 <button id="renderBtn" disabled>Loading...</button>
-                <button id="layoutBtn" disabled>Show Layout Tree</button>
-                <button id="renderTreeBtn" disabled>Show Render Tree</button>
                 <div class="size-inputs">
                     <label>Width:</label>
                     <input type="number" id="width" value="800" min="100" max="2000">
@@ -263,7 +295,9 @@
         <div class="panel">
             <h2>Rendered Output</h2>
             <div id="output" class="empty">
-                Rendered image will appear here
+                <div class="output-section output-placeholder">
+                    Rendered image and trees will appear here
+                </div>
             </div>
         </div>
     </div>
@@ -285,8 +319,6 @@
                         wasmReady = true;
                         document.getElementById('renderBtn').disabled = false;
                         document.getElementById('renderBtn').textContent = 'Render';
-                        document.getElementById('layoutBtn').disabled = false;
-                        document.getElementById('renderTreeBtn').disabled = false;
                         setStatus('Ready to render!', 'success');
                     }
                 }, 100);
@@ -336,8 +368,23 @@
 
                 // Display the result
                 output.classList.remove('empty');
-                output.innerHTML = `<img src="data:image/png;base64,${result.image}" alt="Rendered output">`;
-                setStatus('Rendered successfully!', 'success');
+                output.innerHTML = `
+                    <div class="output-section">
+                        <img src="data:image/png;base64,${result.image}" alt="Rendered output">
+                    </div>
+                    <div class="tree-section">
+                        <div class="tree-title">Layout Tree</div>
+                        <pre id="layoutTreeOutput" class="tree-output"></pre>
+                    </div>
+                    <div class="tree-section">
+                        <div class="tree-title">Render Tree</div>
+                        <pre id="renderTreeOutput" class="tree-output"></pre>
+                    </div>
+                `;
+
+                // Build trees immediately after rendering
+                populateTrees(htmlInput, width, height);
+                setStatus('Rendered image and trees generated!', 'success');
 
             } catch (err) {
                 console.error("Rendering error:", err);
@@ -345,78 +392,45 @@
             }
         }
 
-        function showLayoutTree() {
-            if (!wasmReady) {
-                setStatus('WASM module not ready yet', 'error');
-                return;
-            }
-
-            const htmlInput = document.getElementById('htmlInput').value;
-            const width = parseInt(document.getElementById('width').value);
-            const height = parseInt(document.getElementById('height').value);
-            const output = document.getElementById('output');
-
-            if (!htmlInput.trim()) {
-                setStatus('Please enter some HTML', 'error');
-                return;
-            }
-
-            setStatus('Building layout tree...', 'loading');
+        function populateTrees(htmlInput, width, height) {
+            const layoutTarget = document.getElementById('layoutTreeOutput');
+            const renderTarget = document.getElementById('renderTreeOutput');
 
             try {
-                const result = getLayoutTree(htmlInput, width, height);
-
-                if (result.error) {
-                    setStatus('Error: ' + result.error, 'error');
-                    return;
-                }
-
-                const tree = JSON.parse(result.tree);
-                output.classList.remove('empty');
-                output.innerHTML = '<pre style="text-align: left; font-family: monospace; font-size: 12px; overflow: auto;">' +
-                    formatLayoutTree(tree, 0) + '</pre>';
-                setStatus('Layout tree generated!', 'success');
-
+                const layoutTree = buildLayoutTree(htmlInput, width, height);
+                layoutTarget.textContent = layoutTree;
             } catch (err) {
-                console.error("Layout tree error:", err);
-                setStatus('Layout tree error: ' + err.message, 'error');
+                layoutTarget.textContent = 'Layout tree error: ' + err.message;
+            }
+
+            try {
+                const renderTree = buildRenderTree(htmlInput);
+                renderTarget.textContent = renderTree;
+            } catch (err) {
+                renderTarget.textContent = 'Render tree error: ' + err.message;
             }
         }
 
-        function showRenderTree() {
-            if (!wasmReady) {
-                setStatus('WASM module not ready yet', 'error');
-                return;
+        function buildLayoutTree(htmlInput, width, height) {
+            const result = getLayoutTree(htmlInput, width, height);
+
+            if (result.error) {
+                throw new Error(result.error);
             }
 
-            const htmlInput = document.getElementById('htmlInput').value;
-            const output = document.getElementById('output');
+            const tree = JSON.parse(result.tree);
+            return formatLayoutTree(tree, 0);
+        }
 
-            if (!htmlInput.trim()) {
-                setStatus('Please enter some HTML', 'error');
-                return;
+        function buildRenderTree(htmlInput) {
+            const result = getRenderTree(htmlInput);
+
+            if (result.error) {
+                throw new Error(result.error);
             }
 
-            setStatus('Building render tree...', 'loading');
-
-            try {
-                const result = getRenderTree(htmlInput);
-
-                if (result.error) {
-                    setStatus('Error: ' + result.error, 'error');
-                    return;
-                }
-
-                const tree = JSON.parse(result.tree);
-                output.classList.remove('empty');
-                output.innerHTML = '<pre style="text-align: left; font-family: monospace; font-size: 12px; overflow: auto;">' +
-                    formatRenderTree(tree, 0) + '</pre>';
-                setStatus('Render tree generated!', 'success');
-
-            } catch (err) {
-                console.error("Render tree error:", err);
-                setStatus('Render tree error: ' + err.message, 'error');
-            }
+            const tree = JSON.parse(result.tree);
+            return formatRenderTree(tree, 0);
         }
 
         function formatLayoutTree(node, indent) {
@@ -780,8 +794,6 @@
 
         // Set up event listeners
         document.getElementById('renderBtn').addEventListener('click', render);
-        document.getElementById('layoutBtn').addEventListener('click', showLayoutTree);
-        document.getElementById('renderTreeBtn').addEventListener('click', showRenderTree);
         document.getElementById('logLevel').addEventListener('change', setLogLevel);
 
         // Allow Enter key in textarea without triggering form submission
