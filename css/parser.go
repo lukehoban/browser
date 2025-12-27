@@ -197,6 +197,23 @@ func (p *Parser) parseSelector() *Selector {
 		p.tokenizer.SkipWhitespace()
 		next := p.tokenizer.Peek()
 
+		// Check for child combinator (>), adjacent sibling (+), or general sibling (~)
+		// CSS 2.1 §5.6: Child combinator
+		// CSS 2.1 §5.7: Adjacent sibling combinator
+		// CSS3 Selectors: General sibling combinator (~)
+		if next.Type == IdentToken {
+			if next.Value == ">" {
+				log.Warnf("CSS 2.1 §5.6: Child combinator (>) not yet implemented, skipping selector")
+				return nil
+			} else if next.Value == "+" {
+				log.Warnf("CSS 2.1 §5.7: Adjacent sibling combinator (+) not yet implemented, skipping selector")
+				return nil
+			} else if next.Value == "~" {
+				log.Warnf("CSS3 Selectors: General sibling combinator (~) not yet implemented, skipping selector")
+				return nil
+			}
+		}
+
 		// If next is not a selector start, restore position
 		if next.Type != IdentToken && next.Type != HashToken && next.Type != DotToken {
 			p.tokenizer.pos = savedPos
@@ -365,6 +382,22 @@ func (p *Parser) parseDeclaration() *Declaration {
 		token = p.tokenizer.Peek()
 		if token.Type == SemicolonToken || token.Type == RightBraceToken || token.Type == EOFToken {
 			break
+		}
+		
+		// CSS 2.1 §6.4.2: Check for !important - not yet implemented
+		// Look ahead for '!' followed by 'important'
+		if token.Type == IdentToken && token.Value == "!" {
+			savedPos := p.tokenizer.pos
+			p.tokenizer.Next() // consume '!'
+			p.tokenizer.SkipWhitespace()
+			nextToken := p.tokenizer.Peek()
+			if nextToken.Type == IdentToken && nextToken.Value == "important" {
+				log.Warnf("CSS 2.1 §6.4.2: !important declarations not yet implemented (property: %s)", property)
+				p.tokenizer.Next() // consume "important"
+				break
+			}
+			// Not !important, restore and continue
+			p.tokenizer.pos = savedPos
 		}
 
 		p.tokenizer.Next()

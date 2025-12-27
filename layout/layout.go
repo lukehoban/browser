@@ -156,9 +156,30 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 	// Determine box type based on display property or HTML element
 	// CSS 2.1 §17.2.1: The table element generates a principal table box
 	// CSS 2.1 §9.2.2: Inline-level elements
-	// Note: Position schemes (absolute, relative, fixed) per CSS 2.1 §9.3 not yet implemented
 	boxType := BlockBox
 	display := styledNode.Styles["display"]
+	
+	// CSS 2.1 §9.3: Positioning schemes (absolute, relative, fixed) - not yet implemented
+	if position := styledNode.Styles["position"]; position != "" && position != "static" {
+		log.Warnf("CSS 2.1 §9.3: position:%s not yet implemented (only 'static' positioning supported)", position)
+	}
+	
+	// CSS 2.1 §9.5: Floats - not yet implemented
+	if float := styledNode.Styles["float"]; float != "" && float != "none" {
+		log.Warnf("CSS 2.1 §9.5: float:%s not yet implemented", float)
+	}
+	
+	// CSS3: Flexbox - not yet implemented
+	if display == "flex" || display == "inline-flex" {
+		log.Warnf("CSS3 Flexbox: display:%s not yet implemented, treating as block", display)
+		display = "block"
+	}
+	
+	// CSS3: Grid - not yet implemented
+	if display == "grid" || display == "inline-grid" {
+		log.Warnf("CSS3 Grid: display:%s not yet implemented, treating as block", display)
+		display = "block"
+	}
 
 	// If no explicit display property, infer from HTML element
 	if display == "" && styledNode.Node != nil && styledNode.Node.Type == dom.ElementNode {
@@ -747,6 +768,11 @@ func collapseWhitespace(text string) string {
 // CSS 2.1 §17.5 Visual layout of table contents
 // CSS 2.1 §17.6.1: Border-spacing property adds space between cells
 func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
+	// CSS 2.1 §17.6.2: Border-collapse model - not yet implemented
+	if borderCollapse := box.StyledNode.Styles["border-collapse"]; borderCollapse == "collapse" {
+		log.Warnf("CSS 2.1 §17.6.2: border-collapse:collapse not yet implemented, using separate borders")
+	}
+	
 	// Calculate table width (similar to block)
 	box.calculateBlockWidth(containingBlock)
 	box.calculateBlockPosition(containingBlock)
@@ -813,6 +839,11 @@ func (box *LayoutBox) calculateTableColumns() int {
 func getColspan(cell *LayoutBox) int {
 	if cell.StyledNode == nil || cell.StyledNode.Node == nil {
 		return 1
+	}
+
+	// CSS 2.1 §17.2: rowspan attribute - not yet implemented
+	if rowspanStr := cell.StyledNode.Node.GetAttribute("rowspan"); rowspanStr != "" && rowspanStr != "1" {
+		log.Warnf("CSS 2.1 §17.2: rowspan attribute not yet implemented (found rowspan=%s)", rowspanStr)
 	}
 
 	colspanStr := cell.StyledNode.Node.GetAttribute("colspan")

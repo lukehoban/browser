@@ -148,6 +148,21 @@ func (t *Tokenizer) Next() Token {
 	case ',':
 		t.pos++
 		return Token{Type: CommaToken, Value: ","}
+	case '>':
+		// CSS 2.1 §5.6: Child combinator - not yet implemented
+		// Treat as an identifier for now to avoid breaking parsing
+		t.pos++
+		return Token{Type: IdentToken, Value: ">"}
+	case '+':
+		// CSS 2.1 §5.7: Adjacent sibling combinator - not yet implemented
+		// Treat as an identifier for now to avoid breaking parsing
+		t.pos++
+		return Token{Type: IdentToken, Value: "+"}
+	case '~':
+		// CSS Selectors Level 3: General sibling combinator - not yet implemented
+		// Treat as an identifier for now to avoid breaking parsing
+		t.pos++
+		return Token{Type: IdentToken, Value: "~"}
 	case '{':
 		t.pos++
 		return Token{Type: LeftBraceToken, Value: "{"}
