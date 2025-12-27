@@ -452,7 +452,7 @@ The browser can now load Hacker News from the network and render content with pr
 - [ ] **Text Layout Improvements**
   - [ ] Inline text layout (wrap text within line boxes)
   - [x] Font size support ✅ COMPLETE
-  - [ ] Text-align property (left, center, right) - partial via HTML align attribute
+  - [ ] CSS text-align property (left, center, right)
   - [ ] Line-height property
   - [x] Baseline alignment for inline elements ✅ COMPLETE - December 2025
 
