@@ -33,6 +33,11 @@ const (
 	// which is typically around 0.25em (approximately the width of a space character).
 	// Reference: https://www.w3.org/TR/CSS2/text.html#propdef-word-spacing
 	defaultWordSpacingEm = 0.25
+
+	// CSS 2.1 §10.8.1: Baseline position as a fraction of font size.
+	// For most Latin fonts, the baseline is approximately 80% from the top of the em-box,
+	// accounting for ascenders (the baseline sits below the cap height).
+	baselinePositionEm = 0.8
 )
 
 // LayoutBox represents a box in the layout tree.
@@ -340,6 +345,7 @@ func (box *LayoutBox) layoutBlockChildren() {
 
 // layoutInlineChildren lays out a run of inline-level children within this block box.
 // CSS 2.1 §9.4.2 Inline formatting contexts: inline-level boxes are laid out in horizontal line boxes.
+// CSS 2.1 §10.8: Line height and baseline alignment
 func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 	if len(children) == 0 {
 		return
@@ -347,6 +353,10 @@ func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 
 	currentX := box.Dimensions.Content.X
 	currentY := box.Dimensions.Content.Y + box.Dimensions.Content.Height
+
+	// First pass: layout all children to calculate their dimensions
+	// and find the maximum baseline (for baseline alignment)
+	maxBaseline := 0.0
 	maxHeight := 0.0
 
 	for i, child := range children {
@@ -361,7 +371,7 @@ func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 
 		child.Layout(inlineCB)
 
-		// Position child so its margin box starts at currentX/currentY
+		// Position child horizontally
 		child.Dimensions.Content.X = currentX + child.Dimensions.Margin.Left + child.Dimensions.Border.Left + child.Dimensions.Padding.Left
 		child.Dimensions.Content.Y = currentY + child.Dimensions.Margin.Top + child.Dimensions.Border.Top + child.Dimensions.Padding.Top
 
@@ -372,8 +382,25 @@ func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 			currentX += calculateWordSpacing(child)
 		}
 
+		// Track maximum baseline offset (font size approximates baseline position)
+		baseline := getBaseline(child)
+		if baseline > maxBaseline {
+			maxBaseline = baseline
+		}
+
 		if child.marginBox().Height > maxHeight {
 			maxHeight = child.marginBox().Height
+		}
+	}
+
+	// Second pass: align all children to the common baseline
+	// CSS 2.1 §10.8.1: Inline elements are aligned by their baselines
+	for _, child := range children {
+		baseline := getBaseline(child)
+		// Shift elements with smaller baselines down to align with the maximum baseline
+		baselineOffset := maxBaseline - baseline
+		if baselineOffset > 0 {
+			child.shiftY(baselineOffset)
 		}
 	}
 
@@ -381,8 +408,25 @@ func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 	box.Dimensions.Content.Height += maxHeight
 }
 
+// getBaseline returns the baseline offset for an inline element.
+// CSS 2.1 §10.8.1: The baseline of an inline element is determined by its content.
+// For text, the baseline is where the bottom of most letters (excluding descenders) sit.
+// For replaced elements and other non-text content, we use the bottom edge as a fallback.
+func getBaseline(box *LayoutBox) float64 {
+	// For text nodes and elements with font styling, use font-based baseline
+	if box.StyledNode != nil {
+		fontSize := extractFontSize(box.StyledNode.Styles)
+		// CSS 2.1 §10.8.1: Baseline is at baselinePositionEm of font size from top
+		return fontSize * baselinePositionEm
+	}
+	// For elements without styling (rare), use content height as baseline
+	// This is a fallback for replaced elements (CSS 2.1 §10.8.1)
+	return box.Dimensions.Content.Height
+}
+
 // layoutInlineBox lays out an inline box and its inline children.
 // CSS 2.1 §9.4.2 Inline formatting contexts
+// CSS 2.1 §10.8: Line height and baseline alignment
 func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 	styles := box.StyledNode.Styles
 
@@ -414,8 +458,10 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 
 	currentX := box.Dimensions.Content.X
 	currentY := box.Dimensions.Content.Y
+	maxBaseline := 0.0
 	maxHeight := 0.0
 
+	// First pass: layout all children to calculate their dimensions
 	for i, child := range box.Children {
 		inlineCB := Dimensions{
 			Content: Rect{
@@ -428,7 +474,7 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 
 		child.Layout(inlineCB)
 
-		// Position child so its margin box starts at currentX/currentY
+		// Position child horizontally
 		child.Dimensions.Content.X = currentX + child.Dimensions.Margin.Left + child.Dimensions.Border.Left + child.Dimensions.Padding.Left
 		child.Dimensions.Content.Y = currentY + child.Dimensions.Margin.Top + child.Dimensions.Border.Top + child.Dimensions.Padding.Top
 
@@ -439,8 +485,24 @@ func (box *LayoutBox) layoutInlineBox(containingBlock Dimensions) {
 			currentX += calculateWordSpacing(child)
 		}
 
+		// Track maximum baseline offset
+		baseline := getBaseline(child)
+		if baseline > maxBaseline {
+			maxBaseline = baseline
+		}
+
 		if child.marginBox().Height > maxHeight {
 			maxHeight = child.marginBox().Height
+		}
+	}
+
+	// Second pass: align all children to the common baseline
+	// CSS 2.1 §10.8.1: Inline elements are aligned by their baselines
+	for _, child := range box.Children {
+		baseline := getBaseline(child)
+		baselineOffset := maxBaseline - baseline
+		if baselineOffset > 0 {
+			child.shiftY(baselineOffset)
 		}
 	}
 
@@ -748,8 +810,10 @@ func getColspan(cell *LayoutBox) int {
 }
 
 // calculateColumnWidths calculates preferred widths for table columns.
-// This implements a simplified auto table layout algorithm
-// CSS 2.1 §17.5.2.2: Auto table layout
+// CSS 2.1 §17.5.2.2: Auto table layout algorithm (non-normative)
+// The spec does not fully define this algorithm. This implementation:
+// 1. Calculates minimum content width for each column
+// 2. Distributes remaining space proportionally to content width
 func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) []float64 {
 	// Collect column content sizes from all rows
 	columnMinWidths := make([]float64, numColumns)
@@ -773,24 +837,23 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 			}
 		}
 	}
-	
+
 	totalMinWidth := 0.0
 	for _, w := range columnMinWidths {
 		totalMinWidth += w
 	}
 
-	// Allocate widths proportionally, ensuring minimums are met
 	columnWidths := make([]float64, numColumns)
-	if totalMinWidth > 0 && totalMinWidth < tableWidth {
-		// Distribute extra space proportionally
-		scale := tableWidth / totalMinWidth
-		for i := range columnWidths {
-			columnWidths[i] = columnMinWidths[i] * scale
-		}
-	} else if totalMinWidth > 0 {
-		// Use minimum widths if they exceed table width
-		for i := range columnWidths {
-			columnWidths[i] = columnMinWidths[i]
+	if totalMinWidth > 0 {
+		if totalMinWidth <= tableWidth {
+			// Distribute extra space proportionally to content width
+			scale := tableWidth / totalMinWidth
+			for i, w := range columnMinWidths {
+				columnWidths[i] = w * scale
+			}
+		} else {
+			// Content exceeds table width - use minimum widths
+			copy(columnWidths, columnMinWidths)
 		}
 	} else {
 		// Equal distribution if no content found
@@ -838,6 +901,18 @@ func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 	face := basicfont.Face7x13
 	charWidth := float64(face.Advance)
 
+	// Check for explicit width on the element itself
+	if layoutBox.StyledNode != nil {
+		if widthStr := layoutBox.StyledNode.Styles["width"]; widthStr != "" {
+			if w := parseLength(widthStr, 0); w > 0 {
+				// Add padding if specified
+				paddingLeft := parseLengthOr0(layoutBox.StyledNode.Styles["padding-left"], 0)
+				paddingRight := parseLengthOr0(layoutBox.StyledNode.Styles["padding-right"], 0)
+				return w + paddingLeft + paddingRight
+			}
+		}
+	}
+
 	// Recursively estimate width from children
 	for _, child := range layoutBox.Children {
 		if child.StyledNode != nil && child.StyledNode.Node != nil {
@@ -850,6 +925,15 @@ func (box *LayoutBox) estimateContentWidth(layoutBox *LayoutBox) float64 {
 				textWidth := float64(len(text)) * charWidth * scale
 				width += textWidth
 			} else {
+				// Check for explicit width on child element
+				if widthStr := child.StyledNode.Styles["width"]; widthStr != "" {
+					if w := parseLength(widthStr, 0); w > 0 {
+						paddingLeft := parseLengthOr0(child.StyledNode.Styles["padding-left"], 0)
+						paddingRight := parseLengthOr0(child.StyledNode.Styles["padding-right"], 0)
+						width += w + paddingLeft + paddingRight
+						continue
+					}
+				}
 				// Recursively estimate child width
 				childWidth := box.estimateContentWidth(child)
 				width += childWidth
@@ -1105,6 +1189,9 @@ func (box *LayoutBox) layoutTableCell(containingBlock Dimensions) {
 	// Apply HTML align attribute for horizontal alignment
 	// HTML 4.01 §11.3.2: The align attribute specifies horizontal alignment
 	// Supported values: left, center, right
+	// Note: CSS text-align property (§16.2) is NOT yet implemented. It would
+	// affect inline content rendering within block containers, not child box
+	// positioning like the HTML align attribute does here.
 	if align := box.StyledNode.Node.GetAttribute("align"); align != "" {
 		box.applyHorizontalAlignment(align)
 	}
