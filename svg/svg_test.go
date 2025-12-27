@@ -357,3 +357,144 @@ func TestMultiplePaths(t *testing.T) {
 		t.Errorf("Path[1].FillColor = %v, want blue", parsed.Paths[1].FillColor)
 	}
 }
+
+// TestIsSVG tests SVG content detection per SVG 1.1 §5.1
+func TestIsSVG(t *testing.T) {
+	tests := []struct {
+		name     string
+		data     []byte
+		expected bool
+	}{
+		{"svg element at start", []byte(`<svg xmlns="http://www.w3.org/2000/svg"></svg>`), true},
+		{"svg element with whitespace", []byte(`  <svg></svg>`), true},
+		{"xml declaration then svg", []byte(`<?xml version="1.0"?><svg></svg>`), true},
+		{"xml declaration with newline", []byte("<?xml version=\"1.0\"?>\n<svg></svg>"), true},
+		{"html document", []byte(`<!DOCTYPE html><html></html>`), false},
+		{"png signature", []byte{0x89, 0x50, 0x4E, 0x47}, false},
+		{"empty data", []byte{}, false},
+		{"random text", []byte(`Hello world`), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := IsSVG(tt.data)
+			if got != tt.expected {
+				t.Errorf("IsSVG() = %v, want %v", got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestIsSVGFile tests SVG file extension detection
+func TestIsSVGFile(t *testing.T) {
+	tests := []struct {
+		filename string
+		expected bool
+	}{
+		{"image.svg", true},
+		{"IMAGE.SVG", true},
+		{"icon.Svg", true},
+		{"logo.png", false},
+		{"file.svg.png", false},
+		{"noextension", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.filename, func(t *testing.T) {
+			got := IsSVGFile(tt.filename)
+			if got != tt.expected {
+				t.Errorf("IsSVGFile(%q) = %v, want %v", tt.filename, got, tt.expected)
+			}
+		})
+	}
+}
+
+// TestRender tests the unified Render function
+func TestRender(t *testing.T) {
+	svgData := []byte(triangleSVG)
+
+	width, height := 32, 32
+	img := image.NewRGBA(image.Rect(0, 0, width, height))
+
+	// Fill with transparent
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			img.Set(x, y, color.RGBA{0, 0, 0, 0})
+		}
+	}
+
+	fillFunc := func(x, y int, col color.RGBA) {
+		img.Set(x, y, col)
+	}
+
+	err := Render(svgData, width, height, fillFunc)
+	if err != nil {
+		t.Fatalf("Render failed: %v", err)
+	}
+
+	// Verify that some gray pixels were rendered
+	gray := color.RGBA{153, 153, 153, 255}
+	hasGray := false
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			if img.At(x, y) == gray {
+				hasGray = true
+				break
+			}
+		}
+	}
+	if !hasGray {
+		t.Error("Render did not produce any gray pixels")
+	}
+}
+
+// TestRenderWithOffset tests that rendering works with position offset
+func TestRenderWithOffset(t *testing.T) {
+	svgData := []byte(`<svg viewBox="0 0 10 10"><path d="M0 0 L10 0 L10 10 L0 10 z" fill="#f00"/></svg>`)
+
+	width, height := 10, 10
+	offsetX, offsetY := 5, 5
+	canvasWidth, canvasHeight := 20, 20
+
+	img := image.NewRGBA(image.Rect(0, 0, canvasWidth, canvasHeight))
+
+	// Fill with white
+	white := color.RGBA{255, 255, 255, 255}
+	for y := 0; y < canvasHeight; y++ {
+		for x := 0; x < canvasWidth; x++ {
+			img.Set(x, y, white)
+		}
+	}
+
+	fillFunc := func(x, y int, col color.RGBA) {
+		img.Set(offsetX+x, offsetY+y, col)
+	}
+
+	err := Render(svgData, width, height, fillFunc)
+	if err != nil {
+		t.Fatalf("Render failed: %v", err)
+	}
+
+	// Verify that red pixels are only in the offset region
+	red := color.RGBA{255, 0, 0, 255}
+
+	// Top-left should still be white
+	if img.At(0, 0) != white {
+		t.Error("Top-left should be white (not in offset region)")
+	}
+
+	// Offset region should have red
+	hasRedInOffset := false
+	for y := offsetY; y < offsetY+height; y++ {
+		for x := offsetX; x < offsetX+width; x++ {
+			if img.At(x, y) == red {
+				hasRedInOffset = true
+				break
+			}
+		}
+	}
+	if !hasRedInOffset {
+		t.Error("Offset region should have red pixels")
+	}
+}

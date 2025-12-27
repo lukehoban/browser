@@ -411,3 +411,69 @@ func parseHexColor(hex string) color.RGBA {
 	
 	return color.RGBA{r, g, b, 255}
 }
+
+// IsSVG checks if the given data appears to be SVG content.
+// Detection follows SVG 1.1 §5.1: An SVG document fragment is defined by an 'svg' element.
+// Also checks for common XML declarations that precede SVG content.
+// https://www.w3.org/TR/SVG11/struct.html#NewDocument
+func IsSVG(data []byte) bool {
+	content := string(data)
+	trimmed := strings.TrimSpace(content)
+
+	// Check for <svg element directly at the start
+	if strings.HasPrefix(trimmed, "<svg") {
+		return true
+	}
+
+	// Check for XML declaration followed by SVG content
+	// SVG files often start with <?xml ... ?> before <svg>
+	if strings.HasPrefix(trimmed, "<?xml") && strings.Contains(content, "<svg") {
+		return true
+	}
+
+	return false
+}
+
+// IsSVGFile checks if a filename indicates an SVG file.
+// Per W3C media type registration, SVG files use .svg extension.
+// https://www.w3.org/TR/SVGTiny12/mimereg.html
+func IsSVGFile(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".svg")
+}
+
+// Render renders the parsed SVG to a canvas using the provided fill function.
+// This encapsulates the rendering loop for SVG paths, handling viewBox
+// transformation and rasterization per SVG 1.1 §7.7 (viewBox) and §8.3 (paths).
+func Render(svgData []byte, width, height int, fillFunc func(x, y int, col color.RGBA)) error {
+	if width <= 0 || height <= 0 {
+		return nil
+	}
+
+	// Parse the SVG
+	parsed, err := Parse(svgData)
+	if err != nil || parsed == nil {
+		return err
+	}
+
+	// Set default viewBox if not specified
+	viewBox := parsed.ViewBox
+	if viewBox == nil {
+		viewBox = []float64{0, 0, float64(width), float64(height)}
+	}
+
+	// Create rasterizer
+	rasterizer := Rasterizer{Width: width, Height: height}
+
+	// Render all paths in order (first path is background, subsequent paths are foreground)
+	for _, path := range parsed.Paths {
+		if len(path.Points) < 3 {
+			continue
+		}
+		// Transform points from viewBox coordinates to target dimensions
+		transformedPoints := TransformPoints(path.Points, viewBox, width, height)
+		// Rasterize the polygon
+		rasterizer.FillPolygon(transformedPoints, fillFunc, path.FillColor)
+	}
+
+	return nil
+}
