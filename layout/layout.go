@@ -853,9 +853,7 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 			}
 		} else {
 			// Content exceeds table width - use minimum widths
-			for i, w := range columnMinWidths {
-				columnWidths[i] = w
-			}
+			copy(columnWidths, columnMinWidths)
 		}
 	} else {
 		// Equal distribution if no content found
