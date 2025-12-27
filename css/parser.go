@@ -1,5 +1,9 @@
 package css
 
+import (
+	"github.com/lukehoban/browser/log"
+)
+
 // Stylesheet represents a CSS stylesheet.
 // CSS 2.1 §4 Syntax and basic data types
 type Stylesheet struct {
@@ -62,6 +66,7 @@ func (p *Parser) Parse() *Stylesheet {
 		// Skip @-rules (media queries, imports, etc.)
 		// CSS 2.1 §4.1.5 At-rules - not implementing for simplicity
 		if token.Type == AtKeywordToken {
+			log.Debugf("Skipping unsupported @-rule: %s", token.Value)
 			p.skipAtRule()
 			continue
 		}
@@ -130,6 +135,7 @@ func (p *Parser) parseRule() *Rule {
 	token = p.tokenizer.Next()
 	if token.Type != RightBraceToken {
 		// Error recovery: skip to next '}'
+		log.Debugf("CSS parse error: expected '}', got %v, recovering...", token.Type)
 		for token.Type != RightBraceToken && token.Type != EOFToken {
 			token = p.tokenizer.Next()
 		}
@@ -238,6 +244,7 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 			// Skip attribute selectors [attr=value]
 			// CSS 2.1 §5.8 Attribute selectors - not implementing for simplicity
 			// Note: Attribute selectors are part of CSS 2.1 but not core to basic rendering
+			log.Debug("Skipping attribute selector (not implemented)")
 			p.tokenizer.Next() // consume '['
 			// Skip everything until ']'
 			for {
@@ -251,6 +258,7 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 			// CSS 2.1 §5.11 Pseudo-classes, §5.12 Pseudo-elements
 			// Note: We treat selectors with pseudo-classes the same as without them
 			// (e.g., "a:link" is treated as "a", "a:visited" is treated as "a")
+			log.Debug("Skipping pseudo-class/pseudo-element (partial support)")
 			p.tokenizer.Next() // consume ':'
 			
 			// Check for double colon (pseudo-element ::before)

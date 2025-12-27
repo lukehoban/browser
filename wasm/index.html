@@ -223,12 +223,24 @@
 
             <div class="controls">
                 <button id="renderBtn" disabled>Loading...</button>
+                <button id="layoutBtn" disabled>Show Layout Tree</button>
+                <button id="renderTreeBtn" disabled>Show Render Tree</button>
                 <div class="size-inputs">
                     <label>Width:</label>
                     <input type="number" id="width" value="800" min="100" max="2000">
                     <label>Height:</label>
                     <input type="number" id="height" value="600" min="100" max="2000">
                 </div>
+            </div>
+
+            <div class="controls" style="margin-top: 10px;">
+                <label style="margin-right: 10px;">Log Level:</label>
+                <select id="logLevel" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                    <option value="error">Error</option>
+                    <option value="warn" selected>Warn</option>
+                    <option value="info">Info</option>
+                    <option value="debug">Debug</option>
+                </select>
             </div>
 
             <div class="examples">
@@ -273,6 +285,8 @@
                         wasmReady = true;
                         document.getElementById('renderBtn').disabled = false;
                         document.getElementById('renderBtn').textContent = 'Render';
+                        document.getElementById('layoutBtn').disabled = false;
+                        document.getElementById('renderTreeBtn').disabled = false;
                         setStatus('Ready to render!', 'success');
                     }
                 }, 100);
@@ -328,6 +342,133 @@
             } catch (err) {
                 console.error("Rendering error:", err);
                 setStatus('Rendering error: ' + err.message, 'error');
+            }
+        }
+
+        function showLayoutTree() {
+            if (!wasmReady) {
+                setStatus('WASM module not ready yet', 'error');
+                return;
+            }
+
+            const htmlInput = document.getElementById('htmlInput').value;
+            const width = parseInt(document.getElementById('width').value);
+            const height = parseInt(document.getElementById('height').value);
+            const output = document.getElementById('output');
+
+            if (!htmlInput.trim()) {
+                setStatus('Please enter some HTML', 'error');
+                return;
+            }
+
+            setStatus('Building layout tree...', 'loading');
+
+            try {
+                const result = getLayoutTree(htmlInput, width, height);
+
+                if (result.error) {
+                    setStatus('Error: ' + result.error, 'error');
+                    return;
+                }
+
+                const tree = JSON.parse(result.tree);
+                output.classList.remove('empty');
+                output.innerHTML = '<pre style="text-align: left; font-family: monospace; font-size: 12px; overflow: auto;">' +
+                    formatLayoutTree(tree, 0) + '</pre>';
+                setStatus('Layout tree generated!', 'success');
+
+            } catch (err) {
+                console.error("Layout tree error:", err);
+                setStatus('Layout tree error: ' + err.message, 'error');
+            }
+        }
+
+        function showRenderTree() {
+            if (!wasmReady) {
+                setStatus('WASM module not ready yet', 'error');
+                return;
+            }
+
+            const htmlInput = document.getElementById('htmlInput').value;
+            const output = document.getElementById('output');
+
+            if (!htmlInput.trim()) {
+                setStatus('Please enter some HTML', 'error');
+                return;
+            }
+
+            setStatus('Building render tree...', 'loading');
+
+            try {
+                const result = getRenderTree(htmlInput);
+
+                if (result.error) {
+                    setStatus('Error: ' + result.error, 'error');
+                    return;
+                }
+
+                const tree = JSON.parse(result.tree);
+                output.classList.remove('empty');
+                output.innerHTML = '<pre style="text-align: left; font-family: monospace; font-size: 12px; overflow: auto;">' +
+                    formatRenderTree(tree, 0) + '</pre>';
+                setStatus('Render tree generated!', 'success');
+
+            } catch (err) {
+                console.error("Render tree error:", err);
+                setStatus('Render tree error: ' + err.message, 'error');
+            }
+        }
+
+        function formatLayoutTree(node, indent) {
+            if (!node) return '';
+            
+            const prefix = '  '.repeat(indent);
+            let result = `${prefix}${node.type} <${node.node}> [x:${node.x.toFixed(0)} y:${node.y.toFixed(0)} w:${node.width.toFixed(0)} h:${node.height.toFixed(0)}]\n`;
+            
+            if (node.children) {
+                for (const child of node.children) {
+                    result += formatLayoutTree(child, indent + 1);
+                }
+            }
+            
+            return result;
+        }
+
+        function formatRenderTree(node, indent) {
+            if (!node) return '';
+            
+            const prefix = '  '.repeat(indent);
+            let result = `${prefix}${node.type}: ${node.data}`;
+            
+            if (node.styles && Object.keys(node.styles).length > 0) {
+                const styleStr = Object.entries(node.styles).slice(0, 5).map(([k, v]) => `${k}:${v}`).join(', ');
+                result += ` {${styleStr}${Object.keys(node.styles).length > 5 ? ', ...' : ''}}`;
+            }
+            
+            result += '\n';
+            
+            if (node.children) {
+                for (const child of node.children) {
+                    result += formatRenderTree(child, indent + 1);
+                }
+            }
+            
+            return result;
+        }
+
+        function setLogLevel() {
+            if (!wasmReady) return;
+            
+            const level = document.getElementById('logLevel').value;
+            try {
+                const result = window.setLogLevel(level);
+                if (result.error) {
+                    console.error('Failed to set log level:', result.error);
+                } else {
+                    console.log('Log level set to:', level);
+                }
+            } catch (err) {
+                console.error('Error setting log level:', err);
             }
         }
 
@@ -628,8 +769,11 @@
             document.getElementById('htmlInput').value = examples[type] || examples.simple;
         }
 
-        // Set up event listener
+        // Set up event listeners
         document.getElementById('renderBtn').addEventListener('click', render);
+        document.getElementById('layoutBtn').addEventListener('click', showLayoutTree);
+        document.getElementById('renderTreeBtn').addEventListener('click', showRenderTree);
+        document.getElementById('logLevel').addEventListener('change', setLogLevel);
 
         // Allow Enter key in textarea without triggering form submission
         document.getElementById('htmlInput').addEventListener('keydown', (e) => {

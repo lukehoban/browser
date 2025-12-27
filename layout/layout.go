@@ -15,6 +15,7 @@ import (
 	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/font"
+	"github.com/lukehoban/browser/log"
 	"github.com/lukehoban/browser/style"
 	"golang.org/x/image/font/basicfont"
 )
@@ -121,6 +122,7 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 			}
 		}
 		if isWhitespaceOnly {
+			log.Debug("Skipping whitespace-only text node in layout")
 			return nil // Don't create a box for whitespace-only text
 		}
 	}
@@ -156,6 +158,9 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 	case "inline":
 		boxType = InlineBox
 	case "none":
+		if styledNode.Node != nil && styledNode.Node.Type == dom.ElementNode {
+			log.Debugf("Element <%s> has display:none, skipping layout", styledNode.Node.Data)
+		}
 		return nil // Don't create a box
 	case "table":
 		boxType = TableBox

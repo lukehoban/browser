@@ -16,6 +16,8 @@ import (
 	"image/color"
 	"strconv"
 	"strings"
+
+	"github.com/lukehoban/browser/log"
 )
 
 // SVGPath represents a single path element with its fill color.
@@ -45,6 +47,7 @@ func Parse(svgData []byte) (*ParsedSVG, error) {
 	// SVG 1.1 §8.3: The 'path' element
 	paths := extractAllPaths(svgStr)
 	if len(paths) == 0 {
+    log.Debug("SVG: no path data found")
 		return nil, nil
 	}
 
@@ -86,6 +89,7 @@ func parseViewBox(svg string) []float64 {
 	viewBoxStr := svg[start:end]
 	parts := strings.Fields(viewBoxStr)
 	if len(parts) != 4 {
+		log.Debug("SVG: invalid viewBox format")
 		return nil
 	}
 	
@@ -93,6 +97,7 @@ func parseViewBox(svg string) []float64 {
 	for i, p := range parts {
 		val, err := strconv.ParseFloat(p, 64)
 		if err != nil {
+			log.Warnf("SVG: failed to parse viewBox coordinate: %v", err)
 			return nil
 		}
 		result[i] = val
