@@ -80,22 +80,42 @@ func (r *Rasterizer) FillPolygon(points [][2]float64, fillFunc func(x, y int, co
 
 // TransformPoints transforms points from viewBox coordinates to target dimensions.
 // SVG 1.1 §7.7: The viewBox attribute defines a coordinate system transformation.
+// SVG 1.1 §7.8: preserveAspectRatio - defaults to "xMidYMid meet" which uses uniform scaling.
+// viewBox format is [minX, minY, width, height]
 func TransformPoints(points [][2]float64, viewBox []float64, targetWidth, targetHeight int) [][2]float64 {
 	if viewBox == nil || len(viewBox) != 4 {
 		// No transformation needed if no viewBox
 		return points
 	}
-	
-	scaleX := float64(targetWidth) / (viewBox[2] - viewBox[0])
-	scaleY := float64(targetHeight) / (viewBox[3] - viewBox[1])
-	
+
+	// viewBox is [minX, minY, width, height]
+	minX := viewBox[0]
+	minY := viewBox[1]
+	vbWidth := viewBox[2]
+	vbHeight := viewBox[3]
+
+	// Calculate scale factors
+	scaleX := float64(targetWidth) / vbWidth
+	scaleY := float64(targetHeight) / vbHeight
+
+	// SVG 1.1 §7.8: Use uniform scaling (preserveAspectRatio="xMidYMid meet")
+	// This ensures shapes maintain their proportions
+	scale := scaleX
+	if scaleY < scaleX {
+		scale = scaleY
+	}
+
+	// Calculate offset to center the content (xMidYMid)
+	offsetX := (float64(targetWidth) - vbWidth*scale) / 2
+	offsetY := (float64(targetHeight) - vbHeight*scale) / 2
+
 	transformed := make([][2]float64, len(points))
 	for i, p := range points {
 		transformed[i] = [2]float64{
-			(p[0] - viewBox[0]) * scaleX,
-			(p[1] - viewBox[1]) * scaleY,
+			(p[0]-minX)*scale + offsetX,
+			(p[1]-minY)*scale + offsetY,
 		}
 	}
-	
+
 	return transformed
 }
