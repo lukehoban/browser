@@ -609,18 +609,7 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 ## Current Status
 **Completed**: Milestones 1-10 (Foundation through WebAssembly Support, including all core features)  
 **Recent Updates**: 
-- Comprehensive spec compliance review and documentation (December 2025)
 - WebAssembly support with interactive demo (December 2025)
 - Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)
 - Added baseline alignment for inline elements, text-align support, improved table layout (December 2025)
 **Last Updated**: 2025-12-27
-
-## Standards Compliance
-
-See [SPEC_COMPLIANCE.md](SPEC_COMPLIANCE.md) for detailed review of compliance with:
-- HTML5 tokenization and parsing specifications
-- CSS 2.1 selectors, cascade, box model, and visual formatting
-- SVG 1.1 path rendering
-- RFC 2397 data URL scheme
-
-The browser maintains accurate spec references throughout the codebase and logs warnings when encountering unimplemented features.
