@@ -115,6 +115,7 @@ See [wasm/README.md](wasm/README.md) for more details.
 
 ## Documentation
 
+- **[SPEC_COMPLIANCE.md](SPEC_COMPLIANCE.md)** - Detailed standards compliance review
 - **[MILESTONES.md](MILESTONES.md)** - Implementation milestones and progress tracking
 - **[IMPLEMENTATION.md](IMPLEMENTATION.md)** - Detailed implementation summary and architecture
 - **[TESTING.md](TESTING.md)** - Testing strategy and public test suite integration
