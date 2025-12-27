@@ -149,6 +149,12 @@
             margin: 0;
         }
 
+        .output-placeholder {
+            width: 100%;
+            text-align: center;
+            color: #999;
+        }
+
         #output.empty {
             color: #999;
             font-style: italic;
@@ -289,7 +295,7 @@
         <div class="panel">
             <h2>Rendered Output</h2>
             <div id="output" class="empty">
-                <div class="output-section" style="width:100%; text-align:center; color:#999;">
+                <div class="output-section output-placeholder">
                     Rendered image and trees will appear here
                 </div>
             </div>
@@ -368,11 +374,11 @@
                     </div>
                     <div class="tree-section">
                         <div class="tree-title">Layout Tree</div>
-                        <pre id="layoutTreeOutput" class="tree-output">Generating layout tree...</pre>
+                        <pre id="layoutTreeOutput" class="tree-output"></pre>
                     </div>
                     <div class="tree-section">
                         <div class="tree-title">Render Tree</div>
-                        <pre id="renderTreeOutput" class="tree-output">Generating render tree...</pre>
+                        <pre id="renderTreeOutput" class="tree-output"></pre>
                     </div>
                 `;
 
