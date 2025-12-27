@@ -2,6 +2,7 @@ package html
 
 import (
 	"github.com/lukehoban/browser/dom"
+	"github.com/lukehoban/browser/log"
 )
 
 // Parser parses HTML and builds a DOM tree.
@@ -53,8 +54,10 @@ func (p *Parser) processToken(token Token) {
 		p.handleText(token)
 	case CommentToken:
 		// Ignore comments for now
+		log.Debug("Ignoring HTML comment")
 	case DoctypeToken:
 		// Ignore DOCTYPE for now
+		log.Debugf("Ignoring DOCTYPE: %s", token.Data)
 	}
 }
 
@@ -90,6 +93,7 @@ func (p *Parser) handleEndTag(token Token) {
 		}
 	}
 	// If not found, ignore (error recovery)
+	log.Debugf("Unmatched end tag: <%s> (error recovery)", token.Data)
 }
 
 // handleText handles a text token.

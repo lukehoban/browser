@@ -6,6 +6,8 @@ import (
 	"net/url"
 	"path/filepath"
 	"strings"
+
+	"github.com/lukehoban/browser/log"
 )
 
 // ResolveURLs resolves all relative URLs in a DOM tree against a base URL.
@@ -74,10 +76,12 @@ func ResolveURLString(baseURL, relativeURL string) string {
 	if strings.HasPrefix(baseURL, "http://") || strings.HasPrefix(baseURL, "https://") {
 		base, err := url.Parse(baseURL)
 		if err != nil {
+			log.Warnf("Failed to parse base URL '%s': %v", baseURL, err)
 			return relativeURL
 		}
 		rel, err := url.Parse(relativeURL)
 		if err != nil {
+			log.Warnf("Failed to parse relative URL '%s': %v", relativeURL, err)
 			return relativeURL
 		}
 		return base.ResolveReference(rel).String()
@@ -113,7 +117,8 @@ func fetchStylesheetsFromNode(node *Node, loader *ResourceLoader, builder *strin
 			// The href should already be resolved by ResolveURLs
 			cssContent, err := loader.LoadResourceAsString(href)
 			if err != nil {
-				// Silently skip failed stylesheets (non-blocking per HTML5 spec)
+				// Skip failed stylesheets (non-blocking per HTML5 spec)
+				log.Warnf("Failed to load external stylesheet '%s': %v", href, err)
 				return
 			}
 			builder.WriteString(cssContent)

@@ -15,6 +15,8 @@ import (
 	"image/color"
 	"strconv"
 	"strings"
+
+	"github.com/lukehoban/browser/log"
 )
 
 // ParsedSVG represents a parsed SVG with minimal data needed for rasterization.
@@ -37,6 +39,7 @@ func Parse(svgData []byte) (*ParsedSVG, error) {
 	// SVG 1.1 §8.3: The 'path' element
 	pathData := extractPathData(svgStr)
 	if pathData == "" {
+		log.Debug("SVG: no path data found")
 		return nil, nil
 	}
 	
@@ -48,6 +51,7 @@ func Parse(svgData []byte) (*ParsedSVG, error) {
 	// SVG 1.1 §8.3.2-8.3.4: Path data commands
 	points := parsePath(pathData)
 	if len(points) < 3 {
+		log.Debugf("SVG: insufficient points for polygon (%d points)", len(points))
 		return nil, nil // Need at least 3 points for a polygon
 	}
 	
@@ -82,6 +86,7 @@ func parseViewBox(svg string) []float64 {
 	viewBoxStr := svg[start:end]
 	parts := strings.Fields(viewBoxStr)
 	if len(parts) != 4 {
+		log.Debug("SVG: invalid viewBox format")
 		return nil
 	}
 	
@@ -89,6 +94,7 @@ func parseViewBox(svg string) []float64 {
 	for i, p := range parts {
 		val, err := strconv.ParseFloat(p, 64)
 		if err != nil {
+			log.Warnf("SVG: failed to parse viewBox coordinate: %v", err)
 			return nil
 		}
 		result[i] = val
