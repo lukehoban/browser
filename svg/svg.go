@@ -417,7 +417,17 @@ func parseHexColor(hex string) color.RGBA {
 // Also checks for common XML declarations that precede SVG content.
 // https://www.w3.org/TR/SVG11/struct.html#NewDocument
 func IsSVG(data []byte) bool {
-	content := string(data)
+	if len(data) == 0 {
+		return false
+	}
+
+	// Limit search to first 1024 bytes for efficiency
+	// SVG root element and XML declaration appear early in the file
+	searchLen := len(data)
+	if searchLen > 1024 {
+		searchLen = 1024
+	}
+	content := string(data[:searchLen])
 	trimmed := strings.TrimSpace(content)
 
 	// Check for <svg element directly at the start
