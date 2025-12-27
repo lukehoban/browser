@@ -1,3 +1,37 @@
+// Package render implements the rendering engine for the browser.
+// It converts layout boxes into visual output (PNG images).
+//
+// Spec references:
+// - CSS 2.1 §14 Colors and backgrounds: https://www.w3.org/TR/CSS21/colors.html
+// - CSS 2.1 §15 Fonts: https://www.w3.org/TR/CSS21/fonts.html
+// - CSS 2.1 §16 Text: https://www.w3.org/TR/CSS21/text.html
+// - CSS 2.1 §8.5 Border properties: https://www.w3.org/TR/CSS21/box.html#border-properties
+// - HTML5 §4.8.2 The img element: https://html.spec.whatwg.org/multipage/embedded-content.html#the-img-element
+//
+// Implemented features:
+// - Canvas-based raster rendering
+// - Background colors (CSS 2.1 §14.2)
+// - Border rendering with solid style (CSS 2.1 §8.5)
+// - Text rendering with TrueType fonts (Go fonts)
+// - Font styling: size, weight (bold), style (italic) per CSS 2.1 §15
+// - Text decoration: underline (CSS 2.1 §16.3.1)
+// - Color parsing: named colors and hex colors (CSS 2.1 §4.3.6)
+// - Image rendering: PNG, JPEG, GIF formats (HTML5 §4.8.2)
+// - SVG rendering via custom parser (SVG 1.1 subset)
+// - Data URL support for inline resources (RFC 2397)
+// - Background images (CSS 2.1 §14.2.1)
+// - PNG output via image/png
+//
+// Not yet implemented (would require additional work):
+// - Font family selection (CSS 2.1 §15.3) - uses Go fonts only
+// - Text alignment within boxes (CSS 2.1 §16.2) - handled at layout level
+// - Line height control (CSS 2.1 §10.8.1) - uses font metrics
+// - Text decoration: overline, line-through (CSS 2.1 §16.3.1)
+// - Border styles: dashed, dotted, etc. (CSS 2.1 §8.5.3) - solid only
+// - Border radius (CSS3)
+// - Box shadows (CSS3)
+// - Gradients (CSS3)
+// - Transforms and transitions (CSS3)
 package render
 
 import (

@@ -4,12 +4,25 @@
 //
 // SVG 1.1 Specification: https://www.w3.org/TR/SVG11/
 //
-// Supported features:
+// Implemented features:
 // - Basic shapes via <path> element (SVG 1.1 §8.3)
-// - Path data commands: moveto, lineto, horizontal/vertical lineto, closepath (SVG 1.1 §8.3.2-8.3.4)
+// - Path data commands: M, L, H, V, Z (SVG 1.1 §8.3.2-8.3.4)
 // - Fill colors via fill attribute (SVG 1.1 §11.2)
 // - Coordinate system via viewBox (SVG 1.1 §7.7)
 // - Multiple path elements in a single SVG
+// - Scanline polygon rasterization
+// - Uniform scaling with aspect ratio preservation
+//
+// Not yet implemented (simplified for educational purposes):
+// - Curved path commands: C, Q, A (SVG 1.1 §8.3.6-8.3.8)
+// - Stroke properties (SVG 1.1 §11.4)
+// - Other basic shapes: rect, circle, ellipse (SVG 1.1 §8.2)
+// - Text elements (SVG 1.1 §10)
+// - Gradients and patterns (SVG 1.1 §13)
+// - Transformations (SVG 1.1 §7.6)
+// - Clipping and masking (SVG 1.1 §14)
+// - Filters and effects (SVG 1.1 §15)
+// - Animation (SVG 1.1 §19)
 package svg
 
 import (

@@ -3,6 +3,28 @@
 //
 // Spec references:
 // - CSS 2.1 §4 Syntax and basic data types: https://www.w3.org/TR/CSS21/syndata.html
+// - CSS 2.1 §5 Selectors: https://www.w3.org/TR/CSS21/selector.html
+// - CSS 2.1 §4.1.7 Rule sets, declaration blocks, and selectors: https://www.w3.org/TR/CSS21/syndata.html#rule-sets
+//
+// Implemented features:
+// - CSS tokenization (identifiers, strings, numbers, hash, operators)
+// - Rule parsing (selectors and declarations)
+// - Simple selectors: element, class (.class), ID (#id)
+// - Descendant combinators (space-separated selectors)
+// - Multiple selectors (comma-separated)
+// - Graceful handling of @-rules (skipped, not parsed)
+// - Graceful handling of attribute selectors (skipped)
+// - Partial pseudo-class support (stripped from selector)
+//
+// Not yet implemented (logged as warnings when encountered):
+// - Child combinator > (CSS 2.1 §5.6)
+// - Sibling combinators +, ~ (CSS 2.1 §5.7, CSS3)
+// - Attribute selector matching (CSS 2.1 §5.8)
+// - Pseudo-classes :hover, :focus (CSS 2.1 §5.11)
+// - Pseudo-elements ::before, ::after (CSS 2.1 §5.12)
+// - @media queries, @import, @font-face (CSS 2.1 §4.1.5)
+// - !important declarations (CSS 2.1 §6.4.2)
+// - Full shorthand property parsing
 package css
 
 import (

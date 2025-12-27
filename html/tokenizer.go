@@ -3,6 +3,26 @@
 //
 // Spec references:
 // - HTML5 §12.2.5 Tokenization: https://html.spec.whatwg.org/multipage/parsing.html#tokenization
+// - HTML5 §12.2.6 Tree construction: https://html.spec.whatwg.org/multipage/parsing.html#tree-construction
+// - HTML5 §12.2.4 Character references: https://html.spec.whatwg.org/multipage/parsing.html#character-references
+//
+// Implemented features:
+// - HTML5 tokenization state machine (simplified, common states only)
+// - Tree construction with proper element nesting
+// - Start tags, end tags, self-closing tags
+// - Void elements (img, br, hr, etc.) per HTML5 §12.1.2
+// - Attribute parsing (quoted and unquoted values)
+// - Character entity decoding (&nbsp;, &amp;, &#60;, etc.) per HTML5 §12.2.4
+// - Text nodes and comment handling
+//
+// Not yet implemented (simplified for educational purposes):
+// - Full HTML5 error recovery
+// - Script CDATA sections (HTML5 §12.2.5.14)
+// - Style CDATA sections (HTML5 §12.2.5.16)
+// - Namespace support for SVG/MathML (HTML5 §12.2.6.5)
+// - Advanced tokenization states (RCDATA, RAWTEXT, etc.)
+// - DOCTYPE validation
+// - Template elements
 package html
 
 import (

@@ -5,6 +5,27 @@
 // - CSS 2.1 §8 Box model: https://www.w3.org/TR/CSS21/box.html
 // - CSS 2.1 §9 Visual formatting model: https://www.w3.org/TR/CSS21/visuren.html
 // - CSS 2.1 §10 Visual formatting model details: https://www.w3.org/TR/CSS21/visudet.html
+// - CSS 2.1 §17 Tables: https://www.w3.org/TR/CSS21/tables.html
+//
+// Implemented features:
+// - Box model (content, padding, border, margin) per CSS 2.1 §8
+// - Block-level layout in normal flow (CSS 2.1 §9.4.1)
+// - Inline formatting context with baseline alignment (CSS 2.1 §9.4.2, §10.8)
+// - Table layout with auto width algorithm (CSS 2.1 §17.5)
+// - Width calculation per CSS 2.1 §10.3.3
+// - Height calculation per CSS 2.1 §10.6.3
+// - Text alignment (left, center, right) via CSS text-align and HTML align attribute
+// - Vertical alignment in table cells via HTML valign attribute
+//
+// Not yet implemented (would log warnings if encountered):
+// - Floats (CSS 2.1 §9.5)
+// - Positioning schemes: absolute, relative, fixed (CSS 2.1 §9.3)
+// - Inline layout with line wrapping (CSS 2.1 §9.4.2 - partial)
+// - Z-index and stacking contexts (CSS 2.1 §9.9)
+// - Table rowspan (CSS 2.1 §17.2)
+// - Border-collapse model (CSS 2.1 §17.6.2)
+// - Flexbox (CSS3)
+// - Grid layout (CSS3)
 package layout
 
 import (
@@ -135,6 +156,7 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 	// Determine box type based on display property or HTML element
 	// CSS 2.1 §17.2.1: The table element generates a principal table box
 	// CSS 2.1 §9.2.2: Inline-level elements
+	// Note: Position schemes (absolute, relative, fixed) per CSS 2.1 §9.3 not yet implemented
 	boxType := BlockBox
 	display := styledNode.Styles["display"]
 
