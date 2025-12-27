@@ -6,9 +6,10 @@
 //
 // Supported features:
 // - Basic shapes via <path> element (SVG 1.1 §8.3)
-// - Path data commands: moveto, lineto, closepath (SVG 1.1 §8.3.2-8.3.4)
+// - Path data commands: moveto, lineto, horizontal/vertical lineto, closepath (SVG 1.1 §8.3.2-8.3.4)
 // - Fill colors via fill attribute (SVG 1.1 §11.2)
 // - Coordinate system via viewBox (SVG 1.1 §7.7)
+// - Multiple path elements in a single SVG
 package svg
 
 import (
@@ -17,45 +18,48 @@ import (
 	"strings"
 )
 
+// SVGPath represents a single path element with its fill color.
+type SVGPath struct {
+	Points    [][2]float64 // Polygon points from parsed path data
+	FillColor color.RGBA
+}
+
 // ParsedSVG represents a parsed SVG with minimal data needed for rasterization.
 type ParsedSVG struct {
-	ViewBox    []float64     // [minX, minY, width, height]
-	PathPoints [][2]float64  // Polygon points from parsed path data
-	FillColor  color.RGBA
+	ViewBox    []float64    // [minX, minY, width, height]
+	PathPoints [][2]float64 // Polygon points from first parsed path (for backward compatibility)
+	FillColor  color.RGBA   // Fill color of first path (for backward compatibility)
+	Paths      []SVGPath    // All paths in the SVG
 }
 
 // Parse parses SVG data and extracts the minimal information needed for rendering.
 // SVG 1.1 §5: Document structure
 func Parse(svgData []byte) (*ParsedSVG, error) {
 	svgStr := string(svgData)
-	
+
 	// Extract viewBox dimensions for coordinate transformation
 	// SVG 1.1 §7.7: The viewBox attribute
 	viewBox := parseViewBox(svgStr)
-	
-	// Extract path data
+
+	// Extract all path elements
 	// SVG 1.1 §8.3: The 'path' element
-	pathData := extractPathData(svgStr)
-	if pathData == "" {
+	paths := extractAllPaths(svgStr)
+	if len(paths) == 0 {
 		return nil, nil
 	}
-	
-	// Extract fill color
-	// SVG 1.1 §11.2: The 'fill' property
-	fillColor := extractFillColor(svgStr)
-	
-	// Parse path commands to get polygon points
-	// SVG 1.1 §8.3.2-8.3.4: Path data commands
-	points := parsePath(pathData)
-	if len(points) < 3 {
-		return nil, nil // Need at least 3 points for a polygon
+
+	result := &ParsedSVG{
+		ViewBox: viewBox,
+		Paths:   paths,
 	}
-	
-	return &ParsedSVG{
-		ViewBox:    viewBox,
-		PathPoints: points,
-		FillColor:  fillColor,
-	}, nil
+
+	// For backward compatibility, set the first path's data
+	if len(paths) > 0 {
+		result.PathPoints = paths[0].Points
+		result.FillColor = paths[0].FillColor
+	}
+
+	return result, nil
 }
 
 // parseViewBox extracts viewBox dimensions from SVG string.
@@ -97,13 +101,63 @@ func parseViewBox(svg string) []float64 {
 	return result
 }
 
-// extractPathData extracts the 'd' attribute from a <path> element.
-// SVG 1.1 §8.3.1: The 'd' attribute defines the outline of a shape.
-func extractPathData(svg string) string {
+// extractAllPaths extracts all path elements from an SVG string.
+// SVG 1.1 §8.3: The 'path' element
+func extractAllPaths(svg string) []SVGPath {
+	var paths []SVGPath
+	remaining := svg
+
+	for {
+		// Find the next <path element
+		pathStart := strings.Index(remaining, "<path")
+		if pathStart == -1 {
+			break
+		}
+
+		// Find the end of this path element
+		pathEnd := strings.Index(remaining[pathStart:], "/>")
+		if pathEnd == -1 {
+			// Try finding </path>
+			pathEnd = strings.Index(remaining[pathStart:], "</path>")
+			if pathEnd == -1 {
+				break
+			}
+			pathEnd += 7 // len("</path>")
+		} else {
+			pathEnd += 2 // len("/>")
+		}
+
+		pathElement := remaining[pathStart : pathStart+pathEnd]
+
+		// Extract d attribute from this path element
+		pathData := extractPathDataFromElement(pathElement)
+		if pathData != "" {
+			// Extract fill color from this path element
+			fillColor := extractFillColorFromElement(pathElement)
+
+			// Parse path commands to get polygon points
+			points := parsePath(pathData)
+			if len(points) >= 3 {
+				paths = append(paths, SVGPath{
+					Points:    points,
+					FillColor: fillColor,
+				})
+			}
+		}
+
+		// Move past this path element
+		remaining = remaining[pathStart+pathEnd:]
+	}
+
+	return paths
+}
+
+// extractPathDataFromElement extracts the 'd' attribute from a single path element.
+func extractPathDataFromElement(pathElement string) string {
 	// Look for d="..." in path element
-	start := strings.Index(svg, " d=\"")
+	start := strings.Index(pathElement, " d=\"")
 	if start == -1 {
-		start = strings.Index(svg, " d='")
+		start = strings.Index(pathElement, " d='")
 		if start == -1 {
 			return ""
 		}
@@ -111,22 +165,21 @@ func extractPathData(svg string) string {
 	} else {
 		start += 4 // len(" d=\"")
 	}
-	
+
 	end := start
-	for end < len(svg) && svg[end] != '"' && svg[end] != '\'' {
+	for end < len(pathElement) && pathElement[end] != '"' && pathElement[end] != '\'' {
 		end++
 	}
-	
-	return svg[start:end]
+
+	return pathElement[start:end]
 }
 
-// extractFillColor extracts the fill attribute from SVG.
-// SVG 1.1 §11.2: The 'fill' property paints the interior of a shape.
-func extractFillColor(svg string) color.RGBA {
+// extractFillColorFromElement extracts the fill attribute from a single element.
+func extractFillColorFromElement(element string) color.RGBA {
 	// Look for fill="..."
-	start := strings.Index(svg, "fill=\"")
+	start := strings.Index(element, "fill=\"")
 	if start == -1 {
-		start = strings.Index(svg, "fill='")
+		start = strings.Index(element, "fill='")
 		if start == -1 {
 			return color.RGBA{0, 0, 0, 255} // default black per SVG 1.1 §11.2
 		}
@@ -134,13 +187,13 @@ func extractFillColor(svg string) color.RGBA {
 	} else {
 		start += 6 // len("fill=\"")
 	}
-	
+
 	end := start
-	for end < len(svg) && svg[end] != '"' && svg[end] != '\'' {
+	for end < len(element) && element[end] != '"' && element[end] != '\'' {
 		end++
 	}
-	
-	fillStr := svg[start:end]
+
+	fillStr := element[start:end]
 	return parseColor(fillStr)
 }
 
@@ -150,6 +203,8 @@ func extractFillColor(svg string) color.RGBA {
 // Supported commands:
 // - M/m: moveto (SVG 1.1 §8.3.2)
 // - L/l: lineto (SVG 1.1 §8.3.3)
+// - H/h: horizontal lineto (SVG 1.1 §8.3.3)
+// - V/v: vertical lineto (SVG 1.1 §8.3.3)
 // - Z/z: closepath (SVG 1.1 §8.3.4)
 func parsePath(pathData string) [][2]float64 {
 	var points [][2]float64
@@ -224,7 +279,35 @@ func parsePath(pathData string) [][2]float64 {
 				currentY += nums[j+1]
 				points = append(points, [2]float64{currentX, currentY})
 			}
-			
+
+		case 'H': // Absolute horizontal lineto - SVG 1.1 §8.3.3
+			nums := extractNumbers(pathData, &i)
+			for _, x := range nums {
+				currentX = x
+				points = append(points, [2]float64{currentX, currentY})
+			}
+
+		case 'h': // Relative horizontal lineto - SVG 1.1 §8.3.3
+			nums := extractNumbers(pathData, &i)
+			for _, dx := range nums {
+				currentX += dx
+				points = append(points, [2]float64{currentX, currentY})
+			}
+
+		case 'V': // Absolute vertical lineto - SVG 1.1 §8.3.3
+			nums := extractNumbers(pathData, &i)
+			for _, y := range nums {
+				currentY = y
+				points = append(points, [2]float64{currentX, currentY})
+			}
+
+		case 'v': // Relative vertical lineto - SVG 1.1 §8.3.3
+			nums := extractNumbers(pathData, &i)
+			for _, dy := range nums {
+				currentY += dy
+				points = append(points, [2]float64{currentX, currentY})
+			}
+
 		case 'Z', 'z': // closepath - SVG 1.1 §8.3.4
 			// Close the current subpath by drawing a straight line from
 			// the current point to the initial point of the current subpath
@@ -327,4 +410,80 @@ func parseHexColor(hex string) color.RGBA {
 	}
 	
 	return color.RGBA{r, g, b, 255}
+}
+
+// IsSVG checks if the given data appears to be SVG content.
+// Detection follows SVG 1.1 §5.1: An SVG document fragment is defined by an 'svg' element.
+// Also checks for common XML declarations that precede SVG content.
+// https://www.w3.org/TR/SVG11/struct.html#NewDocument
+func IsSVG(data []byte) bool {
+	if len(data) == 0 {
+		return false
+	}
+
+	// Limit search to first 1024 bytes for efficiency
+	// SVG root element and XML declaration appear early in the file
+	searchLen := len(data)
+	if searchLen > 1024 {
+		searchLen = 1024
+	}
+	content := string(data[:searchLen])
+	trimmed := strings.TrimSpace(content)
+
+	// Check for <svg element directly at the start
+	if strings.HasPrefix(trimmed, "<svg") {
+		return true
+	}
+
+	// Check for XML declaration followed by SVG content
+	// SVG files often start with <?xml ... ?> before <svg>
+	if strings.HasPrefix(trimmed, "<?xml") && strings.Contains(content, "<svg") {
+		return true
+	}
+
+	return false
+}
+
+// IsSVGFile checks if a filename indicates an SVG file.
+// Per W3C media type registration, SVG files use .svg extension.
+// https://www.w3.org/TR/SVGTiny12/mimereg.html
+func IsSVGFile(filename string) bool {
+	return strings.HasSuffix(strings.ToLower(filename), ".svg")
+}
+
+// Render renders the parsed SVG to a canvas using the provided fill function.
+// This encapsulates the rendering loop for SVG paths, handling viewBox
+// transformation and rasterization per SVG 1.1 §7.7 (viewBox) and §8.3 (paths).
+func Render(svgData []byte, width, height int, fillFunc func(x, y int, col color.RGBA)) error {
+	if width <= 0 || height <= 0 {
+		return nil
+	}
+
+	// Parse the SVG
+	parsed, err := Parse(svgData)
+	if err != nil || parsed == nil {
+		return err
+	}
+
+	// Set default viewBox if not specified
+	viewBox := parsed.ViewBox
+	if viewBox == nil {
+		viewBox = []float64{0, 0, float64(width), float64(height)}
+	}
+
+	// Create rasterizer
+	rasterizer := Rasterizer{Width: width, Height: height}
+
+	// Render all paths in order (first path is background, subsequent paths are foreground)
+	for _, path := range parsed.Paths {
+		if len(path.Points) < 3 {
+			continue
+		}
+		// Transform points from viewBox coordinates to target dimensions
+		transformedPoints := TransformPoints(path.Points, viewBox, width, height)
+		// Rasterize the polygon
+		rasterizer.FillPolygon(transformedPoints, fillFunc, path.FillColor)
+	}
+
+	return nil
 }

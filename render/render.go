@@ -101,35 +101,14 @@ func (c *Canvas) DrawRect(x, y, width, height int, col color.RGBA, thickness int
 }
 
 // DrawSVG renders an SVG image onto the canvas at the specified position.
-// Uses the svg package for parsing and rasterization.
+// Uses the svg package for parsing and rasterization per SVG 1.1 spec.
 func (c *Canvas) DrawSVG(svgData []byte, x, y, width, height int) error {
-	if width <= 0 || height <= 0 {
-		return nil
-	}
-
-	// Parse the SVG using the svg package
-	parsed, err := svg.Parse(svgData)
-	if err != nil || parsed == nil {
-		return err
-	}
-
-	// Set default viewBox if not specified
-	viewBox := parsed.ViewBox
-	if viewBox == nil {
-		viewBox = []float64{0, 0, float64(width), float64(height)}
-	}
-
-	// Transform points from viewBox coordinates to target dimensions
-	rasterizer := svg.Rasterizer{Width: width, Height: height}
-	transformedPoints := svg.TransformPoints(parsed.PathPoints, viewBox, width, height)
-
-	// Rasterize the polygon
+	// Fill function that applies offset for canvas position
 	fillFunc := func(px, py int, col color.RGBA) {
 		c.SetPixel(x+px, y+py, col)
 	}
-	rasterizer.FillPolygon(transformedPoints, fillFunc, parsed.FillColor)
 
-	return nil
+	return svg.Render(svgData, width, height, fillFunc)
 }
 
 // DrawText draws text at the given position with the given color.
@@ -1076,10 +1055,32 @@ func renderImage(canvas *Canvas, box *layout.LayoutBox) {
 		return
 	}
 
-	// Load the image
-	img, err := canvas.LoadImage(src)
+	// Load the resource data first
+	loader := dom.NewResourceLoader("")
+	data, err := loader.LoadResource(src)
 	if err != nil {
-		// Silently fail if image can't be loaded
+		return
+	}
+
+	// Check if it's an SVG by extension or content signature
+	// SVG detection per SVG 1.1 §5.1 (document structure) and W3C media type registration
+	// https://www.w3.org/TR/SVG11/struct.html#NewDocument
+	// https://www.w3.org/TR/SVGTiny12/mimereg.html
+	if svg.IsSVGFile(src) || svg.IsSVG(data) {
+		// Render SVG
+		width := int(box.Dimensions.Content.Width)
+		height := int(box.Dimensions.Content.Height)
+		if width <= 0 || height <= 0 {
+			return
+		}
+
+		_ = canvas.DrawSVG(data, int(box.Dimensions.Content.X), int(box.Dimensions.Content.Y), width, height)
+		return
+	}
+
+	// Try to decode as raster image (PNG, JPEG, GIF)
+	img, _, err := image.Decode(bytes.NewReader(data))
+	if err != nil {
 		return
 	}
 

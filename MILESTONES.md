@@ -228,9 +228,11 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ### New Features (Added):
 - ✅ Custom SVG parser and rasterizer for background-image (no external dependencies)
-- ✅ Supports subset of SVG spec: path element with move-to, line-to commands and fill colors
+- ✅ Supports subset of SVG spec: path element with move-to, line-to, horizontal/vertical line-to commands and fill colors
+- ✅ Multiple path elements support for complex SVGs (e.g., y18.svg logo with background and foreground)
 - ✅ Background-image support for both SVG and raster images (PNG, JPEG, GIF)
 - ✅ Scanline polygon rasterization with viewBox coordinate transformation
+- ✅ Uniform scaling with aspect ratio preservation (SVG preserveAspectRatio="xMidYMid meet")
 
 ---
 
