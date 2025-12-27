@@ -2,7 +2,28 @@
 // It matches CSS selectors to DOM elements and computes final styles.
 //
 // Spec references:
-// - CSS 2.1 §6 Assigning property values, Cascading, and Inheritance
+// - CSS 2.1 §6 Assigning property values, Cascading, and Inheritance: https://www.w3.org/TR/CSS21/cascade.html
+// - CSS 2.1 §6.4.3 Calculating a selector's specificity: https://www.w3.org/TR/CSS21/cascade.html#specificity
+// - CSS 2.1 §6.4.4 Precedence of non-CSS presentational hints: https://www.w3.org/TR/CSS21/cascade.html#preshint
+//
+// Implemented features:
+// - Selector matching: element, class, ID, descendant combinators
+// - Specificity calculation per CSS 2.1 §6.4.3
+// - Cascade by specificity and source order
+// - Inline style attribute support (highest specificity)
+// - User-agent stylesheet (lowest specificity)
+// - Property inheritance for font properties (CSS 2.1 §6.2)
+// - Shorthand property expansion (margin, padding, border)
+//
+// Not yet implemented (noted with log warnings where encountered):
+// - !important declarations (CSS 2.1 §6.4.2)
+// - Child combinator > (CSS 2.1 §5.6)
+// - Sibling combinators +, ~ (CSS 2.1 §5.7, CSS3 Selectors)
+// - Attribute selectors [attr=value] (CSS 2.1 §5.8)
+// - Pseudo-classes :hover, :focus, etc. (CSS 2.1 §5.11)
+// - Pseudo-elements ::before, ::after (CSS 2.1 §5.12)
+// - Full computed value calculation (CSS 2.1 §6.1.2)
+// - Inheritance of all inheritable properties (currently subset)
 package style
 
 import (
