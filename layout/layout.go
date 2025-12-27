@@ -33,6 +33,11 @@ const (
 	// which is typically around 0.25em (approximately the width of a space character).
 	// Reference: https://www.w3.org/TR/CSS2/text.html#propdef-word-spacing
 	defaultWordSpacingEm = 0.25
+
+	// CSS 2.1 §10.8.1: Baseline position as a fraction of font size.
+	// For most Latin fonts, the baseline is approximately 80% from the top of the em-box,
+	// accounting for ascenders (the baseline sits below the cap height).
+	baselinePositionEm = 0.8
 )
 
 // LayoutBox represents a box in the layout tree.
@@ -404,16 +409,18 @@ func (box *LayoutBox) layoutInlineChildren(children []*LayoutBox) {
 }
 
 // getBaseline returns the baseline offset for an inline element.
-// CSS 2.1 §10.8.1: The baseline is approximately at the font size from the top.
-// For text, the baseline is where the bottom of most letters sit.
+// CSS 2.1 §10.8.1: The baseline of an inline element is determined by its content.
+// For text, the baseline is where the bottom of most letters (excluding descenders) sit.
+// For replaced elements and other non-text content, we use the bottom edge as a fallback.
 func getBaseline(box *LayoutBox) float64 {
-	// For text nodes, baseline is approximately at the font size
+	// For text nodes and elements with font styling, use font-based baseline
 	if box.StyledNode != nil {
 		fontSize := extractFontSize(box.StyledNode.Styles)
-		// Baseline is roughly at 80% of font size from top (accounts for descenders)
-		return fontSize * 0.8
+		// CSS 2.1 §10.8.1: Baseline is at baselinePositionEm of font size from top
+		return fontSize * baselinePositionEm
 	}
-	// For other elements, use the content height
+	// For elements without styling (rare), use content height as baseline
+	// This is a fallback for replaced elements (CSS 2.1 §10.8.1)
 	return box.Dimensions.Content.Height
 }
 
@@ -830,14 +837,13 @@ func (box *LayoutBox) calculateColumnWidths(numColumns int, tableWidth float64) 
 			}
 		}
 	}
-	
+
 	totalMinWidth := 0.0
 	for _, w := range columnMinWidths {
 		totalMinWidth += w
 	}
 
 	columnWidths := make([]float64, numColumns)
-	
 	if totalMinWidth > 0 {
 		if totalMinWidth <= tableWidth {
 			// Distribute extra space proportionally to content width

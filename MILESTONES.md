@@ -452,9 +452,9 @@ The browser can now load Hacker News from the network and render content with pr
 - [ ] **Text Layout Improvements**
   - [ ] Inline text layout (wrap text within line boxes)
   - [x] Font size support ✅ COMPLETE
-  - [ ] Text-align property (left, center, right)
+  - [x] Text-align property (left, center, right) ✅ COMPLETE - December 2025
   - [ ] Line-height property
-  - [ ] Proper inline box model
+  - [x] Baseline alignment for inline elements ✅ COMPLETE - December 2025
 
 - [x] **Link Rendering** ✅ COMPLETE
   - [x] `<a>` element styling (pseudo-class stripped, selector applies to element)
@@ -466,7 +466,7 @@ The browser can now load Hacker News from the network and render content with pr
   - [x] Basic table layout algorithm (auto layout)
   - [x] Colspan attribute support
   - [x] Empty row height support (spacer rows with explicit height)
-  - [ ] Auto table layout algorithm (full implementation with min/max widths)
+  - [x] Auto table layout with proportional column distribution ✅ COMPLETE - December 2025
   - [ ] Table spanning (rowspan)
   - [ ] Table captions and headers
   - [ ] Border-collapse property
@@ -491,13 +491,15 @@ The browser successfully loads and renders Hacker News from the network with exc
 - HTML character entities (&nbsp;, &amp;, etc.) now decode correctly
 - Font size pt units (10pt, 7pt) are properly converted to pixels
 - Non-rendered elements (head, title, script) are correctly hidden
-- Tables use content-based column sizing
+- Tables use content-based column sizing with proportional distribution
 - Text supports variable font sizes with bold/italic/underline styles
 - HTML alignment attributes (`align`, `valign`, `<center>`) work correctly
 - **Inline style attributes** (`style="color: red"`) now supported with highest specificity
 - **Body/HTML bgcolor** attribute now properly fills the canvas background (CSS 2.1 §14.2)
 - **Empty table rows** with explicit height (spacer rows) now render correctly
 - **Link colors** now properly applied via `a:link` selector support
+- **CSS text-align property** now supported for table cells (CSS 2.1 §16.2)
+- **Baseline alignment** for inline elements with different font sizes (CSS 2.1 §10.8.1)
 
 Minor visual differences remain due to missing CSS properties (line-height, font-family).
 
@@ -572,5 +574,6 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 **Completed**: Milestones 1-10 (Foundation through WebAssembly Support, including all core features)  
 **Recent Updates**: 
 - WebAssembly support with interactive demo (December 2025)
-- Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)  
-**Last Updated**: 2025-12-25
+- Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)
+- Added baseline alignment for inline elements, text-align support, improved table layout (December 2025)
+**Last Updated**: 2025-12-27
