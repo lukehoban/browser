@@ -30,6 +30,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/log"
 )
 
@@ -212,7 +213,7 @@ func extractFillColorFromElement(element string) color.RGBA {
 	}
 
 	fillStr := element[start:end]
-	return parseColor(fillStr)
+	return css.ParseColor(fillStr)
 }
 
 // parsePath parses SVG path data and returns polygon points.
@@ -381,53 +382,6 @@ func extractNumbers(pathData string, i *int) []float64 {
 	}
 	
 	return numbers
-}
-
-// parseColor parses a color string to RGBA.
-// Supports hex colors (#RGB, #RRGGBB) per SVG 1.1 §4.2.
-func parseColor(value string) color.RGBA {
-	value = strings.TrimSpace(strings.ToLower(value))
-	
-	// Handle hex colors
-	if strings.HasPrefix(value, "#") {
-		return parseHexColor(value)
-	}
-	
-	// Default to black
-	return color.RGBA{0, 0, 0, 255}
-}
-
-// parseHexColor parses a hex color string (#RGB or #RRGGBB).
-// SVG 1.1 §4.2: Color syntax follows CSS2 specification.
-func parseHexColor(hex string) color.RGBA {
-	hex = strings.TrimPrefix(hex, "#")
-	
-	var r, g, b uint8
-	
-	switch len(hex) {
-	case 3: // #RGB
-		if rr, err := strconv.ParseUint(string(hex[0])+string(hex[0]), 16, 8); err == nil {
-			r = uint8(rr)
-		}
-		if gg, err := strconv.ParseUint(string(hex[1])+string(hex[1]), 16, 8); err == nil {
-			g = uint8(gg)
-		}
-		if bb, err := strconv.ParseUint(string(hex[2])+string(hex[2]), 16, 8); err == nil {
-			b = uint8(bb)
-		}
-	case 6: // #RRGGBB
-		if rr, err := strconv.ParseUint(hex[0:2], 16, 8); err == nil {
-			r = uint8(rr)
-		}
-		if gg, err := strconv.ParseUint(hex[2:4], 16, 8); err == nil {
-			g = uint8(gg)
-		}
-		if bb, err := strconv.ParseUint(hex[4:6], 16, 8); err == nil {
-			b = uint8(bb)
-		}
-	}
-	
-	return color.RGBA{r, g, b, 255}
 }
 
 // IsSVG checks if the given data appears to be SVG content.
