@@ -7,10 +7,24 @@ import (
 	"testing"
 )
 
+// Test SVG data constants
+// HN's triangle.svg for vote arrows
+// Note: The path extends beyond the viewBox (y ranges from -2 to 27 while viewBox is 0-16)
+// This is intentional - only the visible portion within the viewBox is rendered
+const triangleSVG = `<svg height="32" viewBox="0 0 32 16" width="32" xmlns="http://www.w3.org/2000/svg">` +
+	`<path d="m2 27 14-29 14 29z" fill="#999"/>` +
+	`</svg>`
+
+// HN's y18.svg logo with orange background and white Y letter
+const y18SVG = `<svg height="18" viewBox="4 4 188 188" width="18" xmlns="http://www.w3.org/2000/svg">` +
+	`<path d="m4 4h188v188h-188z" fill="#f60"/>` +
+	`<path d="m73.2521756 45.01 22.7478244 47.39130083 22.7478244-47.39130083h19.56569631` +
+	`l-34.32352071 64.48661468v41.49338532h-15.98v-41.49338532l-34.32352071-64.48661468z" fill="#fff"/>` +
+	`</svg>`
+
 // TestParseTriangleSVG tests parsing the HN vote arrow triangle.svg
 func TestParseTriangleSVG(t *testing.T) {
-	// HN's triangle.svg for vote arrows
-	svgData := []byte(`<svg height="32" viewBox="0 0 32 16" width="32" xmlns="http://www.w3.org/2000/svg"><path d="m2 27 14-29 14 29z" fill="#999"/></svg>`)
+	svgData := []byte(triangleSVG)
 
 	parsed, err := Parse(svgData)
 	if err != nil {
@@ -62,8 +76,7 @@ func TestParseTriangleSVG(t *testing.T) {
 
 // TestParseY18SVG tests parsing the HN y18.svg logo
 func TestParseY18SVG(t *testing.T) {
-	// HN's y18.svg logo
-	svgData := []byte(`<svg height="18" viewBox="4 4 188 188" width="18" xmlns="http://www.w3.org/2000/svg"><path d="m4 4h188v188h-188z" fill="#f60"/><path d="m73.2521756 45.01 22.7478244 47.39130083 22.7478244-47.39130083h19.56569631l-34.32352071 64.48661468v41.49338532h-15.98v-41.49338532l-34.32352071-64.48661468z" fill="#fff"/></svg>`)
+	svgData := []byte(y18SVG)
 
 	parsed, err := Parse(svgData)
 	if err != nil {
@@ -111,8 +124,7 @@ func TestParseY18SVG(t *testing.T) {
 
 // TestRenderTriangle tests that the triangle renders correctly
 func TestRenderTriangle(t *testing.T) {
-	// HN's triangle.svg
-	svgData := []byte(`<svg height="32" viewBox="0 0 32 16" width="32" xmlns="http://www.w3.org/2000/svg"><path d="m2 27 14-29 14 29z" fill="#999"/></svg>`)
+	svgData := []byte(triangleSVG)
 
 	parsed, err := Parse(svgData)
 	if err != nil || parsed == nil {
@@ -174,8 +186,7 @@ func TestRenderTriangle(t *testing.T) {
 
 // TestRenderY18 tests that the Y18 logo renders correctly with both paths
 func TestRenderY18(t *testing.T) {
-	// HN's y18.svg
-	svgData := []byte(`<svg height="18" viewBox="4 4 188 188" width="18" xmlns="http://www.w3.org/2000/svg"><path d="m4 4h188v188h-188z" fill="#f60"/><path d="m73.2521756 45.01 22.7478244 47.39130083 22.7478244-47.39130083h19.56569631l-34.32352071 64.48661468v41.49338532h-15.98v-41.49338532l-34.32352071-64.48661468z" fill="#fff"/></svg>`)
+	svgData := []byte(y18SVG)
 
 	parsed, err := Parse(svgData)
 	if err != nil || parsed == nil {
