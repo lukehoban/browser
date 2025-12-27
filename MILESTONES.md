@@ -413,7 +413,43 @@ Shorthand properties are now automatically expanded to their longhand equivalent
 - ⚠️ No connection pooling or timeouts
 - ⚠️ Attribute selectors are skipped (not applied)
 - ⚠️ @-rules are skipped (media queries, imports, etc.)
-- ⚠️ No support for relative URL resolution in CSS (e.g., background images)
+
+---
+
+## Milestone 9.5: Data URL Support ✅ COMPLETE
+**Goal**: Support RFC 2397 data URLs for inline images and backgrounds
+
+**Spec References**:
+- RFC 2397: The "data" URL scheme
+- HTML5 §4.8.2 The img element
+- CSS 2.1 §14.2.1 Background properties
+
+### Tasks:
+- [x] Implement data URL parsing and decoding
+- [x] Support base64-encoded data URLs
+- [x] Support URL-encoded data URLs
+- [x] Handle data URLs in `<img src="...">`
+- [x] Handle data URLs in CSS `background-image: url(...)`
+- [x] Update WASM demo with accurate HN SVG data URLs
+
+### Deliverables:
+- ✅ Data URL parser in dom/loader.go
+- ✅ Base64 and URL-encoding support
+- ✅ Image rendering with data URLs
+- ✅ CSS background rendering with data URLs
+- ✅ Test coverage for data URL formats
+
+### Validation:
+- ✅ Parse and decode base64 data URLs
+- ✅ Parse and decode URL-encoded data URLs
+- ✅ Render PNG images from data URLs
+- ✅ Render SVG images from data URLs
+- ✅ Apply SVG backgrounds from CSS data URLs
+- ✅ WASM demo Hacker News example uses SVG data URLs
+
+### Known Limitations:
+- ⚠️ No data URL support for stylesheets (only images)
+- ⚠️ No validation of media types
 
 ---
 

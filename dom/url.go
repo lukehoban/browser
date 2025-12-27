@@ -67,6 +67,11 @@ func resolveURL(baseURL, relativeURL string) string {
 // This is exported for use by other packages that need to resolve URLs.
 // HTML5 §2.5: URLs in documents are resolved against a base URL.
 func ResolveURLString(baseURL, relativeURL string) string {
+	// RFC 2397: Data URLs are absolute and should not be resolved
+	if strings.HasPrefix(relativeURL, "data:") {
+		return relativeURL
+	}
+	
 	// If the URL is already absolute (http:// or https://), return as-is
 	if strings.HasPrefix(relativeURL, "http://") || strings.HasPrefix(relativeURL, "https://") {
 		return relativeURL
