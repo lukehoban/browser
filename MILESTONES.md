@@ -452,7 +452,7 @@ The browser can now load Hacker News from the network and render content with pr
 - [ ] **Text Layout Improvements**
   - [ ] Inline text layout (wrap text within line boxes)
   - [x] Font size support ✅ COMPLETE
-  - [x] Text-align property (left, center, right) ✅ COMPLETE - December 2025
+  - [ ] Text-align property (left, center, right) - partial via HTML align attribute
   - [ ] Line-height property
   - [x] Baseline alignment for inline elements ✅ COMPLETE - December 2025
 
@@ -467,6 +467,7 @@ The browser can now load Hacker News from the network and render content with pr
   - [x] Colspan attribute support
   - [x] Empty row height support (spacer rows with explicit height)
   - [x] Auto table layout with proportional column distribution ✅ COMPLETE - December 2025
+  - [x] HTML align/valign attributes for table cells ✅ COMPLETE - December 2025
   - [ ] Table spanning (rowspan)
   - [ ] Table captions and headers
   - [ ] Border-collapse property
@@ -498,10 +499,9 @@ The browser successfully loads and renders Hacker News from the network with exc
 - **Body/HTML bgcolor** attribute now properly fills the canvas background (CSS 2.1 §14.2)
 - **Empty table rows** with explicit height (spacer rows) now render correctly
 - **Link colors** now properly applied via `a:link` selector support
-- **CSS text-align property** now supported for table cells (CSS 2.1 §16.2)
 - **Baseline alignment** for inline elements with different font sizes (CSS 2.1 §10.8.1)
 
-Minor visual differences remain due to missing CSS properties (line-height, font-family).
+Minor visual differences remain due to missing CSS properties (line-height, font-family, text-align).
 
 ---
 

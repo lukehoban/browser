@@ -1191,13 +1191,10 @@ func (box *LayoutBox) layoutTableCell(containingBlock Dimensions) {
 	// Apply HTML align attribute for horizontal alignment
 	// HTML 4.01 §11.3.2: The align attribute specifies horizontal alignment
 	// Supported values: left, center, right
+	// Note: CSS text-align property (§16.2) affects inline content rendering,
+	// not child box positioning, so it's handled in the render phase, not here.
 	if align := box.StyledNode.Node.GetAttribute("align"); align != "" {
 		box.applyHorizontalAlignment(align)
-	}
-	
-	// CSS 2.1 §16.2: text-align property for horizontal alignment (overrides HTML attribute)
-	if textAlign := styles["text-align"]; textAlign != "" {
-		box.applyHorizontalAlignment(textAlign)
 	}
 
 	// Apply HTML valign attribute for vertical alignment
