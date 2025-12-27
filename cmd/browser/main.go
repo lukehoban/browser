@@ -20,6 +20,7 @@ import (
 	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/html"
 	"github.com/lukehoban/browser/layout"
+	"github.com/lukehoban/browser/log"
 	"github.com/lukehoban/browser/render"
 	"github.com/lukehoban/browser/style"
 )
@@ -29,7 +30,29 @@ func main() {
 	outputFile := flag.String("output", "", "Output PNG file path (optional)")
 	width := flag.Int("width", 800, "Viewport width in pixels")
 	height := flag.Int("height", 600, "Viewport height in pixels")
+	logLevel := flag.String("log-level", "warn", "Log level: debug, info, warn, error")
+	verbose := flag.Bool("verbose", false, "Enable verbose logging (equivalent to -log-level=info)")
+	showLayout := flag.Bool("show-layout", false, "Display layout tree instead of rendering")
+	showRender := flag.Bool("show-render", false, "Display render tree (styled nodes) instead of rendering")
 	flag.Parse()
+
+	// Configure logging
+	if *verbose {
+		log.SetLevel(log.InfoLevel)
+	} else {
+		switch strings.ToLower(*logLevel) {
+		case "debug":
+			log.SetLevel(log.DebugLevel)
+		case "info":
+			log.SetLevel(log.InfoLevel)
+		case "warn":
+			log.SetLevel(log.WarnLevel)
+		case "error":
+			log.SetLevel(log.ErrorLevel)
+		default:
+			log.SetLevel(log.WarnLevel)
+		}
+	}
 
 	// Check for input file or URL
 	args := flag.Args()
@@ -117,6 +140,20 @@ func main() {
 	fmt.Printf("Input: %s\n", input)
 	fmt.Printf("Viewport: %dx%d\n", *width, *height)
 
+	// Display render tree if requested
+	if *showRender {
+		fmt.Println("\n=== Render Tree (Styled Nodes) ===")
+		printRenderTree(styledTree, 0)
+		return
+	}
+
+	// Display layout tree if requested
+	if *showLayout {
+		fmt.Println("\n=== Layout Tree ===")
+		printLayoutTree(layoutTree, 0)
+		return
+	}
+
 	// Render to PNG if output specified
 	if *outputFile != "" {
 		canvas := render.Render(layoutTree, *width, *height)
@@ -188,6 +225,65 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 
 	for _, child := range box.Children {
 		printLayoutTree(child, indent+1)
+	}
+}
+
+// printRenderTree prints the render tree (styled nodes) for debugging.
+func printRenderTree(node *style.StyledNode, indent int) {
+	if node == nil {
+		return
+	}
+
+	prefix := strings.Repeat("  ", indent)
+
+	// Get node info
+	nodeType := "?"
+	nodeData := ""
+	if node.Node != nil {
+		switch node.Node.Type {
+		case dom.ElementNode:
+			nodeType = "Element"
+			nodeData = node.Node.Data
+		case dom.TextNode:
+			nodeType = "Text"
+			nodeData = node.Node.Data
+			if len(nodeData) > 40 {
+				nodeData = nodeData[:40] + "..."
+			}
+			// Escape newlines for display
+			nodeData = strings.ReplaceAll(nodeData, "\n", "\\n")
+			nodeData = strings.ReplaceAll(nodeData, "\t", "\\t")
+		case dom.DocumentNode:
+			nodeType = "Document"
+			nodeData = "document"
+		}
+	}
+
+	// Print node with key styles
+	fmt.Printf("%s%s: %s", prefix, nodeType, nodeData)
+	if len(node.Styles) > 0 {
+		fmt.Printf(" {")
+		count := 0
+		maxStyles := 5
+		for k, v := range node.Styles {
+			if count < maxStyles {
+				if count > 0 {
+					fmt.Printf(", ")
+				}
+				fmt.Printf("%s:%s", k, v)
+				count++
+			}
+		}
+		if len(node.Styles) > maxStyles {
+			fmt.Printf(", ...")
+		}
+		fmt.Printf("}")
+	}
+	fmt.Println()
+
+	// Recursively print children
+	for _, child := range node.Children {
+		printRenderTree(child, indent+1)
 	}
 }
 
