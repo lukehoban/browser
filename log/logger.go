@@ -92,14 +92,15 @@ func SetPrefix(prefix string) {
 
 // log is the internal logging function.
 func (l *Logger) log(level Level, msg string, fields map[string]interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-
 	if level < l.level {
 		return
 	}
 
+	// Generate timestamp outside the lock to reduce contention
 	timestamp := time.Now().Format("2006-01-02 15:04:05.000")
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	
 	// Build the log message
 	var output string

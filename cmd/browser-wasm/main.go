@@ -14,7 +14,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"image/png"
-	"io"
 	"strings"
 	"syscall/js"
 
@@ -331,7 +330,7 @@ func extractCSSFromNode(node *dom.Node, builder *strings.Builder) {
 
 func main() {
 	// Set up console logging for WASM
-	log.SetOutput(io.Writer(&consoleWriter{}))
+	log.SetOutput(&consoleWriter{})
 	log.SetLevel(log.WarnLevel) // Default level
 
 	// Register the renderHTML function with JavaScript
