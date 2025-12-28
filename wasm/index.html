@@ -127,6 +127,38 @@
             width: 100%;
         }
 
+        .log-section {
+            width: 100%;
+            margin-bottom: 16px;
+        }
+
+        .log-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 8px 0 4px;
+            color: #444;
+        }
+
+        .log-output {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            padding: 12px;
+            font-family: 'Menlo', 'Courier New', monospace;
+            font-size: 11px;
+            white-space: pre-wrap;
+            margin: 0;
+            max-height: 200px;
+            overflow-y: auto;
+            color: #333;
+        }
+
+        .log-output:empty::before {
+            content: 'No logs to display';
+            color: #999;
+            font-style: italic;
+        }
+
         .tree-section {
             width: 100%;
         }
@@ -306,6 +338,26 @@
     <script>
         const go = new Go();
         let wasmReady = false;
+        let logs = [];
+
+        // Callback function to receive logs from Go
+        window.logToPage = function(message) {
+            logs.push(message);
+            // Update log display if it exists
+            const logOutput = document.getElementById('logOutput');
+            if (logOutput) {
+                logOutput.textContent = logs.join('');
+            }
+        };
+
+        // Clear logs
+        function clearLogs() {
+            logs = [];
+            const logOutput = document.getElementById('logOutput');
+            if (logOutput) {
+                logOutput.textContent = '';
+            }
+        }
 
         // Load the WASM module
         WebAssembly.instantiateStreaming(fetch("browser.wasm"), go.importObject)
@@ -344,6 +396,9 @@
                 return;
             }
 
+            // Clear previous logs
+            clearLogs();
+
             setStatus('Rendering...', 'loading');
 
             try {
@@ -372,19 +427,25 @@
                     <div class="output-section">
                         <img src="data:image/png;base64,${result.image}" alt="Rendered output">
                     </div>
-                    <div class="tree-section">
-                        <div class="tree-title">Layout Tree</div>
-                        <pre id="layoutTreeOutput" class="tree-output"></pre>
+                    <div class="log-section">
+                        <div class="log-title">Logs</div>
+                        <pre id="logOutput" class="log-output"></pre>
                     </div>
                     <div class="tree-section">
-                        <div class="tree-title">Render Tree</div>
-                        <pre id="renderTreeOutput" class="tree-output"></pre>
+                        <div class="tree-title">Layout Tree (with styles)</div>
+                        <pre id="layoutTreeOutput" class="tree-output"></pre>
                     </div>
                 `;
 
-                // Build trees immediately after rendering
+                // Update log output with any logs collected
+                const logOutput = document.getElementById('logOutput');
+                if (logOutput && logs.length > 0) {
+                    logOutput.textContent = logs.join('');
+                }
+
+                // Build combined tree immediately after rendering
                 populateTrees(htmlInput, width, height);
-                setStatus('Rendered image and trees generated!', 'success');
+                setStatus('Rendered image and tree generated!', 'success');
 
             } catch (err) {
                 console.error("Rendering error:", err);
@@ -394,76 +455,53 @@
 
         function populateTrees(htmlInput, width, height) {
             const layoutTarget = document.getElementById('layoutTreeOutput');
-            const renderTarget = document.getElementById('renderTreeOutput');
 
             try {
-                const layoutTree = buildLayoutTree(htmlInput, width, height);
+                const layoutTree = buildCombinedTree(htmlInput, width, height);
                 layoutTarget.textContent = layoutTree;
             } catch (err) {
-                layoutTarget.textContent = 'Layout tree error: ' + err.message;
-            }
-
-            try {
-                const renderTree = buildRenderTree(htmlInput);
-                renderTarget.textContent = renderTree;
-            } catch (err) {
-                renderTarget.textContent = 'Render tree error: ' + err.message;
+                layoutTarget.textContent = 'Tree error: ' + err.message;
             }
         }
 
-        function buildLayoutTree(htmlInput, width, height) {
-            const result = getLayoutTree(htmlInput, width, height);
+        function buildCombinedTree(htmlInput, width, height) {
+            const layoutResult = getLayoutTree(htmlInput, width, height);
+            const renderResult = getRenderTree(htmlInput);
 
-            if (result.error) {
-                throw new Error(result.error);
+            if (layoutResult.error) {
+                throw new Error(layoutResult.error);
+            }
+            if (renderResult.error) {
+                throw new Error(renderResult.error);
             }
 
-            const tree = JSON.parse(result.tree);
-            return formatLayoutTree(tree, 0);
+            const layoutTree = JSON.parse(layoutResult.tree);
+            const renderTree = JSON.parse(renderResult.tree);
+            
+            return formatCombinedTree(layoutTree, renderTree, 0);
         }
 
-        function buildRenderTree(htmlInput) {
-            const result = getRenderTree(htmlInput);
-
-            if (result.error) {
-                throw new Error(result.error);
-            }
-
-            const tree = JSON.parse(result.tree);
-            return formatRenderTree(tree, 0);
-        }
-
-        function formatLayoutTree(node, indent) {
-            if (!node) return '';
+        function formatCombinedTree(layoutNode, renderNode, indent) {
+            if (!layoutNode) return '';
             
             const prefix = '  '.repeat(indent);
-            let result = `${prefix}${node.type} <${node.node}> [x:${node.x.toFixed(0)} y:${node.y.toFixed(0)} w:${node.width.toFixed(0)} h:${node.height.toFixed(0)}]\n`;
+            let result = `${prefix}${layoutNode.type} <${layoutNode.node}> [x:${layoutNode.x.toFixed(0)} y:${layoutNode.y.toFixed(0)} w:${layoutNode.width.toFixed(0)} h:${layoutNode.height.toFixed(0)}]`;
             
-            if (node.children) {
-                for (const child of node.children) {
-                    result += formatLayoutTree(child, indent + 1);
-                }
-            }
-            
-            return result;
-        }
-
-        function formatRenderTree(node, indent) {
-            if (!node) return '';
-            
-            const prefix = '  '.repeat(indent);
-            let result = `${prefix}${node.type}: ${node.data}`;
-            
-            if (node.styles && Object.keys(node.styles).length > 0) {
-                const styleStr = Object.entries(node.styles).slice(0, 5).map(([k, v]) => `${k}:${v}`).join(', ');
-                result += ` {${styleStr}${Object.keys(node.styles).length > 5 ? ', ...' : ''}}`;
+            // Add styles from render tree if available
+            if (renderNode && renderNode.styles && Object.keys(renderNode.styles).length > 0) {
+                const styleEntries = Object.entries(renderNode.styles).slice(0, 5);
+                const styleStr = styleEntries.map(([k, v]) => `${k}:${v}`).join(', ');
+                result += ` {${styleStr}${Object.keys(renderNode.styles).length > 5 ? ', ...' : ''}}`;
             }
             
             result += '\n';
             
-            if (node.children) {
-                for (const child of node.children) {
-                    result += formatRenderTree(child, indent + 1);
+            // Process children recursively
+            if (layoutNode.children) {
+                for (let i = 0; i < layoutNode.children.length; i++) {
+                    const layoutChild = layoutNode.children[i];
+                    const renderChild = renderNode && renderNode.children ? renderNode.children[i] : null;
+                    result += formatCombinedTree(layoutChild, renderChild, indent + 1);
                 }
             }
             
