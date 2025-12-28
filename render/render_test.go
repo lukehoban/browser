@@ -205,7 +205,7 @@ func TestParseColor(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.input, func(t *testing.T) {
-			result := parseColor(tt.input)
+			result := css.ParseColor(tt.input)
 			if result != tt.expected {
 				t.Errorf("parseColor(%q) = %v, expected %v", tt.input, result, tt.expected)
 			}

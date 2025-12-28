@@ -5,6 +5,13 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 **Important**: Keep this document up to date as features are added or modified. When implementing new features, mark the corresponding tasks as complete and update the validation status.
 
+**Recent Improvements (December 2025)**:
+- ✅ Added comprehensive log warnings for unimplemented features
+- ✅ Consolidated color parsing to eliminate duplication
+- ✅ Clean API boundaries: css package owns value parsing
+- ✅ Proper warnings for CSS combinators (>, +, ~), positioning, floats, flexbox, grid
+- ✅ Warnings for table features (rowspan, border-collapse) and !important
+
 ---
 
 ## Milestone 1: Foundation (Initial Setup) ✅ COMPLETE
@@ -96,10 +103,10 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Parse common properties (color, font-size, margin, padding, border)
 
 ### Known Limitations:
-- ⚠️ No pseudo-classes (`:hover`, `:first-child`)
-- ⚠️ No pseudo-elements (`::before`, `::after`)
-- ⚠️ No attribute selectors (`[attr="value"]`)
-- ⚠️ No child/adjacent sibling combinators (`>`, `+`, `~`)
+- ⚠️ No pseudo-classes (`:hover`, `:first-child`) - CSS 2.1 §5.11
+- ⚠️ No pseudo-elements (`::before`, `::after`) - CSS 2.1 §5.12
+- ⚠️ No attribute selectors (`[attr="value"]`) - CSS 2.1 §5.8
+- ⚠️ No child/adjacent sibling combinators (`>`, `+`, `~`) - CSS 2.1 §5.6, §5.7 - warnings logged
 
 ---
 
@@ -135,7 +142,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ### Known Limitations:
 - ⚠️ No inheritance implementation (partially complete - font properties inherit)
-- ⚠️ No `!important` support
+- ⚠️ No `!important` support (CSS 2.1 §6.4.2) - warning logged when encountered
 - ⚠️ No computed value calculation (values used as-is)
 
 ---
@@ -169,9 +176,9 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ### Known Limitations:
 - ⚠️ Inline layout implemented (December 2025) but lacks line wrapping and text alignment controls
-- ⚠️ No positioning schemes (absolute, relative, fixed)
-- ⚠️ No float support
-- ⚠️ No flexbox or grid layout
+- ⚠️ No positioning schemes (absolute, relative, fixed) - CSS 2.1 §9.3 - warnings logged
+- ⚠️ No float support (CSS 2.1 §9.5) - warning logged when encountered
+- ⚠️ No flexbox or grid layout (CSS3) - warnings logged when encountered
 
 ---
 
@@ -307,10 +314,10 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Hacker News table layout renders with proper proportions
 
 ### Known Limitations:
-- ⚠️ No support for rowspan
+- ⚠️ No support for rowspan (CSS 2.1 §17.2) - warning logged when encountered
 - ⚠️ No table headers (`<thead>`, `<tbody>`, `<tfoot>`)
 - ⚠️ No table captions
-- ⚠️ No border-collapse support
+- ⚠️ No border-collapse support (CSS 2.1 §17.6.2) - warning logged when encountered
 - ⚠️ Simple content-width estimation (doesn't account for line wrapping)
 
 ---
@@ -331,7 +338,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Fix failing tests
 
 ### Current Test Results:
-- **WPT CSS Tests**: 94.9% pass rate (37/39 tests passing, 2 expected failures) 
+- **WPT CSS Tests**: 92.3% pass rate (36/39 tests passing, 3 expected failures) 
 - **Unit Test Coverage**: 90%+ across all modules
 - **Test Categories Passing**:
   - ✅ css-borders: 100% (1/1 test)
@@ -340,17 +347,18 @@ This document tracks the milestones for implementing a simple web browser in Go,
   - ✅ css-cascade-advanced: 100% (1/1 test)
   - ✅ css-color: 100% (2/2 tests)
   - ✅ css-display: 100% (2/2 tests)
-  - ✅ css-float: 100% (1/1 test - graceful degradation)
+  - ✅ css-float: 100% (1/1 test - graceful degradation with warnings)
   - ✅ css-fonts: 100% (4/4 tests)
   - ✅ css-inheritance: 100% (3/3 tests)
-  - ✅ css-position: 100% (2/2 tests - graceful degradation)
+  - ✅ css-position: 100% (2/2 tests - graceful degradation with warnings)
   - ✅ css-selectors: 100% (5/5 tests)
-  - ⚠️ css-selectors-advanced: 60% (3/5 tests - 2 expected failures)
+  - ⚠️ css-selectors-advanced: 40% (2/5 tests - 3 expected failures with warnings)
   - ✅ css-text-decor: 100% (1/1 test)
 
 **Expected Failures (Documenting Implementation Gaps)**:
-- ❌ Adjacent sibling combinator (`+`) - CSS 2.1 §5.7
-- ❌ General sibling combinator (`~`) - CSS Selectors Level 3
+- ❌ Child combinator (`>`) - CSS 2.1 §5.6 - warning logged when encountered
+- ❌ Adjacent sibling combinator (`+`) - CSS 2.1 §5.7 - warning logged when encountered
+- ❌ General sibling combinator (`~`) - CSS Selectors Level 3 - warning logged when encountered
 
 ### Completed Features:
 
@@ -609,6 +617,7 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 ## Current Status
 **Completed**: Milestones 1-10 (Foundation through WebAssembly Support, including all core features)  
 **Recent Updates**: 
+- Architectural improvements: Consolidated color parsing, added comprehensive log warnings (December 2025)
 - WebAssembly support with interactive demo (December 2025)
 - Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)
 - Added baseline alignment for inline elements, text-align support, improved table layout (December 2025)
