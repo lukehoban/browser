@@ -26,11 +26,14 @@ import (
 	"github.com/lukehoban/browser/style"
 )
 
-// consoleWriter wraps JavaScript console.log for WASM logging
-type consoleWriter struct{}
+// pageLogWriter sends log messages to the web page via JavaScript callback
+type pageLogWriter struct{}
 
-func (w *consoleWriter) Write(p []byte) (n int, err error) {
-	js.Global().Get("console").Call("log", string(p))
+func (w *pageLogWriter) Write(p []byte) (n int, err error) {
+	// Check if the JavaScript callback exists
+	if logCallback := js.Global().Get("logToPage"); !logCallback.IsUndefined() {
+		logCallback.Invoke(string(p))
+	}
 	return len(p), nil
 }
 
@@ -329,8 +332,8 @@ func extractCSSFromNode(node *dom.Node, builder *strings.Builder) {
 }
 
 func main() {
-	// Set up console logging for WASM
-	log.SetOutput(&consoleWriter{})
+	// Set up page logging for WASM
+	log.SetOutput(&pageLogWriter{})
 	log.SetLevel(log.WarnLevel) // Default level
 
 	// Register the renderHTML function with JavaScript
