@@ -248,13 +248,13 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 	if box.StyledNode != nil && len(box.StyledNode.Styles) > 0 {
 		layoutInfo += " {"
 		styleCount := 0
-		
+
 		// Create a map for O(1) lookup of important styles
 		importantStylesMap := make(map[string]bool)
 		for _, key := range importantStyles {
 			importantStylesMap[key] = true
 		}
-		
+
 		// First, show important styles in order
 		for _, key := range importantStyles {
 			if value, ok := box.StyledNode.Styles[key]; ok {
@@ -268,7 +268,7 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 				}
 			}
 		}
-		
+
 		// If we haven't hit the limit, show additional styles
 		if styleCount < maxDisplayedStyles {
 			for key, value := range box.StyledNode.Styles {
@@ -285,7 +285,7 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 				}
 			}
 		}
-		
+
 		// Indicate if there are more styles than what we displayed
 		if len(box.StyledNode.Styles) > styleCount {
 			layoutInfo += ", ..."
