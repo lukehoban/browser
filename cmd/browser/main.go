@@ -25,6 +25,25 @@ import (
 	"github.com/lukehoban/browser/style"
 )
 
+const (
+	// maxDisplayedStyles is the maximum number of styles to display per layout box
+	// to keep the output readable while still providing useful debugging information.
+	maxDisplayedStyles = 8
+)
+
+// importantStyles lists CSS properties that are most relevant for layout debugging,
+// shown in priority order when displaying computed styles in the layout tree.
+var importantStyles = []string{
+	"display",
+	"width",
+	"height",
+	"color",
+	"background-color",
+	"font-size",
+	"font-weight",
+	"font-style",
+}
+
 func main() {
 	// Parse command-line flags
 	outputFile := flag.String("output", "", "Output PNG file path (optional)")
@@ -229,10 +248,6 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 	if box.StyledNode != nil && len(box.StyledNode.Styles) > 0 {
 		layoutInfo += " {"
 		styleCount := 0
-		maxStyles := 8 // Limit number of styles shown to keep output readable
-		
-		// Show most relevant layout-affecting styles in a consistent order
-		importantStyles := []string{"display", "width", "height", "color", "background-color", "font-size", "font-weight", "font-style"}
 		
 		// Create a map for O(1) lookup of important styles
 		importantStylesMap := make(map[string]bool)
@@ -248,14 +263,14 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 				}
 				layoutInfo += fmt.Sprintf("%s:%s", key, value)
 				styleCount++
-				if styleCount >= maxStyles {
+				if styleCount >= maxDisplayedStyles {
 					break
 				}
 			}
 		}
 		
 		// If we haven't hit the limit, show additional styles
-		if styleCount < maxStyles {
+		if styleCount < maxDisplayedStyles {
 			for key, value := range box.StyledNode.Styles {
 				// Skip if already shown (O(1) lookup)
 				if !importantStylesMap[key] {
@@ -264,7 +279,7 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 					}
 					layoutInfo += fmt.Sprintf("%s:%s", key, value)
 					styleCount++
-					if styleCount >= maxStyles {
+					if styleCount >= maxDisplayedStyles {
 						break
 					}
 				}
