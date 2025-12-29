@@ -150,6 +150,34 @@ func TestCalculateSpecificity(t *testing.T) {
 			},
 			expected: Specificity{A: 0, B: 0, C: 0, D: 2},
 		},
+		{
+			name: "pseudo-class selector",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{TagName: "a", PseudoClasses: []string{"link"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 1, D: 1},
+		},
+		{
+			name: "class with pseudo-class and descendant",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{Classes: []string{"comhead"}},
+					{TagName: "a", PseudoClasses: []string{"link"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 2, D: 1},
+		},
+		{
+			name: "multiple pseudo-classes",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{TagName: "a", PseudoClasses: []string{"link", "hover"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 2, D: 1},
+		},
 	}
 
 	for _, tt := range tests {

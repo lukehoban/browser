@@ -26,9 +26,10 @@ type Selector struct {
 // SimpleSelector represents a simple selector.
 // CSS 2.1 §5.2 Selector syntax
 type SimpleSelector struct {
-	TagName string   // Element type selector (e.g., "div", "*" for universal)
-	ID      string   // ID selector (e.g., "header")
-	Classes []string // Class selectors (e.g., ["container", "main"])
+	TagName      string   // Element type selector (e.g., "div", "*" for universal)
+	ID           string   // ID selector (e.g., "header")
+	Classes      []string // Class selectors (e.g., ["container", "main"])
+	PseudoClasses []string // Pseudo-classes (e.g., ["link", "hover"]) - tracked for specificity per CSS 2.1 §6.4.3
 }
 
 // Declaration represents a CSS declaration.
@@ -232,7 +233,8 @@ func (p *Parser) parseSelector() *Selector {
 // CSS 2.1 §5.2 Selector syntax
 func (p *Parser) parseSimpleSelector() *SimpleSelector {
 	simple := &SimpleSelector{
-		Classes: make([]string, 0),
+		Classes:       make([]string, 0),
+		PseudoClasses: make([]string, 0),
 	}
 
 	token := p.tokenizer.Peek()
@@ -271,24 +273,32 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 				}
 			}
 		} else if token.Type == ColonToken {
-			// Skip pseudo-classes and pseudo-elements (:hover, ::before, etc.)
+			// Handle pseudo-classes and pseudo-elements (:hover, ::before, etc.)
 			// CSS 2.1 §5.11 Pseudo-classes, §5.12 Pseudo-elements
-			// Note: We treat selectors with pseudo-classes the same as without them
-			// (e.g., "a:link" is treated as "a", "a:visited" is treated as "a")
-			// This provides partial support for styling links but not interactive states
-			log.Debug("CSS 2.1 §5.11-5.12: Pseudo-classes/pseudo-elements have partial support (stripping pseudo-class from selector)")
+			// Note: We don't implement pseudo-class matching logic (all links treated the same)
+			// but we track pseudo-classes for specificity calculation per CSS 2.1 §6.4.3
+			log.Debug("CSS 2.1 §5.11-5.12: Pseudo-classes/pseudo-elements tracked for specificity")
 			p.tokenizer.Next() // consume ':'
 			
 			// Check for double colon (pseudo-element ::before)
 			token = p.tokenizer.Peek()
+			isPseudoElement := false
 			if token.Type == ColonToken {
 				p.tokenizer.Next() // consume second ':'
+				isPseudoElement = true
 			}
 			
 			// Consume the pseudo-class/pseudo-element name
 			token = p.tokenizer.Peek()
 			if token.Type == IdentToken {
+				pseudoName := token.Value
 				p.tokenizer.Next() // consume identifier (e.g., "link", "hover", "before")
+				
+				// Track pseudo-classes for specificity (not pseudo-elements)
+				// CSS 2.1 §6.4.3: Pseudo-classes count in specificity, pseudo-elements do not
+				if !isPseudoElement {
+					simple.PseudoClasses = append(simple.PseudoClasses, pseudoName)
+				}
 			}
 			
 			// Handle functional pseudo-classes like :nth-child(2n+1)

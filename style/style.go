@@ -319,7 +319,9 @@ func calculateSpecificity(selector *css.Selector) Specificity {
 		if simple.ID != "" {
 			spec.B++
 		}
+		// CSS 2.1 §6.4.3: Count class selectors and pseudo-classes in component C
 		spec.C += len(simple.Classes)
+		spec.C += len(simple.PseudoClasses)
 		if simple.TagName != "" {
 			spec.D++
 		}
