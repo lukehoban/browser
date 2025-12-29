@@ -81,19 +81,21 @@ var defaultFontStyle = FontStyle{
 
 // Canvas represents the rendering surface.
 type Canvas struct {
-	Width      int
-	Height     int
-	Pixels     []color.RGBA
-	ImageCache map[string]image.Image // Cache for loaded images
+	Width       int
+	Height      int
+	Pixels      []color.RGBA
+	ImageCache  map[string]image.Image // Cache for loaded images
+	ScaleFactor float64                // Scale factor for supersampling (default 1.0)
 }
 
 // NewCanvas creates a new canvas with the given dimensions.
 func NewCanvas(width, height int) *Canvas {
 	return &Canvas{
-		Width:      width,
-		Height:     height,
-		Pixels:     make([]color.RGBA, width*height),
-		ImageCache: make(map[string]image.Image),
+		Width:       width,
+		Height:      height,
+		Pixels:      make([]color.RGBA, width*height),
+		ImageCache:  make(map[string]image.Image),
+		ScaleFactor: 1.0,
 	}
 }
 
@@ -489,17 +491,28 @@ func (c *Canvas) SavePNG(filename string) error {
 }
 
 // Render renders a layout tree to a canvas.
+// Uses 4x supersampling to reduce aliasing artifacts - renders at 4x resolution
+// and downsamples to the requested size for improved visual quality.
 func Render(root *layout.LayoutBox, width, height int) *Canvas {
-	canvas := NewCanvas(width, height)
+	// Create canvas at 4x resolution for supersampling
+	const supersampleFactor = 4
+	hiResWidth := width * supersampleFactor
+	hiResHeight := height * supersampleFactor
+	
+	canvas := NewCanvas(hiResWidth, hiResHeight)
+	canvas.ScaleFactor = float64(supersampleFactor)
 	
 	// CSS 2.1 §14.2: The background of the root element becomes the canvas background.
 	// First try to find the body's background, then fall back to root's background.
 	canvasBg := findCanvasBackground(root)
 	canvas.Clear(canvasBg)
 
-	renderLayoutBox(canvas, root)
+	// Scale the layout tree coordinates by supersampleFactor before rendering
+	scaledRoot := scaleLayoutBox(root, supersampleFactor)
+	renderLayoutBox(canvas, scaledRoot)
 
-	return canvas
+	// Downsample back to requested resolution
+	return downsampleCanvas(canvas, width, height, supersampleFactor)
 }
 
 // findCanvasBackground finds the background color for the canvas.
@@ -767,8 +780,9 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 		textColor = color.RGBA{0, 0, 0, 255} // Default to black
 	}
 
-	// Extract font properties from styles
+	// Extract font properties from styles and scale by canvas factor
 	fontStyle := extractFontStyle(box.StyledNode.Styles)
+	fontStyle.Size *= canvas.ScaleFactor
 	
 	// Render the text at the box's position
 	// Add a vertical offset to position text at baseline
@@ -918,4 +932,97 @@ func renderImage(canvas *Canvas, box *layout.LayoutBox) {
 		int(box.Dimensions.Content.Width),
 		int(box.Dimensions.Content.Height),
 	)
+}
+
+// scaleLayoutBox creates a copy of the layout tree with all dimensions scaled by the given factor.
+// This is used for supersampling - rendering at higher resolution before downsampling.
+func scaleLayoutBox(box *layout.LayoutBox, factor int) *layout.LayoutBox {
+	if box == nil {
+		return nil
+	}
+	
+	scale := float64(factor)
+	
+	// Create a new layout box with scaled dimensions
+	scaled := &layout.LayoutBox{
+		BoxType:    box.BoxType,
+		StyledNode: box.StyledNode,
+		Dimensions: layout.Dimensions{
+			Content: layout.Rect{
+				X:      box.Dimensions.Content.X * scale,
+				Y:      box.Dimensions.Content.Y * scale,
+				Width:  box.Dimensions.Content.Width * scale,
+				Height: box.Dimensions.Content.Height * scale,
+			},
+			Padding: layout.EdgeSizes{
+				Top:    box.Dimensions.Padding.Top * scale,
+				Right:  box.Dimensions.Padding.Right * scale,
+				Bottom: box.Dimensions.Padding.Bottom * scale,
+				Left:   box.Dimensions.Padding.Left * scale,
+			},
+			Border: layout.EdgeSizes{
+				Top:    box.Dimensions.Border.Top * scale,
+				Right:  box.Dimensions.Border.Right * scale,
+				Bottom: box.Dimensions.Border.Bottom * scale,
+				Left:   box.Dimensions.Border.Left * scale,
+			},
+			Margin: layout.EdgeSizes{
+				Top:    box.Dimensions.Margin.Top * scale,
+				Right:  box.Dimensions.Margin.Right * scale,
+				Bottom: box.Dimensions.Margin.Bottom * scale,
+				Left:   box.Dimensions.Margin.Left * scale,
+			},
+		},
+		Children: make([]*layout.LayoutBox, len(box.Children)),
+	}
+	
+	// Scale all children recursively
+	for i, child := range box.Children {
+		scaled.Children[i] = scaleLayoutBox(child, factor)
+	}
+	
+	return scaled
+}
+
+// downsampleCanvas downsamples a high-resolution canvas to the target resolution.
+// Uses box filtering (averaging) to reduce aliasing artifacts.
+func downsampleCanvas(hiRes *Canvas, targetWidth, targetHeight, factor int) *Canvas {
+	result := NewCanvas(targetWidth, targetHeight)
+	
+	// For each pixel in the target canvas, average the corresponding factor x factor block
+	// in the high-resolution canvas
+	for y := 0; y < targetHeight; y++ {
+		for x := 0; x < targetWidth; x++ {
+			var rSum, gSum, bSum uint32
+			
+			// Average the factor x factor block of pixels
+			hiResX := x * factor
+			hiResY := y * factor
+			
+			for dy := 0; dy < factor; dy++ {
+				for dx := 0; dx < factor; dx++ {
+					srcX := hiResX + dx
+					srcY := hiResY + dy
+					
+					if srcX < hiRes.Width && srcY < hiRes.Height {
+						pixel := hiRes.Pixels[srcY*hiRes.Width+srcX]
+						rSum += uint32(pixel.R)
+						gSum += uint32(pixel.G)
+						bSum += uint32(pixel.B)
+					}
+				}
+			}
+			
+			// Calculate average
+			count := uint32(factor * factor)
+			result.Pixels[y*targetWidth+x] = color.RGBA{
+				R: uint8(rSum / count),
+				G: uint8(gSum / count),
+				B: uint8(bSum / count),
+				A: 255,
+			}
+		}
+	}
+	
+	return result
 }
