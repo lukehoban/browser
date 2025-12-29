@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/lukehoban/browser/css"
@@ -43,6 +44,16 @@ var importantStyles = []string{
 	"font-weight",
 	"font-style",
 }
+
+// importantStylesMap provides O(1) lookup for important styles.
+// Initialized once to avoid repeated allocations.
+var importantStylesMap = func() map[string]bool {
+	m := make(map[string]bool)
+	for _, key := range importantStyles {
+		m[key] = true
+	}
+	return m
+}()
 
 func main() {
 	// Parse command-line flags
@@ -249,12 +260,6 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 		layoutInfo += " {"
 		styleCount := 0
 
-		// Create a map for O(1) lookup of important styles
-		importantStylesMap := make(map[string]bool)
-		for _, key := range importantStyles {
-			importantStylesMap[key] = true
-		}
-
 		// First, show important styles in order
 		for _, key := range importantStyles {
 			if value, ok := box.StyledNode.Styles[key]; ok {
@@ -269,19 +274,28 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 			}
 		}
 
-		// If we haven't hit the limit, show additional styles
+		// If we haven't hit the limit, show additional styles in sorted order
 		if styleCount < maxDisplayedStyles {
-			for key, value := range box.StyledNode.Styles {
+			// Collect remaining style keys
+			remainingKeys := make([]string, 0)
+			for key := range box.StyledNode.Styles {
 				// Skip if already shown (O(1) lookup)
 				if !importantStylesMap[key] {
-					if styleCount > 0 {
-						layoutInfo += ", "
-					}
-					layoutInfo += fmt.Sprintf("%s:%s", key, value)
-					styleCount++
-					if styleCount >= maxDisplayedStyles {
-						break
-					}
+					remainingKeys = append(remainingKeys, key)
+				}
+			}
+			// Sort for deterministic output
+			sort.Strings(remainingKeys)
+
+			// Display remaining styles in sorted order
+			for _, key := range remainingKeys {
+				if styleCount > 0 {
+					layoutInfo += ", "
+				}
+				layoutInfo += fmt.Sprintf("%s:%s", key, box.StyledNode.Styles[key])
+				styleCount++
+				if styleCount >= maxDisplayedStyles {
+					break
 				}
 			}
 		}
