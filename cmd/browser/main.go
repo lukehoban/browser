@@ -194,6 +194,7 @@ func extractCSSFromNode(node *dom.Node, builder *strings.Builder) {
 }
 
 // printLayoutTree prints the layout tree for debugging.
+// Each node displays its type, name, dimensions, and computed styles.
 func printLayoutTree(box *layout.LayoutBox, indent int) {
 	prefix := strings.Repeat("  ", indent)
 
