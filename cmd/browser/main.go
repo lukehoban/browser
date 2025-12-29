@@ -233,6 +233,14 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 		
 		// Show most relevant layout-affecting styles in a consistent order
 		importantStyles := []string{"display", "width", "height", "color", "background-color", "font-size", "font-weight", "font-style"}
+		
+		// Create a map for O(1) lookup of important styles
+		importantStylesMap := make(map[string]bool)
+		for _, key := range importantStyles {
+			importantStylesMap[key] = true
+		}
+		
+		// First, show important styles in order
 		for _, key := range importantStyles {
 			if value, ok := box.StyledNode.Styles[key]; ok {
 				if styleCount > 0 {
@@ -249,15 +257,8 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 		// If we haven't hit the limit, show additional styles
 		if styleCount < maxStyles {
 			for key, value := range box.StyledNode.Styles {
-				// Skip if already shown
-				found := false
-				for _, sk := range importantStyles {
-					if key == sk {
-						found = true
-						break
-					}
-				}
-				if !found {
+				// Skip if already shown (O(1) lookup)
+				if !importantStylesMap[key] {
 					if styleCount > 0 {
 						layoutInfo += ", "
 					}
@@ -270,8 +271,8 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 			}
 		}
 		
-		// Indicate if there are more styles
-		if len(box.StyledNode.Styles) > maxStyles {
+		// Indicate if there are more styles (check if we actually truncated)
+		if styleCount >= maxStyles && len(box.StyledNode.Styles) > styleCount {
 			layoutInfo += ", ..."
 		}
 		layoutInfo += "}"
