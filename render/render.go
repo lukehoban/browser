@@ -989,11 +989,14 @@ func scaleLayoutBox(box *layout.LayoutBox, factor int) *layout.LayoutBox {
 func downsampleCanvas(hiRes *Canvas, targetWidth, targetHeight, factor int) *Canvas {
 	result := NewCanvas(targetWidth, targetHeight)
 	
+	// Pre-calculate count outside the loop
+	count := uint32(factor * factor)
+	
 	// For each pixel in the target canvas, average the corresponding factor x factor block
 	// in the high-resolution canvas
 	for y := 0; y < targetHeight; y++ {
 		for x := 0; x < targetWidth; x++ {
-			var rSum, gSum, bSum uint32
+			var rSum, gSum, bSum, aSum uint32
 			
 			// Average the factor x factor block of pixels
 			hiResX := x * factor
@@ -1009,17 +1012,17 @@ func downsampleCanvas(hiRes *Canvas, targetWidth, targetHeight, factor int) *Can
 						rSum += uint32(pixel.R)
 						gSum += uint32(pixel.G)
 						bSum += uint32(pixel.B)
+						aSum += uint32(pixel.A)
 					}
 				}
 			}
 			
-			// Calculate average
-			count := uint32(factor * factor)
+			// Calculate average for all channels including alpha
 			result.Pixels[y*targetWidth+x] = color.RGBA{
 				R: uint8(rSum / count),
 				G: uint8(gSum / count),
 				B: uint8(bSum / count),
-				A: 255,
+				A: uint8(aSum / count),
 			}
 		}
 	}
