@@ -781,15 +781,21 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 	}
 
 	// Extract font properties from styles and scale by canvas factor
+	// Create a copy to avoid modifying the original
 	fontStyle := extractFontStyle(box.StyledNode.Styles)
-	fontStyle.Size *= canvas.ScaleFactor
+	scaledFontStyle := FontStyle{
+		Size:       fontStyle.Size * canvas.ScaleFactor,
+		Weight:     fontStyle.Weight,
+		Style:      fontStyle.Style,
+		Decoration: fontStyle.Decoration,
+	}
 	
 	// Render the text at the box's position
 	// Add a vertical offset to position text at baseline
 	x := int(box.Dimensions.Content.X)
-	y := int(box.Dimensions.Content.Y) + int(fontStyle.Size)
+	y := int(box.Dimensions.Content.Y) + int(scaledFontStyle.Size)
 
-	canvas.DrawStyledText(text, x, y, textColor, fontStyle)
+	canvas.DrawStyledText(text, x, y, textColor, scaledFontStyle)
 }
 
 // extractFontStyle extracts font styling properties from CSS styles.
@@ -989,14 +995,12 @@ func scaleLayoutBox(box *layout.LayoutBox, factor int) *layout.LayoutBox {
 func downsampleCanvas(hiRes *Canvas, targetWidth, targetHeight, factor int) *Canvas {
 	result := NewCanvas(targetWidth, targetHeight)
 	
-	// Pre-calculate count outside the loop
-	count := uint32(factor * factor)
-	
 	// For each pixel in the target canvas, average the corresponding factor x factor block
 	// in the high-resolution canvas
 	for y := 0; y < targetHeight; y++ {
 		for x := 0; x < targetWidth; x++ {
 			var rSum, gSum, bSum, aSum uint32
+			var validPixels uint32
 			
 			// Average the factor x factor block of pixels
 			hiResX := x * factor
@@ -1013,16 +1017,20 @@ func downsampleCanvas(hiRes *Canvas, targetWidth, targetHeight, factor int) *Can
 						gSum += uint32(pixel.G)
 						bSum += uint32(pixel.B)
 						aSum += uint32(pixel.A)
+						validPixels++
 					}
 				}
 			}
 			
-			// Calculate average for all channels including alpha
-			result.Pixels[y*targetWidth+x] = color.RGBA{
-				R: uint8(rSum / count),
-				G: uint8(gSum / count),
-				B: uint8(bSum / count),
-				A: uint8(aSum / count),
+			// Calculate average based on actual number of valid pixels
+			// This handles edge cases where the high-res canvas doesn't divide evenly
+			if validPixels > 0 {
+				result.Pixels[y*targetWidth+x] = color.RGBA{
+					R: uint8(rSum / validPixels),
+					G: uint8(gSum / validPixels),
+					B: uint8(bSum / validPixels),
+					A: uint8(aSum / validPixels),
+				}
 			}
 		}
 	}
