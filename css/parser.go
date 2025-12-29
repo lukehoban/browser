@@ -26,10 +26,11 @@ type Selector struct {
 // SimpleSelector represents a simple selector.
 // CSS 2.1 §5.2 Selector syntax
 type SimpleSelector struct {
-	TagName      string   // Element type selector (e.g., "div", "*" for universal)
-	ID           string   // ID selector (e.g., "header")
-	Classes      []string // Class selectors (e.g., ["container", "main"])
-	PseudoClasses []string // Pseudo-classes (e.g., ["link", "hover"]) - tracked for specificity but not used for matching
+	TagName        string   // Element type selector (e.g., "div", "*" for universal)
+	ID             string   // ID selector (e.g., "header")
+	Classes        []string // Class selectors (e.g., ["container", "main"])
+	PseudoClasses  []string // Pseudo-classes (e.g., ["link", "hover"]) - tracked for specificity but not used for matching
+	PseudoElements []string // Pseudo-elements (e.g., ["before", "after"]) - tracked for specificity but not used for matching
 }
 
 // Declaration represents a CSS declaration.
@@ -233,8 +234,9 @@ func (p *Parser) parseSelector() *Selector {
 // CSS 2.1 §5.2 Selector syntax
 func (p *Parser) parseSimpleSelector() *SimpleSelector {
 	simple := &SimpleSelector{
-		Classes:       make([]string, 0),
-		PseudoClasses: make([]string, 0),
+		Classes:        make([]string, 0),
+		PseudoClasses:  make([]string, 0),
+		PseudoElements: make([]string, 0),
 	}
 
 	token := p.tokenizer.Peek()
@@ -275,7 +277,7 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 		} else if token.Type == ColonToken {
 			// Handle pseudo-classes and pseudo-elements (:hover, ::before, etc.)
 			// CSS 2.1 §5.11 Pseudo-classes, §5.12 Pseudo-elements
-			// Note: We store pseudo-classes for specificity calculation but don't use them for matching
+			// Note: We store pseudo-classes and pseudo-elements for specificity calculation but don't use them for matching
 			// (e.g., "a:link" is matched as "a", but specificity includes the pseudo-class)
 			// This provides partial support for styling links but not interactive states
 			log.Debug("CSS 2.1 §5.11-5.12: Pseudo-classes/pseudo-elements have partial support (storing for specificity, stripping from matching)")
@@ -295,10 +297,12 @@ func (p *Parser) parseSimpleSelector() *SimpleSelector {
 				pseudoName := token.Value
 				p.tokenizer.Next() // consume identifier (e.g., "link", "hover", "before")
 				
-				// Store pseudo-class for specificity calculation
+				// Store for specificity calculation
 				// CSS 2.1 §6.4.3: Pseudo-classes count as class selectors (specificity C)
-				// Pseudo-elements also count as element selectors (specificity D) but we treat them similarly for now
-				if !isPseudoElement {
+				// CSS 2.1 §6.4.3: Pseudo-elements count as element selectors (specificity D)
+				if isPseudoElement {
+					simple.PseudoElements = append(simple.PseudoElements, pseudoName)
+				} else {
 					simple.PseudoClasses = append(simple.PseudoClasses, pseudoName)
 				}
 			}
