@@ -271,8 +271,8 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 			}
 		}
 		
-		// Indicate if there are more styles (check if we actually truncated)
-		if styleCount >= maxStyles && len(box.StyledNode.Styles) > styleCount {
+		// Indicate if there are more styles than what we displayed
+		if len(box.StyledNode.Styles) > styleCount {
 			layoutInfo += ", ..."
 		}
 		layoutInfo += "}"
