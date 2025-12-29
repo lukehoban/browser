@@ -276,8 +276,8 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 
 		// If we haven't hit the limit, show additional styles in sorted order
 		if styleCount < maxDisplayedStyles {
-			// Collect remaining style keys
-			remainingKeys := make([]string, 0)
+			// Collect remaining style keys with pre-allocated capacity
+			remainingKeys := make([]string, 0, len(box.StyledNode.Styles))
 			for key := range box.StyledNode.Styles {
 				// Skip if already shown (O(1) lookup)
 				if !importantStylesMap[key] {
