@@ -215,13 +215,68 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 		nodeName = box.StyledNode.Node.Data
 	}
 
-	fmt.Printf("%s%s <%s> [x:%.0f y:%.0f w:%.0f h:%.0f]\n",
+	// Format the basic layout info
+	layoutInfo := fmt.Sprintf("%s%s <%s> [x:%.0f y:%.0f w:%.0f h:%.0f]",
 		prefix, boxType, nodeName,
 		box.Dimensions.Content.X,
 		box.Dimensions.Content.Y,
 		box.Dimensions.Content.Width,
 		box.Dimensions.Content.Height,
 	)
+
+	// Add computed styles if available
+	if box.StyledNode != nil && len(box.StyledNode.Styles) > 0 {
+		layoutInfo += " {"
+		styleCount := 0
+		maxStyles := 8 // Limit number of styles shown to keep output readable
+		
+		// Show most relevant layout-affecting styles in a consistent order
+		importantStyles := []string{"display", "width", "height", "color", "background-color", "font-size", "font-weight", "font-style"}
+		for _, key := range importantStyles {
+			if value, ok := box.StyledNode.Styles[key]; ok {
+				if styleCount > 0 {
+					layoutInfo += ", "
+				}
+				layoutInfo += fmt.Sprintf("%s:%s", key, value)
+				styleCount++
+				if styleCount >= maxStyles {
+					break
+				}
+			}
+		}
+		
+		// If we haven't hit the limit, show additional styles
+		if styleCount < maxStyles {
+			for key, value := range box.StyledNode.Styles {
+				// Skip if already shown
+				found := false
+				for _, sk := range importantStyles {
+					if key == sk {
+						found = true
+						break
+					}
+				}
+				if !found {
+					if styleCount > 0 {
+						layoutInfo += ", "
+					}
+					layoutInfo += fmt.Sprintf("%s:%s", key, value)
+					styleCount++
+					if styleCount >= maxStyles {
+						break
+					}
+				}
+			}
+		}
+		
+		// Indicate if there are more styles
+		if len(box.StyledNode.Styles) > maxStyles {
+			layoutInfo += ", ..."
+		}
+		layoutInfo += "}"
+	}
+
+	fmt.Println(layoutInfo)
 
 	for _, child := range box.Children {
 		printLayoutTree(child, indent+1)
