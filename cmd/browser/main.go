@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/lukehoban/browser/css"
@@ -24,6 +25,35 @@ import (
 	"github.com/lukehoban/browser/render"
 	"github.com/lukehoban/browser/style"
 )
+
+const (
+	// maxDisplayedStyles is the maximum number of styles to display per layout box
+	// to keep the output readable while still providing useful debugging information.
+	maxDisplayedStyles = 8
+)
+
+// importantStyles lists CSS properties that are most relevant for layout debugging,
+// shown in priority order when displaying computed styles in the layout tree.
+var importantStyles = []string{
+	"display",
+	"width",
+	"height",
+	"color",
+	"background-color",
+	"font-size",
+	"font-weight",
+	"font-style",
+}
+
+// importantStylesMap provides O(1) lookup for important styles.
+// Initialized once to avoid repeated allocations.
+var importantStylesMap = func() map[string]bool {
+	m := make(map[string]bool)
+	for _, key := range importantStyles {
+		m[key] = true
+	}
+	return m
+}()
 
 func main() {
 	// Parse command-line flags
@@ -194,6 +224,7 @@ func extractCSSFromNode(node *dom.Node, builder *strings.Builder) {
 }
 
 // printLayoutTree prints the layout tree for debugging.
+// Each node displays its type, name, dimensions, and computed styles.
 func printLayoutTree(box *layout.LayoutBox, indent int) {
 	prefix := strings.Repeat("  ", indent)
 
@@ -215,13 +246,68 @@ func printLayoutTree(box *layout.LayoutBox, indent int) {
 		nodeName = box.StyledNode.Node.Data
 	}
 
-	fmt.Printf("%s%s <%s> [x:%.0f y:%.0f w:%.0f h:%.0f]\n",
+	// Format the basic layout info
+	layoutInfo := fmt.Sprintf("%s%s <%s> [x:%.0f y:%.0f w:%.0f h:%.0f]",
 		prefix, boxType, nodeName,
 		box.Dimensions.Content.X,
 		box.Dimensions.Content.Y,
 		box.Dimensions.Content.Width,
 		box.Dimensions.Content.Height,
 	)
+
+	// Add computed styles if available
+	if box.StyledNode != nil && len(box.StyledNode.Styles) > 0 {
+		layoutInfo += " {"
+		styleCount := 0
+
+		// First, show important styles in order
+		for _, key := range importantStyles {
+			if value, ok := box.StyledNode.Styles[key]; ok {
+				if styleCount > 0 {
+					layoutInfo += ", "
+				}
+				layoutInfo += fmt.Sprintf("%s:%s", key, value)
+				styleCount++
+				if styleCount >= maxDisplayedStyles {
+					break
+				}
+			}
+		}
+
+		// If we haven't hit the limit, show additional styles in sorted order
+		if styleCount < maxDisplayedStyles {
+			// Collect remaining style keys with pre-allocated capacity
+			remainingKeys := make([]string, 0, len(box.StyledNode.Styles))
+			for key := range box.StyledNode.Styles {
+				// Skip if already shown (O(1) lookup)
+				if !importantStylesMap[key] {
+					remainingKeys = append(remainingKeys, key)
+				}
+			}
+			// Sort for deterministic output
+			sort.Strings(remainingKeys)
+
+			// Display remaining styles in sorted order
+			for _, key := range remainingKeys {
+				if styleCount > 0 {
+					layoutInfo += ", "
+				}
+				layoutInfo += fmt.Sprintf("%s:%s", key, box.StyledNode.Styles[key])
+				styleCount++
+				if styleCount >= maxDisplayedStyles {
+					break
+				}
+			}
+		}
+
+		// Indicate if there are more styles than what we displayed
+		if len(box.StyledNode.Styles) > styleCount {
+			layoutInfo += ", ..."
+		}
+		layoutInfo += "}"
+	}
+
+	fmt.Println(layoutInfo)
 
 	for _, child := range box.Children {
 		printLayoutTree(child, indent+1)
