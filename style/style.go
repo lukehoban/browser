@@ -307,6 +307,30 @@ func matchesSimpleSelector(node *dom.Node, selector *css.SimpleSelector) bool {
 		}
 	}
 
+	// Check pseudo-classes for link state
+	// CSS 2.1 §5.11.2: :link and :visited pseudo-classes
+	// Since we don't track visited state, we treat all links as unvisited (:link)
+	// Therefore, selectors with :visited should not match any elements
+	if len(selector.PseudoClasses) > 0 {
+		for _, pseudoClass := range selector.PseudoClasses {
+			if pseudoClass == "visited" {
+				// :visited pseudo-class - don't match (treat all links as unvisited)
+				return false
+			}
+			// For other pseudo-classes like :link, :hover, :focus, etc.
+			// we ignore them for matching purposes (already counted in specificity)
+			// :link matches all <a> elements with href attribute
+			if pseudoClass == "link" {
+				// Only match if this is an <a> element with href
+				if node.Data != "a" || node.GetAttribute("href") == "" {
+					return false
+				}
+			}
+			// Other pseudo-classes like :hover, :active, :focus are ignored
+			// (they're counted in specificity but don't affect matching)
+		}
+	}
+
 	return true
 }
 
