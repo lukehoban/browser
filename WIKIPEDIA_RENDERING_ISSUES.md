@@ -67,12 +67,12 @@ This document analyzes rendering issues discovered when rendering a simplified W
 **Impact**: High - Most real-world pages load images from CDNs or external sources.
 
 **Technical Details**: 
-- The rendering code in `render/render.go` (line 886-889) silently fails when image loading fails
-- The `dom.ResourceLoader` should support HTTP/HTTPS but may be failing
+- The `renderImage()` function in `render/render.go` silently returns when image loading fails
+- The `dom.ResourceLoader` should support HTTP/HTTPS but may be failing in this case
 - The image URL is accessible (verified with curl - HTTP 200 OK)
 - Code path exists for network image loading but appears non-functional in this test
 
-**Note**: According to README.md, the browser claims to support "Network images: Load images from remote URLs" (Milestone 9), but this doesn't seem to be working in this test case.
+**Note**: According to README.md Features section, the browser claims to support "Network images: Load images from remote URLs", but this doesn't seem to be working in this test case.
 
 ---
 
