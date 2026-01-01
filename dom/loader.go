@@ -65,7 +65,23 @@ func isDataURL(input string) bool {
 
 // loadFromURL fetches content from a URL.
 func loadFromURL(urlStr string) ([]byte, error) {
-	resp, err := http.Get(urlStr)
+	client := &http.Client{
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Allow redirects but maintain user-agent
+			req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GoBrowser/1.0; +https://github.com/lukehoban/browser)")
+			return nil
+		},
+	}
+
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set a proper user-agent to avoid being blocked by websites like Wikipedia
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GoBrowser/1.0; +https://github.com/lukehoban/browser)")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to fetch URL: %w", err)
 	}
