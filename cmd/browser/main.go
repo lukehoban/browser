@@ -380,13 +380,7 @@ func isURL(input string) bool {
 
 // fetchURL fetches content from a URL and returns it as a string
 func fetchURL(urlStr string) (string, error) {
-	client := &http.Client{
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// Allow redirects but maintain user-agent
-			req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GoBrowser/1.0; +https://github.com/lukehoban/browser)")
-			return nil
-		},
-	}
+	client := dom.NewHTTPClient()
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
@@ -394,7 +388,7 @@ func fetchURL(urlStr string) (string, error) {
 	}
 
 	// Set a proper user-agent to avoid being blocked by websites like Wikipedia
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GoBrowser/1.0; +https://github.com/lukehoban/browser)")
+	req.Header.Set("User-Agent", dom.UserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {

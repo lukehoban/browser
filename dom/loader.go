@@ -17,6 +17,11 @@ import (
 	"strings"
 )
 
+const (
+	// UserAgent is the user-agent string used for HTTP requests to avoid being blocked by websites
+	UserAgent = "Mozilla/5.0 (compatible; GoBrowser/1.0; +https://github.com/lukehoban/browser)"
+)
+
 // ResourceLoader handles loading resources from URLs or file paths.
 type ResourceLoader struct {
 	BaseURL string
@@ -63,15 +68,20 @@ func isDataURL(input string) bool {
 	return strings.HasPrefix(input, "data:")
 }
 
-// loadFromURL fetches content from a URL.
-func loadFromURL(urlStr string) ([]byte, error) {
-	client := &http.Client{
+// NewHTTPClient creates an HTTP client configured for browser use with proper user-agent.
+func NewHTTPClient() *http.Client {
+	return &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Allow redirects but maintain user-agent
-			req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GoBrowser/1.0; +https://github.com/lukehoban/browser)")
+			req.Header.Set("User-Agent", UserAgent)
 			return nil
 		},
 	}
+}
+
+// loadFromURL fetches content from a URL.
+func loadFromURL(urlStr string) ([]byte, error) {
+	client := NewHTTPClient()
 
 	req, err := http.NewRequest("GET", urlStr, nil)
 	if err != nil {
@@ -79,7 +89,7 @@ func loadFromURL(urlStr string) ([]byte, error) {
 	}
 
 	// Set a proper user-agent to avoid being blocked by websites like Wikipedia
-	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GoBrowser/1.0; +https://github.com/lukehoban/browser)")
+	req.Header.Set("User-Agent", UserAgent)
 
 	resp, err := client.Do(req)
 	if err != nil {
