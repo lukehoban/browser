@@ -332,17 +332,76 @@ body { color: blue; }
 // These tests document known limitations that need to be implemented.
 // See MILESTONES.md for more details.
 
-func TestParsePseudoClasses_Skipped(t *testing.T) {
-	t.Skip("Pseudo-classes not implemented - CSS 2.1 §5.11")
+func TestParsePseudoClasses(t *testing.T) {
 	// CSS 2.1 §5.11 Pseudo-classes
-	// Common pseudo-classes include :hover, :active, :focus, :first-child, :last-child, :nth-child
+	// Pseudo-classes are now tracked for specificity calculation
 	
-	input := "a:hover { color: red; } p:first-child { margin-top: 0; }"
-	_ = Parse(input)
+	input := "a:link { color: black; }"
+	stylesheet := Parse(input)
 	
-	// When implemented, parser should recognize pseudo-classes
-	// Expected structure would include PseudoClass field in SimpleSelector
-	// For now, this gracefully fails/skips the selector
+	if len(stylesheet.Rules) != 1 {
+		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+	}
+	
+	simple := stylesheet.Rules[0].Selectors[0].Simple[0]
+	if simple.TagName != "a" {
+		t.Errorf("Expected tag 'a', got %v", simple.TagName)
+	}
+	if len(simple.PseudoClasses) != 1 {
+		t.Fatalf("Expected 1 pseudo-class, got %d", len(simple.PseudoClasses))
+	}
+	if simple.PseudoClasses[0] != "link" {
+		t.Errorf("Expected pseudo-class 'link', got %v", simple.PseudoClasses[0])
+	}
+}
+
+func TestParseMultiplePseudoClasses(t *testing.T) {
+	// Multiple pseudo-classes on a single element
+	input := "a:link:hover { color: blue; }"
+	stylesheet := Parse(input)
+	
+	if len(stylesheet.Rules) != 1 {
+		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+	}
+	
+	simple := stylesheet.Rules[0].Selectors[0].Simple[0]
+	if len(simple.PseudoClasses) != 2 {
+		t.Fatalf("Expected 2 pseudo-classes, got %d", len(simple.PseudoClasses))
+	}
+	if simple.PseudoClasses[0] != "link" {
+		t.Errorf("Expected first pseudo-class 'link', got %v", simple.PseudoClasses[0])
+	}
+	if simple.PseudoClasses[1] != "hover" {
+		t.Errorf("Expected second pseudo-class 'hover', got %v", simple.PseudoClasses[1])
+	}
+}
+
+func TestParsePseudoClassWithDescendant(t *testing.T) {
+	// Pseudo-class in descendant selector
+	input := ".comhead a:link { color: #828282; }"
+	stylesheet := Parse(input)
+	
+	if len(stylesheet.Rules) != 1 {
+		t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+	}
+	
+	selector := stylesheet.Rules[0].Selectors[0]
+	if len(selector.Simple) != 2 {
+		t.Fatalf("Expected 2 simple selectors, got %d", len(selector.Simple))
+	}
+	
+	// First simple selector: .comhead
+	if len(selector.Simple[0].Classes) != 1 || selector.Simple[0].Classes[0] != "comhead" {
+		t.Errorf("Expected first selector to be '.comhead', got %+v", selector.Simple[0])
+	}
+	
+	// Second simple selector: a:link
+	if selector.Simple[1].TagName != "a" {
+		t.Errorf("Expected second selector tag 'a', got %v", selector.Simple[1].TagName)
+	}
+	if len(selector.Simple[1].PseudoClasses) != 1 || selector.Simple[1].PseudoClasses[0] != "link" {
+		t.Errorf("Expected pseudo-class 'link' on second selector, got %v", selector.Simple[1].PseudoClasses)
+	}
 }
 
 func TestParsePseudoElements_Skipped(t *testing.T) {

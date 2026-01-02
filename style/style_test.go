@@ -150,6 +150,34 @@ func TestCalculateSpecificity(t *testing.T) {
 			},
 			expected: Specificity{A: 0, B: 0, C: 0, D: 2},
 		},
+		{
+			name: "pseudo-class selector",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{TagName: "a", PseudoClasses: []string{"link"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 1, D: 1},
+		},
+		{
+			name: "class with pseudo-class and descendant",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{Classes: []string{"comhead"}},
+					{TagName: "a", PseudoClasses: []string{"link"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 2, D: 1},
+		},
+		{
+			name: "multiple pseudo-classes",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{TagName: "a", PseudoClasses: []string{"link", "hover"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 2, D: 1},
+		},
 	}
 
 	for _, tt := range tests {
@@ -1075,5 +1103,87 @@ func TestInlineStyleSpecificity(t *testing.T) {
 	// Inline style should win over all CSS rules
 	if divStyled.Styles["color"] != "red" {
 		t.Errorf("Expected inline style 'red' to win, got %v", divStyled.Styles["color"])
+	}
+}
+
+// TestHackerNewsLinkSpecificity tests the specific scenario from the HN homepage issue.
+// This verifies that pseudo-classes are properly counted in specificity calculation.
+// Issue: titleline links were rendering as gray (#828282) instead of black (#000000).
+func TestHackerNewsLinkSpecificity(t *testing.T) {
+	// Create DOM structure similar to HN homepage
+	doc := dom.NewDocument()
+	
+	// titleline with regular link
+	titlelineLink := dom.NewElement("a")
+	titlelineLink.SetAttribute("href", "#")
+	titlelineText := dom.NewText("Article Title")
+	titlelineLink.AppendChild(titlelineText)
+	
+	titlelineSpan := dom.NewElement("span")
+	titlelineSpan.SetAttribute("class", "titleline")
+	titlelineSpan.AppendChild(titlelineLink)
+	doc.AppendChild(titlelineSpan)
+	
+	// comhead link
+	comheadLink := dom.NewElement("a")
+	comheadLink.SetAttribute("href", "#")
+	comheadText := dom.NewText("example.com")
+	comheadLink.AppendChild(comheadText)
+	
+	comheadSpan := dom.NewElement("span")
+	comheadSpan.SetAttribute("class", "comhead")
+	comheadSpan.AppendChild(comheadLink)
+	doc.AppendChild(comheadSpan)
+	
+	// HN CSS rules
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{{
+					Simple: []*css.SimpleSelector{{
+						TagName:       "a",
+						PseudoClasses: []string{"link"},
+					}},
+				}},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "#000000"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{{
+					Simple: []*css.SimpleSelector{
+						{Classes: []string{"comhead"}},
+						{
+							TagName:       "a",
+							PseudoClasses: []string{"link"},
+						},
+					},
+				}},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "#828282"},
+				},
+			},
+		},
+	}
+	
+	styledTree := StyleTree(doc, stylesheet)
+	
+	// Check titleline link (first child's first child)
+	if len(styledTree.Children) < 2 {
+		t.Fatal("Expected at least 2 children in styled tree")
+	}
+	titlelineLinkStyled := styledTree.Children[0].Children[0]
+	
+	// Titleline link should be BLACK (#000000) from "a:link" with specificity (0,0,1,1)
+	if titlelineLinkStyled.Styles["color"] != "#000000" {
+		t.Errorf("Titleline link color = %v, expected #000000", titlelineLinkStyled.Styles["color"])
+	}
+	
+	// Check comhead link (second child's first child)
+	comheadLinkStyled := styledTree.Children[1].Children[0]
+	
+	// Comhead link should be GRAY (#828282) from ".comhead a:link" with specificity (0,0,2,1)
+	if comheadLinkStyled.Styles["color"] != "#828282" {
+		t.Errorf("Comhead link color = %v, expected #828282", comheadLinkStyled.Styles["color"])
 	}
 }
