@@ -150,6 +150,52 @@ func TestCalculateSpecificity(t *testing.T) {
 			},
 			expected: Specificity{A: 0, B: 0, C: 0, D: 2},
 		},
+		{
+			name: "pseudo-class selector (a:link)",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{TagName: "a", PseudoClasses: []string{"link"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 1, D: 1},
+		},
+		{
+			name: "class with pseudo-class (.comhead a:link)",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{Classes: []string{"comhead"}},
+					{TagName: "a", PseudoClasses: []string{"link"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 2, D: 1},
+		},
+		{
+			name: "multiple pseudo-classes",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{TagName: "a", PseudoClasses: []string{"link", "hover"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 2, D: 1},
+		},
+		{
+			name: "pseudo-element (::before)",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{TagName: "p", PseudoElements: []string{"before"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 0, D: 2},
+		},
+		{
+			name: "pseudo-class and pseudo-element",
+			selector: &css.Selector{
+				Simple: []*css.SimpleSelector{
+					{TagName: "a", PseudoClasses: []string{"hover"}, PseudoElements: []string{"after"}},
+				},
+			},
+			expected: Specificity{A: 0, B: 0, C: 1, D: 2},
+		},
 	}
 
 	for _, tt := range tests {
