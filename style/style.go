@@ -307,6 +307,32 @@ func matchesSimpleSelector(node *dom.Node, selector *css.SimpleSelector) bool {
 		}
 	}
 
+	// Check pseudo-classes for link state
+	// CSS 2.1 §5.11.2: :link and :visited pseudo-classes
+	// Since we don't track visited state, we treat all links as unvisited (:link)
+	// Therefore, selectors with :visited should not match any elements
+	if len(selector.PseudoClasses) > 0 {
+		hasLink := false
+		for _, pseudoClass := range selector.PseudoClasses {
+			if pseudoClass == "visited" {
+				// :visited pseudo-class - don't match (treat all links as unvisited)
+				return false
+			}
+			if pseudoClass == "link" {
+				hasLink = true
+			}
+			// Other pseudo-classes like :hover, :active, :focus are ignored
+			// (they're counted in specificity but don't affect matching)
+		}
+		
+		// If selector has :link, verify this is an <a> element with href
+		if hasLink {
+			if node.Data != "a" || node.GetAttribute("href") == "" {
+				return false
+			}
+		}
+	}
+
 	return true
 }
 
@@ -319,10 +345,14 @@ func calculateSpecificity(selector *css.Selector) Specificity {
 		if simple.ID != "" {
 			spec.B++
 		}
+		// CSS 2.1 §6.4.3: Class selectors and pseudo-classes count in specificity C
 		spec.C += len(simple.Classes)
+		spec.C += len(simple.PseudoClasses)
+		// CSS 2.1 §6.4.3: Element selectors and pseudo-elements count in specificity D
 		if simple.TagName != "" {
 			spec.D++
 		}
+		spec.D += len(simple.PseudoElements)
 	}
 
 	return spec
