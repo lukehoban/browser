@@ -1503,11 +1503,18 @@ func (box *LayoutBox) layoutFlexRow(justifyContent string) {
 	
 	// Position each flex item
 	for i, child := range box.Children {
-		// Adjust X position
-		offsetX := currentX - child.Dimensions.Content.X + child.Dimensions.Margin.Left + child.Dimensions.Border.Left + child.Dimensions.Padding.Left
+		// Calculate where the child's marginBox should start
+		targetMarginBoxX := currentX
+		
+		// The child's content box should be positioned at:
+		// targetMarginBoxX + margin.Left + border.Left + padding.Left
+		targetContentX := targetMarginBoxX + child.Dimensions.Margin.Left + child.Dimensions.Border.Left + child.Dimensions.Padding.Left
+		
+		// Calculate the offset needed to move the child from its current position to the target
+		offsetX := targetContentX - child.Dimensions.Content.X
 		child.shiftX(offsetX)
 		
-		// Move to next item position
+		// Move to next item position (after this item's margin box)
 		currentX += child.marginBox().Width
 		
 		// Add gap for space-between (except after last item)
@@ -1517,6 +1524,8 @@ func (box *LayoutBox) layoutFlexRow(justifyContent string) {
 	}
 	
 	// Set flex container height to the tallest item
+	// Note: maxHeight is already the marginBox height of the tallest item
+	// The container's content height should match this
 	box.Dimensions.Content.Height = maxHeight
 }
 
