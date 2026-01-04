@@ -6,6 +6,7 @@
 // - CSS 2.1 §9 Visual formatting model: https://www.w3.org/TR/CSS21/visuren.html
 // - CSS 2.1 §10 Visual formatting model details: https://www.w3.org/TR/CSS21/visudet.html
 // - CSS 2.1 §17 Tables: https://www.w3.org/TR/CSS21/tables.html
+// - CSS Flexible Box Layout Module Level 1: https://www.w3.org/TR/css-flexbox-1/
 //
 // Implemented features:
 // - Box model (content, padding, border, margin) per CSS 2.1 §8
@@ -16,6 +17,7 @@
 // - Height calculation per CSS 2.1 §10.6.3
 // - Text alignment (left, center, right) via CSS text-align and HTML align attribute
 // - Vertical alignment in table cells via HTML valign attribute
+// - Flexbox layout (CSS3): display:flex, flex-direction:row, justify-content
 //
 // Not yet implemented (would log warnings if encountered):
 // - Floats (CSS 2.1 §9.5)
@@ -24,7 +26,7 @@
 // - Z-index and stacking contexts (CSS 2.1 §9.9)
 // - Table rowspan (CSS 2.1 §17.2)
 // - Border-collapse model (CSS 2.1 §17.6.2)
-// - Flexbox (CSS3)
+// - Advanced flexbox features (column direction, wrap, align-items, flex-grow/shrink)
 // - Grid layout (CSS3)
 package layout
 
