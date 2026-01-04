@@ -88,6 +88,8 @@ const (
 	TableRowBox
 	// TableCellBox represents a table cell box
 	TableCellBox
+	// FlexBox represents a flex container box (CSS3 Flexbox)
+	FlexBox
 )
 
 // Dimensions represents the dimensions of a box.
@@ -169,10 +171,12 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 		log.Warnf("CSS 2.1 §9.5: float:%s not yet implemented", float)
 	}
 	
-	// CSS3: Flexbox - not yet implemented
-	if display == "flex" || display == "inline-flex" {
-		log.Warnf("CSS3 Flexbox: display:%s not yet implemented, treating as block", display)
-		display = "block"
+	// CSS3: Flexbox - basic support for display:flex with flex-direction:row
+	if display == "flex" {
+		// Supported - will create FlexBox
+	} else if display == "inline-flex" {
+		log.Warnf("CSS3 Flexbox: display:%s not yet implemented, treating as flex", display)
+		display = "flex"
 	}
 	
 	// CSS3: Grid - not yet implemented
@@ -216,6 +220,8 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 		boxType = TableRowBox
 	case "table-cell":
 		boxType = TableCellBox
+	case "flex":
+		boxType = FlexBox
 	}
 
 	box := &LayoutBox{
@@ -238,6 +244,7 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 // Layout calculates the layout for this box and its children.
 // CSS 2.1 §10 Visual formatting model details
 // CSS 2.1 §17 Tables
+// CSS Flexible Box Layout Module Level 1 (Flexbox)
 func (box *LayoutBox) Layout(containingBlock Dimensions) {
 	switch box.BoxType {
 	case BlockBox:
@@ -250,6 +257,8 @@ func (box *LayoutBox) Layout(containingBlock Dimensions) {
 		box.layoutTableRow(containingBlock)
 	case TableCellBox:
 		box.layoutTableCell(containingBlock)
+	case FlexBox:
+		box.layoutFlex(containingBlock)
 	}
 }
 
@@ -1357,6 +1366,156 @@ func (box *LayoutBox) shiftY(offset float64) {
 	for _, child := range box.Children {
 		child.shiftY(offset)
 	}
+}
+
+// layoutFlex lays out a flex container using the CSS Flexible Box Layout Module.
+// Spec reference: CSS Flexible Box Layout Module Level 1
+// https://www.w3.org/TR/css-flexbox-1/
+//
+// Currently supported:
+// - display: flex (block-level flex container)
+// - flex-direction: row (main axis is horizontal, left to right)
+// - justify-content: flex-start | center | flex-end | space-between
+//
+// Not yet implemented (graceful degradation with warnings):
+// - flex-direction: column, row-reverse, column-reverse
+// - justify-content: space-around, space-evenly
+// - align-items, align-content, align-self
+// - flex-wrap property
+// - flex, flex-grow, flex-shrink, flex-basis properties for items
+// - order property
+func (box *LayoutBox) layoutFlex(containingBlock Dimensions) {
+	styles := box.StyledNode.Styles
+	
+	// Parse flex-direction (default: row)
+	flexDirection := strings.TrimSpace(strings.ToLower(styles["flex-direction"]))
+	if flexDirection == "" {
+		flexDirection = "row"
+	}
+	
+	// Warn about unsupported flex-direction values
+	if flexDirection != "row" {
+		log.Warnf("CSS3 Flexbox: flex-direction:%s not yet implemented, using 'row'", flexDirection)
+		flexDirection = "row"
+	}
+	
+	// Parse justify-content (default: flex-start)
+	justifyContent := strings.TrimSpace(strings.ToLower(styles["justify-content"]))
+	if justifyContent == "" {
+		justifyContent = "flex-start"
+	}
+	
+	// Warn about unsupported justify-content values
+	supportedJustify := map[string]bool{
+		"flex-start":    true,
+		"center":        true,
+		"flex-end":      true,
+		"space-between": true,
+	}
+	if !supportedJustify[justifyContent] {
+		log.Warnf("CSS3 Flexbox: justify-content:%s not yet implemented, using 'flex-start'", justifyContent)
+		justifyContent = "flex-start"
+	}
+	
+	// Warn about unsupported flex properties
+	if alignItems := styles["align-items"]; alignItems != "" && alignItems != "stretch" {
+		log.Warnf("CSS3 Flexbox: align-items:%s not yet implemented", alignItems)
+	}
+	if alignContent := styles["align-content"]; alignContent != "" && alignContent != "stretch" {
+		log.Warnf("CSS3 Flexbox: align-content:%s not yet implemented", alignContent)
+	}
+	if flexWrap := styles["flex-wrap"]; flexWrap != "" && flexWrap != "nowrap" {
+		log.Warnf("CSS3 Flexbox: flex-wrap:%s not yet implemented", flexWrap)
+	}
+	
+	// Calculate flex container dimensions (similar to block)
+	box.calculateBlockWidth(containingBlock)
+	box.calculateBlockPosition(containingBlock)
+	
+	// Layout flex items with flex-direction: row
+	box.layoutFlexRow(justifyContent)
+	
+	// Calculate height based on tallest item
+	box.calculateBlockHeight()
+}
+
+// layoutFlexRow lays out flex items in a row with the given justify-content alignment.
+// Implements the main-axis alignment for flex-direction: row.
+func (box *LayoutBox) layoutFlexRow(justifyContent string) {
+	if len(box.Children) == 0 {
+		return
+	}
+	
+	// First pass: layout all items to determine their dimensions
+	// Flex items are laid out as block-level boxes to calculate their preferred sizes
+	totalItemWidth := 0.0
+	maxHeight := 0.0
+	
+	for _, child := range box.Children {
+		// Create a containing block for the flex item
+		// In flex layout, items have their own sizing rules
+		itemCB := Dimensions{
+			Content: Rect{
+				X:      box.Dimensions.Content.X,
+				Y:      box.Dimensions.Content.Y,
+				Width:  box.Dimensions.Content.Width,
+				Height: 0,
+			},
+		}
+		
+		// Layout the child as a block to get its dimensions
+		child.Layout(itemCB)
+		
+		// Accumulate total width (including margins)
+		totalItemWidth += child.marginBox().Width
+		
+		// Track maximum height for flex container
+		itemHeight := child.marginBox().Height
+		if itemHeight > maxHeight {
+			maxHeight = itemHeight
+		}
+	}
+	
+	// Second pass: position items according to justify-content
+	currentX := box.Dimensions.Content.X
+	gap := 0.0
+	
+	// Calculate spacing based on justify-content
+	availableSpace := box.Dimensions.Content.Width - totalItemWidth
+	
+	switch justifyContent {
+	case "flex-start":
+		// Items are packed at the start (default behavior, currentX already set)
+	case "center":
+		// Items are centered in the container
+		currentX += availableSpace / 2.0
+	case "flex-end":
+		// Items are packed at the end
+		currentX += availableSpace
+	case "space-between":
+		// Items are evenly distributed with space between them
+		if len(box.Children) > 1 {
+			gap = availableSpace / float64(len(box.Children)-1)
+		}
+	}
+	
+	// Position each flex item
+	for i, child := range box.Children {
+		// Adjust X position
+		offsetX := currentX - child.Dimensions.Content.X + child.Dimensions.Margin.Left + child.Dimensions.Border.Left + child.Dimensions.Padding.Left
+		child.shiftX(offsetX)
+		
+		// Move to next item position
+		currentX += child.marginBox().Width
+		
+		// Add gap for space-between (except after last item)
+		if justifyContent == "space-between" && i < len(box.Children)-1 {
+			currentX += gap
+		}
+	}
+	
+	// Set flex container height to the tallest item
+	box.Dimensions.Content.Height = maxHeight
 }
 
 // extractFontWeight extracts font-weight from CSS styles.
