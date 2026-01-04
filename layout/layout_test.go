@@ -1033,8 +1033,7 @@ func TestFloatLayout_Skipped(t *testing.T) {
 	}
 }
 
-func TestFlexboxLayout_Skipped(t *testing.T) {
-	t.Skip("Flexbox not implemented - CSS Flexible Box Layout Module Level 1")
+func TestFlexboxLayout(t *testing.T) {
 	// CSS Flexible Box Layout Module Level 1
 	// Flexbox provides efficient layout for complex alignments
 	
@@ -1066,6 +1065,10 @@ func TestFlexboxLayout_Skipped(t *testing.T) {
 	}
 	
 	box := buildLayoutTree(styledContainer)
+	if box.BoxType != FlexBox {
+		t.Errorf("Expected FlexBox type, got %v", box.BoxType)
+	}
+	
 	box.Layout(containingBlock)
 	
 	// Items should be distributed with space between them
@@ -1078,16 +1081,249 @@ func TestFlexboxLayout_Skipped(t *testing.T) {
 		t.Errorf("Expected item1 X at 0, got %v", item1Box.Dimensions.Content.X)
 	}
 	
-	// Item2 in middle
-	expectedItem2X := 150.0 // (400 - 300) / 2 + 100
-	if item2Box.Dimensions.Content.X != expectedItem2X {
+	// Item2 in middle - with space-between, should have equal spacing
+	// Total width: 400px, Items: 3 * 100px = 300px, Available space: 100px
+	// Gap between items: 100px / 2 = 50px
+	// Item2 X: 100px (item1) + 50px (gap) = 150px
+	expectedItem2X := 150.0
+	if item2Box.Dimensions.Content.X < expectedItem2X-1 || item2Box.Dimensions.Content.X > expectedItem2X+1 {
 		t.Errorf("Expected item2 X at %v, got %v", expectedItem2X, item2Box.Dimensions.Content.X)
 	}
 	
-	// Item3 at end
+	// Item3 at end - should be positioned with gap from item2
+	// Item3 X: 150px (item2) + 100px (item2 width) + 50px (gap) = 300px
 	expectedItem3X := 300.0
-	if item3Box.Dimensions.Content.X != expectedItem3X {
+	if item3Box.Dimensions.Content.X < expectedItem3X-1 || item3Box.Dimensions.Content.X > expectedItem3X+1 {
 		t.Errorf("Expected item3 X at %v, got %v", expectedItem3X, item3Box.Dimensions.Content.X)
+	}
+	
+	// All items should have the same Y position (no cross-axis alignment yet)
+	if item1Box.Dimensions.Content.Y != item2Box.Dimensions.Content.Y ||
+		item2Box.Dimensions.Content.Y != item3Box.Dimensions.Content.Y {
+		t.Errorf("All items should be on same Y position")
+	}
+}
+
+func TestFlexboxJustifyContentFlexStart(t *testing.T) {
+	// Test justify-content: flex-start (default)
+	container := dom.NewElement("div")
+	item1 := dom.NewElement("div")
+	item2 := dom.NewElement("div")
+	container.AppendChild(item1)
+	container.AppendChild(item2)
+	
+	styledContainer := &style.StyledNode{
+		Node: container,
+		Styles: map[string]string{
+			"display":         "flex",
+			"justify-content": "flex-start",
+			"width":           "400px",
+		},
+		Children: []*style.StyledNode{
+			{Node: item1, Styles: map[string]string{"width": "100px", "height": "50px"}},
+			{Node: item2, Styles: map[string]string{"width": "100px", "height": "50px"}},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledContainer)
+	box.Layout(containingBlock)
+	
+	item1Box := box.Children[0]
+	item2Box := box.Children[1]
+	
+	// Items should be packed at the start
+	if item1Box.Dimensions.Content.X != 0.0 {
+		t.Errorf("Expected item1 X at 0, got %v", item1Box.Dimensions.Content.X)
+	}
+	if item2Box.Dimensions.Content.X != 100.0 {
+		t.Errorf("Expected item2 X at 100, got %v", item2Box.Dimensions.Content.X)
+	}
+}
+
+func TestFlexboxJustifyContentCenter(t *testing.T) {
+	// Test justify-content: center
+	container := dom.NewElement("div")
+	item1 := dom.NewElement("div")
+	item2 := dom.NewElement("div")
+	container.AppendChild(item1)
+	container.AppendChild(item2)
+	
+	styledContainer := &style.StyledNode{
+		Node: container,
+		Styles: map[string]string{
+			"display":         "flex",
+			"justify-content": "center",
+			"width":           "400px",
+		},
+		Children: []*style.StyledNode{
+			{Node: item1, Styles: map[string]string{"width": "100px", "height": "50px"}},
+			{Node: item2, Styles: map[string]string{"width": "100px", "height": "50px"}},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledContainer)
+	box.Layout(containingBlock)
+	
+	item1Box := box.Children[0]
+	item2Box := box.Children[1]
+	
+	// Items should be centered: available space = 400 - 200 = 200, offset = 100
+	expectedItem1X := 100.0
+	expectedItem2X := 200.0
+	
+	if item1Box.Dimensions.Content.X < expectedItem1X-1 || item1Box.Dimensions.Content.X > expectedItem1X+1 {
+		t.Errorf("Expected item1 X at %v, got %v", expectedItem1X, item1Box.Dimensions.Content.X)
+	}
+	if item2Box.Dimensions.Content.X < expectedItem2X-1 || item2Box.Dimensions.Content.X > expectedItem2X+1 {
+		t.Errorf("Expected item2 X at %v, got %v", expectedItem2X, item2Box.Dimensions.Content.X)
+	}
+}
+
+func TestFlexboxJustifyContentFlexEnd(t *testing.T) {
+	// Test justify-content: flex-end
+	container := dom.NewElement("div")
+	item1 := dom.NewElement("div")
+	item2 := dom.NewElement("div")
+	container.AppendChild(item1)
+	container.AppendChild(item2)
+	
+	styledContainer := &style.StyledNode{
+		Node: container,
+		Styles: map[string]string{
+			"display":         "flex",
+			"justify-content": "flex-end",
+			"width":           "400px",
+		},
+		Children: []*style.StyledNode{
+			{Node: item1, Styles: map[string]string{"width": "100px", "height": "50px"}},
+			{Node: item2, Styles: map[string]string{"width": "100px", "height": "50px"}},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledContainer)
+	box.Layout(containingBlock)
+	
+	item1Box := box.Children[0]
+	item2Box := box.Children[1]
+	
+	// Items should be packed at the end: available space = 400 - 200 = 200
+	expectedItem1X := 200.0
+	expectedItem2X := 300.0
+	
+	if item1Box.Dimensions.Content.X < expectedItem1X-1 || item1Box.Dimensions.Content.X > expectedItem1X+1 {
+		t.Errorf("Expected item1 X at %v, got %v", expectedItem1X, item1Box.Dimensions.Content.X)
+	}
+	if item2Box.Dimensions.Content.X < expectedItem2X-1 || item2Box.Dimensions.Content.X > expectedItem2X+1 {
+		t.Errorf("Expected item2 X at %v, got %v", expectedItem2X, item2Box.Dimensions.Content.X)
+	}
+}
+
+func TestFlexboxWithMargins(t *testing.T) {
+	// Test flexbox with items that have margins
+	container := dom.NewElement("div")
+	item1 := dom.NewElement("div")
+	item2 := dom.NewElement("div")
+	container.AppendChild(item1)
+	container.AppendChild(item2)
+	
+	styledContainer := &style.StyledNode{
+		Node: container,
+		Styles: map[string]string{
+			"display":         "flex",
+			"justify-content": "flex-start",
+			"width":           "400px",
+		},
+		Children: []*style.StyledNode{
+			{
+				Node: item1,
+				Styles: map[string]string{
+					"width":        "100px",
+					"height":       "50px",
+					"margin-left":  "10px",
+					"margin-right": "10px",
+				},
+			},
+			{
+				Node: item2,
+				Styles: map[string]string{
+					"width":        "100px",
+					"height":       "50px",
+					"margin-left":  "5px",
+					"margin-right": "5px",
+				},
+			},
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledContainer)
+	box.Layout(containingBlock)
+	
+	item1Box := box.Children[0]
+	item2Box := box.Children[1]
+	
+	// Item1 should account for its margins: marginBox width = 100 + 10 + 10 = 120
+	// Item1 content X should be at 10 (left margin)
+	expectedItem1ContentX := 10.0
+	if item1Box.Dimensions.Content.X < expectedItem1ContentX-1 || item1Box.Dimensions.Content.X > expectedItem1ContentX+1 {
+		t.Errorf("Expected item1 content X at %v, got %v", expectedItem1ContentX, item1Box.Dimensions.Content.X)
+	}
+	
+	// Item2 should be positioned after item1's marginBox
+	// Item2 X = item1 marginBox.X + item1 marginBox.Width = 0 + 120 = 120
+	// Item2 content X = 120 + 5 (left margin) = 125
+	expectedItem2ContentX := 125.0
+	if item2Box.Dimensions.Content.X < expectedItem2ContentX-1 || item2Box.Dimensions.Content.X > expectedItem2ContentX+1 {
+		t.Errorf("Expected item2 content X at %v, got %v", expectedItem2ContentX, item2Box.Dimensions.Content.X)
+	}
+}
+
+func TestFlexboxContainerHeight(t *testing.T) {
+	// Test that flex container height is set to the tallest item
+	container := dom.NewElement("div")
+	item1 := dom.NewElement("div")
+	item2 := dom.NewElement("div")
+	container.AppendChild(item1)
+	container.AppendChild(item2)
+	
+	styledContainer := &style.StyledNode{
+		Node: container,
+		Styles: map[string]string{
+			"display": "flex",
+			"width":   "400px",
+		},
+		Children: []*style.StyledNode{
+			{Node: item1, Styles: map[string]string{"width": "100px", "height": "50px"}},
+			{Node: item2, Styles: map[string]string{"width": "100px", "height": "80px"}}, // Taller
+		},
+	}
+	
+	containingBlock := Dimensions{
+		Content: Rect{X: 0, Y: 0, Width: 800, Height: 0},
+	}
+	
+	box := buildLayoutTree(styledContainer)
+	box.Layout(containingBlock)
+	
+	// Container height should be set to the tallest item
+	expectedHeight := 80.0
+	if box.Dimensions.Content.Height != expectedHeight {
+		t.Errorf("Expected container height %v, got %v", expectedHeight, box.Dimensions.Content.Height)
 	}
 }
 
