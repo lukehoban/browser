@@ -125,7 +125,7 @@ See [TESTING.md](TESTING.md) for detailed test results and WPT integration.
 
 ## WebAssembly
 
-The browser compiles to WebAssembly and runs entirely in a web browser. 
+The browser compiles to WebAssembly and runs entirely in a web browser.
 
 **[Live Demo →](https://lukehoban.github.io/browser/)** (automatically deployed via GitHub Actions)
 
