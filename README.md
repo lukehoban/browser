@@ -10,6 +10,7 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - HTML parsing with DOM tree construction
 - CSS 2.1 parsing and style computation
 - Visual formatting model (box model, block layout)
+- **Table layout**: Auto column sizing based on content, colspan support
 - **High-quality text rendering** with Go fonts (proportional sans-serif)
 - Font styling support (bold, italic, underline, size)
 - Image rendering (PNG, JPEG, GIF, SVG support)
@@ -77,6 +78,18 @@ go build ./cmd/browser
 
 ## Screenshots
 
+### Hacker News
+
+The browser can load and render real web pages. Here's Hacker News (1024x768):
+
+![Hacker News Rendering](./hackernews_screenshot.png)
+
+### WebAssembly Demo
+
+Try the browser in your web browser! The [live demo](https://lukehoban.github.io/browser/) lets you enter HTML/CSS and see it rendered in real-time.
+
+![WebAssembly Demo](./wasm_demo_screenshot.png)
+
 ### Font Rendering
 
 The browser uses the [Go fonts](https://blog.golang.org/go-fonts) - high-quality, proportional, sans-serif fonts designed for the Go project. These fonts are embedded in the binary and provide excellent readability with support for bold, italic, and various sizes.
@@ -88,12 +101,6 @@ The browser uses the [Go fonts](https://blog.golang.org/go-fonts) - high-quality
 Example of styled HTML with borders, colors, and text formatting:
 
 ![Test Case Rendering](./test_case_screenshot.png)
-
-### Hacker News
-
-Latest Hacker News render (1024x768):
-
-![Hacker News Rendering](./hackernews_screenshot.png)
 
 ### Testing
 
@@ -121,10 +128,12 @@ See [wasm/README.md](wasm/README.md) for more details.
 
 ## Current Status
 
-✅ Milestones 1-7 Complete: Foundation, HTML Parsing, CSS Parsing, Style Computation, Layout Engine, Rendering, Image Rendering  
-✅ Milestone 9 Complete: Network Support (HTTP/HTTPS, external CSS, remote images)  
-✅ Milestone 9.5 Complete: Data URL Support (RFC 2397, base64 & URL-encoded inline resources)  
-🔄 Milestone 8 In Progress: Testing & Validation (81.8% WPT pass rate)
+✅ **Milestones 1-7 Complete**: Foundation, HTML Parsing, CSS Parsing, Style Computation, Layout Engine, Rendering, Image Rendering  
+✅ **Milestone 7.5 Complete**: Basic Table Layout (auto column sizing, colspan support)  
+✅ **Milestone 8 Complete**: Testing & Validation (92.3% WPT pass rate)  
+✅ **Milestone 9 Complete**: Network Support (HTTP/HTTPS, external CSS, remote images)  
+✅ **Milestone 9.5 Complete**: Data URL Support (RFC 2397, base64 & URL-encoded inline resources)  
+✅ **Milestone 10 Complete**: WebAssembly Support ([live demo](https://lukehoban.github.io/browser/))
 
 See [MILESTONES.md](MILESTONES.md) for detailed progress and known limitations.
 
