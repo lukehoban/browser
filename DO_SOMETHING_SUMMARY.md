@@ -82,7 +82,7 @@ Total: 100% of implemented features tested and working
 
 ## Files Generated
 
-1. **do_something_demo.png** - Demonstration rendering (65KB)
+1. **do_something_screenshot.png** - Demonstration rendering (65KB)
 2. **DO_SOMETHING_SUMMARY.md** - This summary document
 
 ## Conclusion
