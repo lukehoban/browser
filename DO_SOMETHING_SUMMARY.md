@@ -45,7 +45,7 @@ In response to the intentionally vague "Do something" request, I performed a com
 
 ## Demo Screenshot
 
-![Browser Demo](./do_something_demo.png)
+![Browser Demo](./do_something_screenshot.png)
 
 *Screenshot showing the browser rendering a styled HTML page with various CSS features including colors, layouts, fonts, and formatting.*
 
