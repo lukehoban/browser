@@ -27,6 +27,7 @@
 package style
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -217,14 +218,10 @@ func matchRules(node *dom.Node, stylesheet *css.Stylesheet) []MatchedRule {
 		}
 	}
 
-	// Sort by specificity (simple bubble sort for small lists)
-	for i := 0; i < len(matched); i++ {
-		for j := i + 1; j < len(matched); j++ {
-			if matched[i].Specificity.Compare(matched[j].Specificity) > 0 {
-				matched[i], matched[j] = matched[j], matched[i]
-			}
-		}
-	}
+	// Sort by specificity using O(n log n) sort instead of O(n²) bubble sort
+	sort.Slice(matched, func(i, j int) bool {
+		return matched[i].Specificity.Compare(matched[j].Specificity) < 0
+	})
 
 	return matched
 }
