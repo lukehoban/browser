@@ -1,4 +1,4 @@
-# Browser - A Simple Web Browser in Go
+# Browser - A Simple Web Browser in Go :)
 
 [![CI](https://github.com/lukehoban/browser/actions/workflows/ci.yml/badge.svg)](https://github.com/lukehoban/browser/actions/workflows/ci.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/lukehoban/browser)](https://goreportcard.com/report/github.com/lukehoban/browser)
