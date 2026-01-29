@@ -27,6 +27,7 @@
 package style
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -217,14 +218,10 @@ func matchRules(node *dom.Node, stylesheet *css.Stylesheet) []MatchedRule {
 		}
 	}
 
-	// Sort by specificity (simple bubble sort for small lists)
-	for i := 0; i < len(matched); i++ {
-		for j := i + 1; j < len(matched); j++ {
-			if matched[i].Specificity.Compare(matched[j].Specificity) > 0 {
-				matched[i], matched[j] = matched[j], matched[i]
-			}
-		}
-	}
+	// Sort by specificity
+	sort.Slice(matched, func(i, j int) bool {
+		return matched[i].Specificity.Compare(matched[j].Specificity) < 0
+	})
 
 	return matched
 }
@@ -290,18 +287,15 @@ func matchesSimpleSelector(node *dom.Node, selector *css.SimpleSelector) bool {
 		return false
 	}
 
-	// Check classes
+	// Check classes using map for O(1) lookup instead of O(m×n) nested loops
 	if len(selector.Classes) > 0 {
 		nodeClasses := node.Classes()
+		classSet := make(map[string]struct{}, len(nodeClasses))
+		for _, class := range nodeClasses {
+			classSet[class] = struct{}{}
+		}
 		for _, selectorClass := range selector.Classes {
-			found := false
-			for _, nodeClass := range nodeClasses {
-				if nodeClass == selectorClass {
-					found = true
-					break
-				}
-			}
-			if !found {
+			if _, found := classSet[selectorClass]; !found {
 				return false
 			}
 		}
@@ -520,21 +514,21 @@ func parseBorderValue(value string) (width, style, color string) {
 // splitWhitespace splits a string on whitespace characters.
 func splitWhitespace(s string) []string {
 	var result []string
-	var current string
+	var current strings.Builder
 
 	for _, ch := range s {
 		if ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' {
-			if current != "" {
-				result = append(result, current)
-				current = ""
+			if current.Len() > 0 {
+				result = append(result, current.String())
+				current.Reset()
 			}
 		} else {
-			current += string(ch)
+			current.WriteRune(ch)
 		}
 	}
 
-	if current != "" {
-		result = append(result, current)
+	if current.Len() > 0 {
+		result = append(result, current.String())
 	}
 
 	return result
