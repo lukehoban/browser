@@ -1,6 +1,8 @@
 package css
 
 import (
+	"strings"
+
 	"github.com/lukehoban/browser/log"
 )
 
@@ -393,13 +395,13 @@ func (p *Parser) parseDeclaration() *Declaration {
 	p.tokenizer.SkipWhitespace()
 
 	// Parse value (simplified - just concatenate tokens until ';' or '}')
-	value := ""
+	var valueBuilder strings.Builder
 	for {
 		token = p.tokenizer.Peek()
 		if token.Type == SemicolonToken || token.Type == RightBraceToken || token.Type == EOFToken {
 			break
 		}
-		
+
 		// CSS 2.1 §6.4.2: Check for !important - not yet implemented
 		// Look ahead for '!' followed by 'important'
 		if token.Type == IdentToken && token.Value == "!" {
@@ -419,20 +421,21 @@ func (p *Parser) parseDeclaration() *Declaration {
 		p.tokenizer.Next()
 
 		if token.Type == WhitespaceToken {
-			if value != "" {
-				value += " "
+			if valueBuilder.Len() > 0 {
+				valueBuilder.WriteByte(' ')
 			}
 		} else if token.Type == HashToken {
 			// CSS 2.1 §4.3.6: Preserve # prefix for color values
-			value += "#" + token.Value
+			valueBuilder.WriteByte('#')
+			valueBuilder.WriteString(token.Value)
 		} else {
-			value += token.Value
+			valueBuilder.WriteString(token.Value)
 		}
 	}
 
 	return &Declaration{
 		Property: property,
-		Value:    value,
+		Value:    valueBuilder.String(),
 	}
 }
 
