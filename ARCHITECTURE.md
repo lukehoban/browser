@@ -58,7 +58,7 @@ flowchart LR
     end
 
     HTML --> Tokenizer1 --> Parser1 --> DOMTree
-    ExtCSS --> Tokenizer2
+    ExtCSS --> Tokenizer2 --> Parser2
     DOMTree --> URLResolver --> StyleComp
     Parser2 --> StyleComp
     UASheet --> StyleComp
@@ -203,9 +203,9 @@ classDiagram
 
     class Dimensions {
         +Rect Content
-        +EdgeSize Padding
-        +EdgeSize Border
-        +EdgeSize Margin
+        +EdgeSizes Padding
+        +EdgeSizes Border
+        +EdgeSizes Margin
     }
 
     class Rect {
@@ -216,9 +216,10 @@ classDiagram
     }
 
     class Canvas {
-        +Image Image
         +int Width
         +int Height
+        +[]color.RGBA Pixels
+        +map ImageCache
     }
 
     Node --> StyledNode : styled into
