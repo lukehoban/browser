@@ -21,6 +21,120 @@ A simple web browser implementation in Go, focusing on static HTML and CSS 2.1 c
 - **Network images**: Load images from remote URLs
 - **WebAssembly**: Run the browser entirely in a web client
 
+## Architecture
+
+The browser follows a classic rendering pipeline that transforms HTML and CSS into pixels:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              BROWSER ARCHITECTURE                               │
+└─────────────────────────────────────────────────────────────────────────────────┘
+
+    ┌──────────────┐
+    │  HTML/URL    │ ─── Input: Local file or HTTP/HTTPS URL
+    │   Input      │
+    └──────┬───────┘
+           │
+           ▼
+┌──────────────────────┐     ┌──────────────────────┐
+│     HTML Parser      │     │     CSS Parser       │
+│   ┌──────────────┐   │     │   ┌──────────────┐   │
+│   │  Tokenizer   │   │     │   │  Tokenizer   │   │
+│   │  (html/)     │   │     │   │  (css/)      │   │
+│   └──────┬───────┘   │     │   └──────┬───────┘   │
+│          ▼           │     │          ▼           │
+│   ┌──────────────┐   │     │   ┌──────────────┐   │
+│   │   Parser     │   │     │   │   Parser     │   │
+│   └──────────────┘   │     │   └──────────────┘   │
+└──────────┬───────────┘     └──────────┬───────────┘
+           │                            │
+           ▼                            ▼
+    ┌──────────────┐             ┌──────────────┐
+    │   DOM Tree   │             │  Stylesheet  │
+    │   (dom/)     │             │   Rules      │
+    └──────┬───────┘             └──────┬───────┘
+           │                            │
+           └─────────────┬──────────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │   Style Computation  │
+              │      (style/)        │
+              │  ┌────────────────┐  │
+              │  │ Selector Match │  │
+              │  │ Specificity    │  │
+              │  │ Cascade        │  │
+              │  │ Inheritance    │  │
+              │  └────────────────┘  │
+              └──────────┬───────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │     Styled Tree      │
+              │ (DOM + Computed CSS) │
+              └──────────┬───────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │    Layout Engine     │
+              │      (layout/)       │
+              │  ┌────────────────┐  │
+              │  │  Box Model     │  │
+              │  │  Block Layout  │  │
+              │  │  Inline Layout │  │
+              │  │  Table Layout  │  │
+              │  └────────────────┘  │
+              └──────────┬───────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │     Layout Tree      │
+              │  (Positioned Boxes)  │
+              └──────────┬───────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │   Render Engine      │
+              │      (render/)       │
+              │  ┌────────────────┐  │
+              │  │ Backgrounds    │  │
+              │  │ Borders        │  │
+              │  │ Text/Fonts     │  │
+              │  │ Images (PNG,   │  │
+              │  │  JPEG, GIF,    │  │
+              │  │  SVG)          │  │
+              │  └────────────────┘  │
+              └──────────┬───────────┘
+                         │
+                         ▼
+              ┌──────────────────────┐
+              │     PNG Output       │
+              │   (Pixel Buffer)     │
+              └──────────────────────┘
+```
+
+### Data Flow
+
+1. **Input**: HTML content is loaded from a local file or fetched via HTTP/HTTPS
+2. **HTML Parsing**: Tokenizes HTML and builds a DOM tree structure
+3. **CSS Parsing**: Extracts CSS from `<style>` tags and external stylesheets, parsing into rule sets
+4. **Style Computation**: Matches CSS selectors to DOM elements, computes specificity, applies cascade
+5. **Layout**: Calculates box dimensions and positions using the CSS box model
+6. **Rendering**: Paints backgrounds, borders, text, and images to a pixel buffer
+7. **Output**: Saves the rendered page as a PNG image
+
+### Key Packages
+
+| Package | Responsibility | Spec Reference |
+|---------|---------------|----------------|
+| `html/` | HTML tokenization & parsing | HTML5 §12 |
+| `css/`  | CSS tokenization & parsing | CSS 2.1 §4 |
+| `dom/`  | DOM tree structure & URL resolution | DOM Level 2 |
+| `style/` | Selector matching, cascade, inheritance | CSS 2.1 §5-6 |
+| `layout/` | Box model, visual formatting | CSS 2.1 §8-10 |
+| `render/` | Painting, fonts, images | CSS 2.1 §14-16 |
+| `svg/` | SVG parsing & rasterization | SVG 1.1 subset |
+
 ## Project Structure
 
 ```
