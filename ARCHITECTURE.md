@@ -529,7 +529,7 @@ Images and fonts are cached to avoid redundant loading and parsing.
 | CSS 2.1 §9 Visual Formatting | ✅ Partial | Block layout only |
 | CSS 2.1 §10 Width/Height | ✅ Complete | Auto and fixed values |
 | CSS 2.1 §14 Colors/Backgrounds | ✅ Complete | Colors and backgrounds |
-| RFC 2397 Data URLs | ✅ Complete | Base64 and URL-encoded |
+| RFC 2397 Data URLs | ✅ Complete | Base64 and percent-encoded |
 
 ## Future Architecture Considerations
 
@@ -552,6 +552,6 @@ Images and fonts are cached to avoid redundant loading and parsing.
 
 - **HTML5 Specification**: https://html.spec.whatwg.org/
 - **CSS 2.1 Specification**: https://www.w3.org/TR/CSS21/
-- **RFC 2397 (Data URLs)**: https://www.rfc-editor.org/rfc/rfc2397
+- **RFC 2397 (Data URLs)**: https://datatracker.ietf.org/doc/html/rfc2397
 - **Web Platform Tests**: https://github.com/web-platform-tests/wpt
 - **Go Fonts**: https://go.googlesource.com/image/+/refs/heads/master/font/gofont/
