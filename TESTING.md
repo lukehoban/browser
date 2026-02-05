@@ -68,6 +68,37 @@ Integration tests use complete HTML documents with embedded CSS:
 - `test/styled.html`: HTML with CSS styles
 - `test/hackernews.html`: Simplified Hacker News homepage for testing real-world layout
 
+### Website Integration Tests
+
+The browser includes real-world website integration tests in `cmd/browser/website_test.go`:
+
+```bash
+# Run all website tests
+go test ./cmd/browser -run TestWebsite
+
+# Run specific website test
+go test ./cmd/browser -run TestHackerNewsSpecific
+
+# Skip website tests (they require network access)
+go test ./cmd/browser -short
+```
+
+**Test Coverage:**
+- **Hacker News** (news.ycombinator.com): Simple news aggregator with minimal CSS
+- **Example.com**: IANA's example domain with basic HTML
+- **Example.org**: Another IANA example domain
+- **Error Handling**: Tests for invalid URLs, non-existent domains, and network failures
+
+These tests verify:
+- Network fetching (HTTP/HTTPS)
+- HTML parsing of real-world content
+- CSS extraction and parsing from live sites
+- External stylesheet loading
+- Layout computation for actual websites
+- PNG rendering capabilities
+
+**Note:** Website tests are skipped in short mode (`go test -short`) to avoid network dependencies in CI.
+
 ## WPT Reftest Harness
 
 The browser includes a WPT (Web Platform Tests) reference test harness for benchmarking CSS compliance.
