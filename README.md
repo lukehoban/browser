@@ -38,6 +38,67 @@ browser/
 └── test/            # Test files and fixtures
 ```
 
+## Architecture
+
+### Rendering Pipeline
+
+The browser processes a web page through a multi-stage pipeline, transforming HTML and CSS source into a rendered PNG image:
+
+```mermaid
+flowchart TD
+    A["📄 HTML Source\n(file, HTTP/HTTPS URL, or data URL)"] --> B["🔤 HTML Tokenizer\n(html/tokenizer.go)\nState machine producing token stream"]
+    B --> C["🌳 HTML Parser\n(html/parser.go)\nStack-based tree construction"]
+    C --> D["📦 DOM Tree\n(dom/node.go)\nElement, Text, and Document nodes"]
+    D --> E["🔗 URL Resolution\n(dom/url.go)\nResolve relative paths to absolute URLs"]
+    E --> F["📦 DOM Tree\nwith resolved URLs"]
+
+    F --> G["🎨 CSS Extraction\nInline <style> tags +\nexternal <link> stylesheets"]
+    G --> H["🎨 CSS Tokenizer\n(css/tokenizer.go)\nIdent, String, Hash, Number tokens"]
+    H --> I["📋 CSS Parser\n(css/parser.go)\nSelectors + Declarations → Stylesheet"]
+
+    F --> J["🧮 Style Computation\n(style/style.go)"]
+    I --> J
+    UA["📜 User-Agent Defaults\n(style/useragent.go)"] --> J
+
+    J --> K["✨ Styled Tree\nDOM nodes with computed CSS properties\n(cascade, specificity, inheritance)"]
+
+    K --> L["📐 Layout Engine\n(layout/layout.go)\nBox model, block/inline/table layout"]
+    L --> M["📐 Layout Tree\nBoxes with computed dimensions\n(content, padding, border, margin)"]
+
+    M --> N["🖌️ Render Engine\n(render/render.go)\nCanvas painting: backgrounds, borders,\ntext, images, SVG"]
+    N --> O["🖼️ PNG Output\nFinal rendered image"]
+
+    N -. "font metrics" .-> P["🔡 Font Engine\n(font/font.go)\nGo TrueType fonts"]
+    N -. "SVG raster" .-> Q["📐 SVG Engine\n(svg/svg.go)\nParse & rasterize SVG"]
+```
+
+### Module Dependencies
+
+```mermaid
+graph TD
+    CLI["cmd/browser\nCLI entry point"] --> HTML
+    WASM["cmd/browser-wasm\nWebAssembly entry point"] --> HTML
+
+    HTML["html\nTokenizer & Parser"] --> DOM
+    DOM["dom\nNode tree, URL resolution,\nresource loading"]
+
+    CSS["css\nTokenizer & Parser"]
+
+    DOM --> STYLE
+    CSS --> STYLE
+    STYLE["style\nCascade, specificity,\ninheritance, user-agent defaults"]
+
+    STYLE --> LAYOUT
+    LAYOUT["layout\nBox model, block/inline/table\ndimension calculation"]
+
+    LAYOUT --> RENDER
+    RENDER["render\nCanvas, text, images,\nbackgrounds, borders"]
+
+    RENDER --> FONT["font\nTrueType loading &\ntext measurement"]
+    RENDER --> SVG["svg\nSVG parsing &\nrasterization"]
+    RENDER --> LOG["log\nStructured logging"]
+```
+
 ## Specifications
 
 This browser implementation follows these W3C specifications:
