@@ -2,9 +2,11 @@ package render
 
 import (
 	"image/color"
+	"os"
 	"testing"
 
 	"github.com/lukehoban/browser/css"
+	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/layout"
 	"github.com/lukehoban/browser/style"
 )
@@ -880,4 +882,462 @@ func TestExtractURLFromCSS(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRenderBordersWithStyle(t *testing.T) {
+canvas := NewCanvas(200, 200)
+canvas.Clear(color.RGBA{255, 255, 255, 255})
+
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+"border-style": "solid",
+"border-color": "red",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 50, Y: 50, Width: 100, Height: 100},
+Border:  layout.EdgeSizes{Top: 2, Right: 2, Bottom: 2, Left: 2},
+},
+}
+
+renderBorders(canvas, box)
+
+// Check top border area has red pixels
+red := color.RGBA{255, 0, 0, 255}
+// Check a pixel in the top border region
+topBorderY := 48 // Content.Y(50) - Border.Top(2)
+px := canvas.Pixels[topBorderY*canvas.Width+50]
+if px != red {
+t.Errorf("Expected red at top border, got %v", px)
+}
+}
+
+func TestRenderBordersNoBorderStyle(t *testing.T) {
+canvas := NewCanvas(100, 100)
+canvas.Clear(color.RGBA{255, 255, 255, 255})
+
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+// No border-style set
+"border-color": "red",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 10, Width: 80, Height: 80},
+Border:  layout.EdgeSizes{Top: 2, Right: 2, Bottom: 2, Left: 2},
+},
+}
+
+white := color.RGBA{255, 255, 255, 255}
+renderBorders(canvas, box)
+
+// Without border-style, no border should be drawn
+px := canvas.Pixels[8*canvas.Width+10]
+if px != white {
+t.Errorf("Expected white (no border without style), got %v", px)
+}
+}
+
+func TestRenderBordersNilStyledNode(t *testing.T) {
+canvas := NewCanvas(100, 100)
+box := &layout.LayoutBox{
+BoxType:    layout.BlockBox,
+StyledNode: nil,
+}
+// Should not panic
+renderBorders(canvas, box)
+}
+
+func TestRenderTextBasic(t *testing.T) {
+canvas := NewCanvas(200, 50)
+canvas.Clear(color.RGBA{255, 255, 255, 255})
+
+textNode := &dom.Node{
+Type: dom.TextNode,
+Data: "Hello",
+}
+
+box := &layout.LayoutBox{
+BoxType: layout.InlineBox,
+StyledNode: &style.StyledNode{
+Node: textNode,
+Styles: map[string]string{
+"color": "black",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 5, Width: 50, Height: 13},
+},
+}
+
+renderText(canvas, box)
+
+// Verify some pixels changed (text was rendered)
+white := color.RGBA{255, 255, 255, 255}
+hasNonWhite := false
+for _, px := range canvas.Pixels {
+if px != white && px != (color.RGBA{0, 0, 0, 0}) {
+hasNonWhite = true
+break
+}
+}
+if !hasNonWhite {
+t.Error("Expected some non-white pixels after rendering text")
+}
+}
+
+func TestRenderTextEmptyString(t *testing.T) {
+canvas := NewCanvas(100, 50)
+textNode := &dom.Node{
+Type: dom.TextNode,
+Data: "",
+}
+box := &layout.LayoutBox{
+BoxType: layout.InlineBox,
+StyledNode: &style.StyledNode{
+Node:   textNode,
+Styles: map[string]string{},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 5, Width: 50, Height: 13},
+},
+}
+// Should not panic
+renderText(canvas, box)
+}
+
+func TestRenderTextNonTextNode(t *testing.T) {
+canvas := NewCanvas(100, 50)
+elemNode := &dom.Node{
+Type: dom.ElementNode,
+Data: "div",
+}
+box := &layout.LayoutBox{
+BoxType: layout.InlineBox,
+StyledNode: &style.StyledNode{
+Node:   elemNode,
+Styles: map[string]string{},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 5, Width: 50, Height: 13},
+},
+}
+// Should not render anything for non-text nodes
+renderText(canvas, box)
+}
+
+func TestRenderTextNilStyledNode(t *testing.T) {
+canvas := NewCanvas(100, 50)
+box := &layout.LayoutBox{
+BoxType:    layout.InlineBox,
+StyledNode: nil,
+}
+// Should not panic
+renderText(canvas, box)
+}
+
+func TestRenderBackgroundSolidColor(t *testing.T) {
+canvas := NewCanvas(100, 100)
+canvas.Clear(color.RGBA{255, 255, 255, 255})
+
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+"background-color": "blue",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 10, Width: 50, Height: 50},
+},
+}
+
+renderBackground(canvas, box)
+
+blue := color.RGBA{0, 0, 255, 255}
+px := canvas.Pixels[20*canvas.Width+20]
+if px != blue {
+t.Errorf("Expected blue at (20,20), got %v", px)
+}
+}
+
+func TestRenderBackgroundTransparent(t *testing.T) {
+canvas := NewCanvas(100, 100)
+white := color.RGBA{255, 255, 255, 255}
+canvas.Clear(white)
+
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+"background-color": "transparent",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 10, Width: 50, Height: 50},
+},
+}
+
+renderBackground(canvas, box)
+
+// Should remain white
+px := canvas.Pixels[20*canvas.Width+20]
+if px != white {
+t.Errorf("Expected white (transparent bg), got %v", px)
+}
+}
+
+func TestRenderBackgroundNilStyledNode(t *testing.T) {
+canvas := NewCanvas(100, 100)
+box := &layout.LayoutBox{
+BoxType:    layout.BlockBox,
+StyledNode: nil,
+}
+// Should not panic
+renderBackground(canvas, box)
+}
+
+func TestFindCanvasBackgroundDefault(t *testing.T) {
+// No root means white
+bg := findCanvasBackground(nil)
+white := color.RGBA{255, 255, 255, 255}
+if bg != white {
+t.Errorf("Expected white for nil root, got %v", bg)
+}
+}
+
+func TestFindCanvasBackgroundRoot(t *testing.T) {
+root := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+"background-color": "red",
+},
+},
+}
+bg := findCanvasBackground(root)
+red := color.RGBA{255, 0, 0, 255}
+if bg != red {
+t.Errorf("Expected red, got %v", bg)
+}
+}
+
+func TestFindCanvasBackgroundBody(t *testing.T) {
+bodyNode := dom.NewElement("body")
+root := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{},
+},
+Children: []*layout.LayoutBox{
+{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Node: bodyNode,
+Styles: map[string]string{
+"background-color": "blue",
+},
+},
+},
+},
+}
+bg := findCanvasBackground(root)
+blue := color.RGBA{0, 0, 255, 255}
+if bg != blue {
+t.Errorf("Expected blue from body, got %v", bg)
+}
+}
+
+func TestGetBackgroundColor(t *testing.T) {
+tests := []struct {
+name     string
+styles   map[string]string
+expected color.RGBA
+}{
+{"solid_color", map[string]string{"background-color": "red"}, css.ParseColor("red")},
+{"background_shorthand", map[string]string{"background": "blue"}, css.ParseColor("blue")},
+{"transparent", map[string]string{"background-color": "transparent"}, color.RGBA{}},
+{"none", map[string]string{"background-color": "none"}, color.RGBA{}},
+{"empty", map[string]string{}, color.RGBA{}},
+{"url_ignored", map[string]string{"background": "url(bg.png)"}, color.RGBA{}},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+result := getBackgroundColor(tt.styles)
+if result != tt.expected {
+t.Errorf("getBackgroundColor(%v) = %v, want %v", tt.styles, result, tt.expected)
+}
+})
+}
+}
+
+func TestExtractFontStyleDetailed(t *testing.T) {
+tests := []struct {
+name     string
+styles   map[string]string
+size     float64
+weight   string
+style    string
+decor    string
+}{
+{
+name:   "defaults",
+styles: map[string]string{},
+size:   13.0, weight: "normal", style: "normal", decor: "none",
+},
+{
+name:   "custom_size",
+styles: map[string]string{"font-size": "20px"},
+size:   20.0, weight: "normal", style: "normal", decor: "none",
+},
+{
+name:   "bold",
+styles: map[string]string{"font-weight": "bold"},
+size:   13.0, weight: "bold", style: "normal", decor: "none",
+},
+{
+name:   "bold_numeric_700",
+styles: map[string]string{"font-weight": "700"},
+size:   13.0, weight: "bold", style: "normal", decor: "none",
+},
+{
+name:   "italic",
+styles: map[string]string{"font-style": "italic"},
+size:   13.0, weight: "normal", style: "italic", decor: "none",
+},
+{
+name:   "oblique",
+styles: map[string]string{"font-style": "oblique"},
+size:   13.0, weight: "normal", style: "italic", decor: "none",
+},
+{
+name:   "underline",
+styles: map[string]string{"text-decoration": "underline"},
+size:   13.0, weight: "normal", style: "normal", decor: "underline",
+},
+{
+name:   "combined",
+styles: map[string]string{
+"font-size":       "16px",
+"font-weight":     "bold",
+"font-style":      "italic",
+"text-decoration": "underline",
+},
+size: 16.0, weight: "bold", style: "italic", decor: "underline",
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+fs := extractFontStyle(tt.styles)
+if fs.Size != tt.size {
+t.Errorf("Size = %v, want %v", fs.Size, tt.size)
+}
+if fs.Weight != tt.weight {
+t.Errorf("Weight = %q, want %q", fs.Weight, tt.weight)
+}
+if fs.Style != tt.style {
+t.Errorf("Style = %q, want %q", fs.Style, tt.style)
+}
+if fs.Decoration != tt.decor {
+t.Errorf("Decoration = %q, want %q", fs.Decoration, tt.decor)
+}
+})
+}
+}
+
+func TestCollapseWhitespace(t *testing.T) {
+tests := []struct {
+input    string
+expected string
+}{
+{"hello world", "hello world"},
+{"  hello  world  ", "hello world"},
+{"hello\n\nworld", "hello world"},
+{"\t\thello\t\tworld\t\t", "hello world"},
+{"hello\r\nworld", "hello world"},
+{"", ""},
+{"   ", ""},
+{"hello", "hello"},
+}
+
+for _, tt := range tests {
+t.Run(tt.input, func(t *testing.T) {
+result := collapseWhitespace(tt.input)
+if result != tt.expected {
+t.Errorf("collapseWhitespace(%q) = %q, want %q", tt.input, result, tt.expected)
+}
+})
+}
+}
+
+func TestSavePNG(t *testing.T) {
+canvas := NewCanvas(10, 10)
+canvas.Clear(color.RGBA{255, 0, 0, 255})
+
+tmpFile := "/tmp/test_save.png"
+err := canvas.SavePNG(tmpFile)
+if err != nil {
+t.Fatalf("SavePNG failed: %v", err)
+}
+
+// Verify the file exists and is a valid PNG
+info, err := os.Stat(tmpFile)
+if err != nil {
+t.Fatalf("File not found: %v", err)
+}
+if info.Size() == 0 {
+t.Error("Expected non-empty file")
+}
+
+os.Remove(tmpFile)
+}
+
+func TestRenderIntegration(t *testing.T) {
+// Test full render pipeline with a simple layout tree
+root := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+"background-color": "white",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 0, Y: 0, Width: 100, Height: 100},
+},
+Children: []*layout.LayoutBox{
+{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+"background-color": "red",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 10, Width: 80, Height: 30},
+},
+},
+},
+}
+
+canvas := Render(root, 100, 100)
+
+if canvas == nil {
+t.Fatal("Render returned nil")
+}
+if canvas.Width != 100 || canvas.Height != 100 {
+t.Errorf("Expected 100x100 canvas, got %dx%d", canvas.Width, canvas.Height)
+}
+
+// Check that the red area was rendered
+red := color.RGBA{255, 0, 0, 255}
+px := canvas.Pixels[20*canvas.Width+20]
+if px != red {
+t.Errorf("Expected red at (20,20), got %v", px)
+}
 }

@@ -96,3 +96,79 @@ func TestResolveURLsNonImgElements(t *testing.T) {
 		t.Errorf("expected data-src=test.png, got %s", div.GetAttribute("data-src"))
 	}
 }
+
+func TestResolveURLStringDataURL(t *testing.T) {
+dataURL := "data:image/png;base64,abc123"
+result := ResolveURLString("/base/dir", dataURL)
+if result != dataURL {
+t.Errorf("Data URLs should not be resolved, got %q", result)
+}
+}
+
+func TestResolveURLStringAbsoluteHTTP(t *testing.T) {
+absURL := "http://example.com/image.png"
+result := ResolveURLString("/base/dir", absURL)
+if result != absURL {
+t.Errorf("Absolute HTTP URLs should not be changed, got %q", result)
+}
+}
+
+func TestResolveURLStringAbsoluteHTTPS(t *testing.T) {
+absURL := "https://example.com/style.css"
+result := ResolveURLString("/base/dir", absURL)
+if result != absURL {
+t.Errorf("Absolute HTTPS URLs should not be changed, got %q", result)
+}
+}
+
+func TestResolveURLStringRelativeWithHTTPBase(t *testing.T) {
+base := "http://example.com/pages/"
+rel := "images/logo.png"
+result := ResolveURLString(base, rel)
+expected := "http://example.com/pages/images/logo.png"
+if result != expected {
+t.Errorf("Expected %q, got %q", expected, result)
+}
+}
+
+func TestResolveURLStringRelativeWithHTTPBaseAbsolutePath(t *testing.T) {
+base := "http://example.com/pages/index.html"
+rel := "/images/logo.png"
+result := ResolveURLString(base, rel)
+expected := "http://example.com/images/logo.png"
+if result != expected {
+t.Errorf("Expected %q, got %q", expected, result)
+}
+}
+
+func TestResolveURLStringFilePath(t *testing.T) {
+base := "/home/user/project"
+rel := "images/logo.png"
+result := ResolveURLString(base, rel)
+expected := "/home/user/project/images/logo.png"
+if result != expected {
+t.Errorf("Expected %q, got %q", expected, result)
+}
+}
+
+func TestResolveURLsLinkElement(t *testing.T) {
+doc := NewDocument()
+head := NewElement("head")
+link := NewElement("link")
+link.SetAttribute("href", "style.css")
+head.AppendChild(link)
+doc.AppendChild(head)
+
+ResolveURLs(doc, "/home/test")
+
+got := link.GetAttribute("href")
+expected := "/home/test/style.css"
+if got != expected {
+t.Errorf("Expected href=%q, got %q", expected, got)
+}
+}
+
+func TestResolveURLsNilNode(t *testing.T) {
+// Should not panic on nil node
+ResolveURLs(nil, "/base")
+}

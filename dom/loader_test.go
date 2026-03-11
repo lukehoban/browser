@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"image"
 	_ "image/png"
+	"os"
 	"testing"
 )
 
@@ -98,4 +99,105 @@ func TestIsDataURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestIsURL(t *testing.T) {
+tests := []struct {
+input string
+want  bool
+}{
+{"http://example.com", true},
+{"https://example.com", true},
+{"ftp://example.com", false},
+{"data:text/plain,hello", false},
+{"/home/user/file.txt", false},
+{"", false},
+{"relative/path", false},
+}
+
+for _, tt := range tests {
+t.Run(tt.input, func(t *testing.T) {
+if got := isURL(tt.input); got != tt.want {
+t.Errorf("isURL(%q) = %v, want %v", tt.input, got, tt.want)
+}
+})
+}
+}
+
+func TestNewResourceLoader(t *testing.T) {
+loader := NewResourceLoader("http://example.com")
+if loader.BaseURL != "http://example.com" {
+t.Errorf("Expected BaseURL 'http://example.com', got %q", loader.BaseURL)
+}
+}
+
+func TestLoadResourceFromFile(t *testing.T) {
+// Create a temporary file for testing
+tmpFile := "/tmp/test_loader_resource.txt"
+content := []byte("hello world")
+if err := os.WriteFile(tmpFile, content, 0644); err != nil {
+t.Fatalf("Failed to create temp file: %v", err)
+}
+defer os.Remove(tmpFile)
+
+loader := NewResourceLoader("")
+data, err := loader.LoadResource(tmpFile)
+if err != nil {
+t.Fatalf("LoadResource failed: %v", err)
+}
+if string(data) != "hello world" {
+t.Errorf("Expected 'hello world', got %q", string(data))
+}
+}
+
+func TestLoadResourceAsString(t *testing.T) {
+tmpFile := "/tmp/test_loader_string.txt"
+content := []byte("test content")
+if err := os.WriteFile(tmpFile, content, 0644); err != nil {
+t.Fatalf("Failed to create temp file: %v", err)
+}
+defer os.Remove(tmpFile)
+
+loader := NewResourceLoader("")
+str, err := loader.LoadResourceAsString(tmpFile)
+if err != nil {
+t.Fatalf("LoadResourceAsString failed: %v", err)
+}
+if str != "test content" {
+t.Errorf("Expected 'test content', got %q", str)
+}
+}
+
+func TestLoadResourceAsStringError(t *testing.T) {
+loader := NewResourceLoader("")
+_, err := loader.LoadResourceAsString("/nonexistent/path/file.txt")
+if err == nil {
+t.Error("Expected error for nonexistent file")
+}
+}
+
+func TestLoadResourceFromDataURL(t *testing.T) {
+loader := NewResourceLoader("")
+data, err := loader.LoadResource("data:text/plain;base64,SGVsbG8=")
+if err != nil {
+t.Fatalf("LoadResource data URL failed: %v", err)
+}
+if string(data) != "Hello" {
+t.Errorf("Expected 'Hello', got %q", string(data))
+}
+}
+
+func TestLoadFromDataURLInvalidNoComma(t *testing.T) {
+_, err := loadFromDataURL("data:text/plain;base64")
+if err == nil {
+t.Error("Expected error for data URL without comma")
+}
+}
+
+func TestLoadResourceFileNotFound(t *testing.T) {
+loader := NewResourceLoader("")
+_, err := loader.LoadResource("/nonexistent/file.txt")
+if err == nil {
+t.Error("Expected error for nonexistent file")
+}
 }

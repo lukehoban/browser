@@ -506,3 +506,156 @@ func TestParseInlineStyle(t *testing.T) {
 		})
 	}
 }
+
+func TestParsePseudoClass(t *testing.T) {
+input := "a:link { color: blue; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) != 1 {
+t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+}
+
+rule := stylesheet.Rules[0]
+if len(rule.Selectors) != 1 {
+t.Fatalf("Expected 1 selector, got %d", len(rule.Selectors))
+}
+
+simple := rule.Selectors[0].Simple[0]
+if simple.TagName != "a" {
+t.Errorf("Expected tag 'a', got %q", simple.TagName)
+}
+if len(simple.PseudoClasses) != 1 || simple.PseudoClasses[0] != "link" {
+t.Errorf("Expected pseudo-class 'link', got %v", simple.PseudoClasses)
+}
+
+if len(rule.Declarations) != 1 {
+t.Fatalf("Expected 1 declaration, got %d", len(rule.Declarations))
+}
+if rule.Declarations[0].Property != "color" || rule.Declarations[0].Value != "blue" {
+t.Errorf("Expected 'color: blue', got '%s: %s'",
+rule.Declarations[0].Property, rule.Declarations[0].Value)
+}
+}
+
+func TestParsePseudoElement(t *testing.T) {
+input := "p::before { content: hello; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) != 1 {
+t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+}
+
+simple := stylesheet.Rules[0].Selectors[0].Simple[0]
+if simple.TagName != "p" {
+t.Errorf("Expected tag 'p', got %q", simple.TagName)
+}
+if len(simple.PseudoElements) != 1 || simple.PseudoElements[0] != "before" {
+t.Errorf("Expected pseudo-element 'before', got %v", simple.PseudoElements)
+}
+}
+
+func TestParseAttributeSelectorGraceful(t *testing.T) {
+input := "input[type=text] { color: red; } p { color: blue; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) < 1 {
+t.Fatalf("Expected at least 1 rule, got %d", len(stylesheet.Rules))
+}
+
+found := false
+for _, rule := range stylesheet.Rules {
+for _, sel := range rule.Selectors {
+for _, s := range sel.Simple {
+if s.TagName == "p" {
+found = true
+}
+}
+}
+}
+if !found {
+t.Error("Expected to find 'p' selector after attribute selector")
+}
+}
+
+func TestParseFunctionalPseudoClass(t *testing.T) {
+input := "li:nth-child(2n+1) { color: red; } p { color: blue; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) < 1 {
+t.Fatalf("Expected at least 1 rule, got %d", len(stylesheet.Rules))
+}
+}
+
+func TestParseMultiplePseudoClasses(t *testing.T) {
+input := "a:link:visited { color: purple; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) != 1 {
+t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+}
+
+simple := stylesheet.Rules[0].Selectors[0].Simple[0]
+if simple.TagName != "a" {
+t.Errorf("Expected tag 'a', got %q", simple.TagName)
+}
+if len(simple.PseudoClasses) != 2 {
+t.Errorf("Expected 2 pseudo-classes, got %d: %v", len(simple.PseudoClasses), simple.PseudoClasses)
+}
+}
+
+func TestParseEmptyRule(t *testing.T) {
+input := "div { } p { color: red; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) < 1 {
+t.Fatalf("Expected at least 1 rule, got %d", len(stylesheet.Rules))
+}
+}
+
+func TestParseStringValue(t *testing.T) {
+input := "div { content: \"hello world\"; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) != 1 {
+t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+}
+if len(stylesheet.Rules[0].Declarations) != 1 {
+t.Fatalf("Expected 1 declaration, got %d", len(stylesheet.Rules[0].Declarations))
+}
+}
+
+func TestTokenizerEscapeInString(t *testing.T) {
+input := "div { content: \"hello\\\"world\"; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) != 1 {
+t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+}
+}
+
+func TestTokenizerUnclosedString(t *testing.T) {
+input := "div { content: \"hello; } p { color: red; }"
+stylesheet := Parse(input)
+_ = stylesheet
+}
+
+func TestParseCommentInCSS(t *testing.T) {
+input := "/* comment */ div { color: red; }"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) != 1 {
+t.Fatalf("Expected 1 rule, got %d", len(stylesheet.Rules))
+}
+if stylesheet.Rules[0].Selectors[0].Simple[0].TagName != "div" {
+t.Errorf("Expected tag 'div'")
+}
+}
+
+func TestParseUnclosedComment(t *testing.T) {
+input := "div { color: red; } /* unclosed"
+stylesheet := Parse(input)
+
+if len(stylesheet.Rules) < 1 {
+t.Fatalf("Expected at least 1 rule, got %d", len(stylesheet.Rules))
+}
+}

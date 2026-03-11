@@ -1123,3 +1123,309 @@ func TestInlineStyleSpecificity(t *testing.T) {
 		t.Errorf("Expected inline style 'red' to win, got %v", divStyled.Styles["color"])
 	}
 }
+
+func TestApplyPresentationalHintsBold(t *testing.T) {
+// strong element should get bold font-weight
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+strong := dom.NewElement("strong")
+body.AppendChild(strong)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("")
+styledTree := StyleTree(doc, stylesheet)
+strongStyled := styledTree.Children[0].Children[0]
+
+if strongStyled.Styles["font-weight"] != "bold" {
+t.Errorf("Expected font-weight 'bold' for <strong>, got %q", strongStyled.Styles["font-weight"])
+}
+}
+
+func TestApplyPresentationalHintsItalic(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+em := dom.NewElement("em")
+body.AppendChild(em)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("")
+styledTree := StyleTree(doc, stylesheet)
+emStyled := styledTree.Children[0].Children[0]
+
+if emStyled.Styles["font-style"] != "italic" {
+t.Errorf("Expected font-style 'italic' for <em>, got %q", emStyled.Styles["font-style"])
+}
+}
+
+func TestApplyPresentationalHintsUnderline(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+u := dom.NewElement("u")
+body.AppendChild(u)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("")
+styledTree := StyleTree(doc, stylesheet)
+uStyled := styledTree.Children[0].Children[0]
+
+if uStyled.Styles["text-decoration"] != "underline" {
+t.Errorf("Expected text-decoration 'underline' for <u>, got %q", uStyled.Styles["text-decoration"])
+}
+}
+
+func TestApplyPresentationalHintsBgcolor(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+td := dom.NewElement("td")
+td.SetAttribute("bgcolor", "#ff0000")
+body.AppendChild(td)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("")
+styledTree := StyleTree(doc, stylesheet)
+tdStyled := styledTree.Children[0].Children[0]
+
+if tdStyled.Styles["background-color"] != "#ff0000" {
+t.Errorf("Expected background-color '#ff0000', got %q", tdStyled.Styles["background-color"])
+}
+}
+
+func TestApplyPresentationalHintsWidth(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+img := dom.NewElement("img")
+img.SetAttribute("width", "200")
+body.AppendChild(img)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("")
+styledTree := StyleTree(doc, stylesheet)
+imgStyled := styledTree.Children[0].Children[0]
+
+if imgStyled.Styles["width"] != "200px" {
+t.Errorf("Expected width '200px', got %q", imgStyled.Styles["width"])
+}
+}
+
+func TestApplyPresentationalHintsWidthPercent(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+table := dom.NewElement("table")
+table.SetAttribute("width", "50%")
+body.AppendChild(table)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("")
+styledTree := StyleTree(doc, stylesheet)
+tableStyled := styledTree.Children[0].Children[0]
+
+if tableStyled.Styles["width"] != "50%" {
+t.Errorf("Expected width '50%%', got %q", tableStyled.Styles["width"])
+}
+}
+
+func TestApplyPresentationalHintsHeight(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+img := dom.NewElement("img")
+img.SetAttribute("height", "100")
+body.AppendChild(img)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("")
+styledTree := StyleTree(doc, stylesheet)
+imgStyled := styledTree.Children[0].Children[0]
+
+if imgStyled.Styles["height"] != "100px" {
+t.Errorf("Expected height '100px', got %q", imgStyled.Styles["height"])
+}
+}
+
+func TestResolveCSSURLs(t *testing.T) {
+styledNode := &StyledNode{
+Node: dom.NewElement("div"),
+Styles: map[string]string{
+"background-image": "url(images/bg.png)",
+},
+Children: []*StyledNode{},
+}
+
+ResolveCSSURLs(styledNode, "http://example.com/pages/")
+
+expected := "url(http://example.com/pages/images/bg.png)"
+if styledNode.Styles["background-image"] != expected {
+t.Errorf("Expected %q, got %q", expected, styledNode.Styles["background-image"])
+}
+}
+
+func TestResolveCSSURLsNil(t *testing.T) {
+// Should not panic on nil
+ResolveCSSURLs(nil, "http://example.com/")
+}
+
+func TestResolveCSSURLsNoURL(t *testing.T) {
+styledNode := &StyledNode{
+Node: dom.NewElement("div"),
+Styles: map[string]string{
+"background-color": "red",
+},
+Children: []*StyledNode{},
+}
+
+ResolveCSSURLs(styledNode, "http://example.com/")
+
+if styledNode.Styles["background-color"] != "red" {
+t.Errorf("Expected 'red', got %q", styledNode.Styles["background-color"])
+}
+}
+
+func TestResolveCSSURLsRecursive(t *testing.T) {
+child := &StyledNode{
+Node: dom.NewElement("span"),
+Styles: map[string]string{
+"background": "url(child.png)",
+},
+Children: []*StyledNode{},
+}
+parent := &StyledNode{
+Node: dom.NewElement("div"),
+Styles: map[string]string{
+"background-image": "url(parent.png)",
+},
+Children: []*StyledNode{child},
+}
+
+ResolveCSSURLs(parent, "http://example.com/")
+
+if !contains(parent.Styles["background-image"], "http://example.com/parent.png") {
+t.Errorf("Parent URL not resolved: %q", parent.Styles["background-image"])
+}
+if !contains(child.Styles["background"], "http://example.com/child.png") {
+t.Errorf("Child URL not resolved: %q", child.Styles["background"])
+}
+}
+
+func contains(s, substr string) bool {
+return len(s) >= len(substr) && (s == substr || len(s) > 0 && stringContains(s, substr))
+}
+
+func stringContains(s, substr string) bool {
+for i := 0; i+len(substr) <= len(s); i++ {
+if s[i:i+len(substr)] == substr {
+return true
+}
+}
+return false
+}
+
+func TestMatchesDescendantSelector(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+div := dom.NewElement("div")
+div.SetAttribute("id", "container")
+p := dom.NewElement("p")
+div.AppendChild(p)
+body.AppendChild(div)
+doc.AppendChild(body)
+
+cssInput := "#container p { color: red; }"
+stylesheet := css.Parse(cssInput)
+styledTree := StyleTree(doc, stylesheet)
+
+// Navigate to the p element
+pStyled := styledTree.Children[0].Children[0].Children[0]
+if pStyled.Styles["color"] != "red" {
+t.Errorf("Expected descendant selector to match, color = %q", pStyled.Styles["color"])
+}
+}
+
+func TestMatchesPseudoClassLink(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+a := dom.NewElement("a")
+a.SetAttribute("href", "http://example.com")
+body.AppendChild(a)
+doc.AppendChild(body)
+
+cssInput := "a:link { color: blue; }"
+stylesheet := css.Parse(cssInput)
+styledTree := StyleTree(doc, stylesheet)
+
+aStyled := styledTree.Children[0].Children[0]
+if aStyled.Styles["color"] != "blue" {
+t.Errorf("Expected a:link to match, color = %q", aStyled.Styles["color"])
+}
+}
+
+func TestSpecificityCompareAllFields(t *testing.T) {
+tests := []struct {
+name     string
+a, b     Specificity
+expected int
+}{
+{"equal", Specificity{0, 0, 0, 0}, Specificity{0, 0, 0, 0}, 0},
+{"a_wins_A", Specificity{1, 0, 0, 0}, Specificity{0, 1, 1, 1}, 1},
+{"b_wins_A", Specificity{0, 1, 1, 1}, Specificity{1, 0, 0, 0}, -1},
+{"a_wins_B", Specificity{0, 2, 0, 0}, Specificity{0, 1, 0, 0}, 1},
+{"a_wins_C", Specificity{0, 0, 2, 0}, Specificity{0, 0, 1, 0}, 1},
+{"a_wins_D", Specificity{0, 0, 0, 2}, Specificity{0, 0, 0, 1}, 1},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+result := tt.a.Compare(tt.b)
+if (tt.expected > 0 && result <= 0) || (tt.expected < 0 && result >= 0) || (tt.expected == 0 && result != 0) {
+t.Errorf("(%v).Compare(%v) = %d, want sign of %d", tt.a, tt.b, result, tt.expected)
+}
+})
+}
+}
+
+func TestDefaultUserAgentStylesheet(t *testing.T) {
+ua := DefaultUserAgentStylesheet()
+if ua == nil {
+t.Fatal("DefaultUserAgentStylesheet returned nil")
+}
+if len(ua.Rules) == 0 {
+t.Error("Expected user agent stylesheet to have rules")
+}
+}
+
+func TestStyleTreeWithNilStylesheet(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+doc.AppendChild(body)
+
+// StyleTree should handle nil author stylesheet
+styledTree := StyleTree(doc, nil)
+if styledTree == nil {
+t.Fatal("StyleTree returned nil")
+}
+}
+
+func TestInheritanceOfFontProperties(t *testing.T) {
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+p := dom.NewElement("p")
+span := dom.NewElement("span")
+p.AppendChild(span)
+body.AppendChild(p)
+doc.AppendChild(body)
+
+cssInput := "p { font-size: 20px; color: red; }"
+stylesheet := css.Parse(cssInput)
+styledTree := StyleTree(doc, stylesheet)
+
+// Navigate to span
+spanStyled := styledTree.Children[0].Children[0].Children[0]
+
+// font-size should be inherited
+if spanStyled.Styles["font-size"] != "20px" {
+t.Errorf("Expected inherited font-size '20px', got %q", spanStyled.Styles["font-size"])
+}
+
+// color should be inherited
+if spanStyled.Styles["color"] != "red" {
+t.Errorf("Expected inherited color 'red', got %q", spanStyled.Styles["color"])
+}
+}

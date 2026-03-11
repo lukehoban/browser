@@ -1149,3 +1149,432 @@ func TestGridLayout_Skipped(t *testing.T) {
 		t.Errorf("Expected gap of %v between items 0 and 1, got %v", expectedGap, gap1)
 	}
 }
+
+func TestLayoutTree(t *testing.T) {
+// Test the public LayoutTree function
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+div := dom.NewElement("div")
+body.AppendChild(div)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("div { width: 200px; height: 100px; }")
+styledTree := style.StyleTree(doc, stylesheet)
+
+containing := Dimensions{
+Content: Rect{Width: 800, Height: 600},
+}
+root := LayoutTree(styledTree, containing)
+
+if root == nil {
+t.Fatal("LayoutTree returned nil")
+}
+}
+
+func TestApplyExplicitRowHeight(t *testing.T) {
+box := &LayoutBox{
+BoxType:    TableRowBox,
+Dimensions: Dimensions{},
+}
+
+styles := map[string]string{"height": "50px"}
+result := applyExplicitRowHeight(box, styles)
+
+if !result {
+t.Error("Expected applyExplicitRowHeight to return true")
+}
+if box.Dimensions.Content.Height != 50 {
+t.Errorf("Expected height 50, got %v", box.Dimensions.Content.Height)
+}
+}
+
+func TestApplyExplicitRowHeightNoHeight(t *testing.T) {
+box := &LayoutBox{
+BoxType:    TableRowBox,
+Dimensions: Dimensions{},
+}
+
+styles := map[string]string{}
+applyExplicitRowHeight(box, styles)
+
+if box.Dimensions.Content.Height != 0 {
+t.Errorf("Expected height 0 (unchanged), got %v", box.Dimensions.Content.Height)
+}
+}
+
+func TestGetColspanDefault(t *testing.T) {
+node := dom.NewElement("td")
+styledNode := &style.StyledNode{
+Node:   node,
+Styles: map[string]string{},
+}
+cell := &LayoutBox{
+BoxType:    TableCellBox,
+StyledNode: styledNode,
+}
+
+if got := getColspan(cell); got != 1 {
+t.Errorf("Expected default colspan 1, got %d", got)
+}
+}
+
+func TestGetColspanExplicit(t *testing.T) {
+node := dom.NewElement("td")
+node.SetAttribute("colspan", "3")
+styledNode := &style.StyledNode{
+Node:   node,
+Styles: map[string]string{},
+}
+cell := &LayoutBox{
+BoxType:    TableCellBox,
+StyledNode: styledNode,
+}
+
+if got := getColspan(cell); got != 3 {
+t.Errorf("Expected colspan 3, got %d", got)
+}
+}
+
+func TestGetColspanInvalid(t *testing.T) {
+node := dom.NewElement("td")
+node.SetAttribute("colspan", "abc")
+styledNode := &style.StyledNode{
+Node:   node,
+Styles: map[string]string{},
+}
+cell := &LayoutBox{
+BoxType:    TableCellBox,
+StyledNode: styledNode,
+}
+
+if got := getColspan(cell); got != 1 {
+t.Errorf("Expected default 1 for invalid colspan, got %d", got)
+}
+}
+
+func TestGetColspanNilStyledNode(t *testing.T) {
+cell := &LayoutBox{
+BoxType:    TableCellBox,
+StyledNode: nil,
+}
+
+if got := getColspan(cell); got != 1 {
+t.Errorf("Expected default 1 for nil styled node, got %d", got)
+}
+}
+
+func TestGetColspanZero(t *testing.T) {
+node := dom.NewElement("td")
+node.SetAttribute("colspan", "0")
+styledNode := &style.StyledNode{
+Node:   node,
+Styles: map[string]string{},
+}
+cell := &LayoutBox{
+BoxType:    TableCellBox,
+StyledNode: styledNode,
+}
+
+// colspan of 0 is not > 0, so should return 1
+if got := getColspan(cell); got != 1 {
+t.Errorf("Expected 1 for colspan 0, got %d", got)
+}
+}
+
+func TestShiftY(t *testing.T) {
+child := &LayoutBox{
+BoxType: BlockBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 10, Width: 50, Height: 20},
+},
+}
+parent := &LayoutBox{
+BoxType: BlockBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 100, Height: 50},
+},
+Children: []*LayoutBox{child},
+}
+
+parent.shiftY(15.0)
+
+if parent.Dimensions.Content.Y != 15 {
+t.Errorf("Parent Y = %v, want 15", parent.Dimensions.Content.Y)
+}
+if child.Dimensions.Content.Y != 25 {
+t.Errorf("Child Y = %v, want 25 (10 + 15)", child.Dimensions.Content.Y)
+}
+}
+
+func TestApplyVerticalAlignmentMiddle(t *testing.T) {
+child := &LayoutBox{
+BoxType: BlockBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 50, Height: 20},
+},
+}
+parent := &LayoutBox{
+BoxType: TableCellBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 100, Height: 100},
+},
+Children: []*LayoutBox{child},
+}
+
+parent.applyVerticalAlignment("middle")
+
+// Available space = 100 - 20 = 80, middle offset = 40
+expectedY := 40.0
+if child.Dimensions.Content.Y != expectedY {
+t.Errorf("Child Y after middle align = %v, want %v", child.Dimensions.Content.Y, expectedY)
+}
+}
+
+func TestApplyVerticalAlignmentBottom(t *testing.T) {
+child := &LayoutBox{
+BoxType: BlockBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 50, Height: 20},
+},
+}
+parent := &LayoutBox{
+BoxType: TableCellBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 100, Height: 100},
+},
+Children: []*LayoutBox{child},
+}
+
+parent.applyVerticalAlignment("bottom")
+
+expectedY := 80.0
+if child.Dimensions.Content.Y != expectedY {
+t.Errorf("Child Y after bottom align = %v, want %v", child.Dimensions.Content.Y, expectedY)
+}
+}
+
+func TestApplyVerticalAlignmentTop(t *testing.T) {
+child := &LayoutBox{
+BoxType: BlockBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 5, Width: 50, Height: 20},
+},
+}
+parent := &LayoutBox{
+BoxType: TableCellBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 100, Height: 100},
+},
+Children: []*LayoutBox{child},
+}
+
+parent.applyVerticalAlignment("top")
+
+// Top alignment should not change Y
+if child.Dimensions.Content.Y != 5 {
+t.Errorf("Child Y after top align = %v, want 5 (unchanged)", child.Dimensions.Content.Y)
+}
+}
+
+func TestApplyVerticalAlignmentNoSpace(t *testing.T) {
+child := &LayoutBox{
+BoxType: BlockBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 50, Height: 100},
+},
+}
+parent := &LayoutBox{
+BoxType: TableCellBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 100, Height: 50},
+},
+Children: []*LayoutBox{child},
+}
+
+parent.applyVerticalAlignment("middle")
+
+// No available space, Y should not change
+if child.Dimensions.Content.Y != 0 {
+t.Errorf("Child Y should be unchanged when no space, got %v", child.Dimensions.Content.Y)
+}
+}
+
+func TestApplyVerticalAlignmentEmpty(t *testing.T) {
+parent := &LayoutBox{
+BoxType: TableCellBox,
+Dimensions: Dimensions{
+Content: Rect{X: 0, Y: 0, Width: 100, Height: 100},
+},
+Children: []*LayoutBox{},
+}
+
+// Should not panic with empty children
+parent.applyVerticalAlignment("middle")
+}
+
+func TestExtractFontStyle(t *testing.T) {
+tests := []struct {
+name     string
+styles   map[string]string
+expected string
+}{
+{"empty", map[string]string{}, "normal"},
+{"italic", map[string]string{"font-style": "italic"}, "italic"},
+{"oblique", map[string]string{"font-style": "oblique"}, "italic"},
+{"normal", map[string]string{"font-style": "normal"}, "normal"},
+{"unknown", map[string]string{"font-style": "unknown"}, "normal"},
+{"with_whitespace", map[string]string{"font-style": "  italic  "}, "italic"},
+{"uppercase", map[string]string{"font-style": "ITALIC"}, "italic"},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+result := extractFontStyle(tt.styles)
+if result != tt.expected {
+t.Errorf("extractFontStyle(%v) = %q, want %q", tt.styles, result, tt.expected)
+}
+})
+}
+}
+
+func TestExtractFontSize(t *testing.T) {
+tests := []struct {
+name     string
+styles   map[string]string
+expected float64
+}{
+{"empty_styles", map[string]string{}, css.BaseFontHeight},
+{"no_font_size", map[string]string{"color": "red"}, css.BaseFontHeight},
+{"explicit_20px", map[string]string{"font-size": "20px"}, 20.0},
+{"named_large", map[string]string{"font-size": "large"}, 16.0},
+{"invalid", map[string]string{"font-size": "invalid"}, css.BaseFontHeight},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+result := extractFontSize(tt.styles)
+if result != tt.expected {
+t.Errorf("extractFontSize(%v) = %v, want %v", tt.styles, result, tt.expected)
+}
+})
+}
+}
+
+func TestIsInlineLevel(t *testing.T) {
+textNode := dom.NewText("hello")
+tests := []struct {
+name     string
+box      *LayoutBox
+expected bool
+}{
+{
+"inline_box",
+&LayoutBox{BoxType: InlineBox},
+true,
+},
+{
+"block_box",
+&LayoutBox{BoxType: BlockBox},
+false,
+},
+{
+"text_node",
+&LayoutBox{
+BoxType: BlockBox,
+StyledNode: &style.StyledNode{
+Node: textNode,
+},
+},
+true,
+},
+{
+"nil_styled_node",
+&LayoutBox{BoxType: BlockBox, StyledNode: nil},
+false,
+},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+if got := tt.box.isInlineLevel(); got != tt.expected {
+t.Errorf("isInlineLevel() = %v, want %v", got, tt.expected)
+}
+})
+}
+}
+
+func TestParseLengthEdgeCases(t *testing.T) {
+tests := []struct {
+name     string
+value    string
+ref      float64
+expected float64
+}{
+{"em_value", "2em", 0, -1}, // em not supported, returns -1
+{"negative_px", "-10px", 0, -10},
+{"percent_50", "50%", 200, 100},
+{"percent_100", "100%", 300, 300},
+{"zero_percent", "0%", 100, 0},
+{"invalid_percent", "abc%", 100, -1},
+{"invalid_px", "abcpx", 100, -1},
+}
+
+for _, tt := range tests {
+t.Run(tt.name, func(t *testing.T) {
+result := parseLength(tt.value, tt.ref)
+if result != tt.expected {
+t.Errorf("parseLength(%q, %v) = %v, want %v", tt.value, tt.ref, result, tt.expected)
+}
+})
+}
+}
+
+func TestLayoutTableRowWithColspan(t *testing.T) {
+// Create a table row with cells including one with colspan
+doc := dom.NewDocument()
+body := dom.NewElement("body")
+table := dom.NewElement("table")
+tr := dom.NewElement("tr")
+
+td1 := dom.NewElement("td")
+td1.SetAttribute("colspan", "2")
+td2 := dom.NewElement("td")
+
+tr.AppendChild(td1)
+tr.AppendChild(td2)
+table.AppendChild(tr)
+body.AppendChild(table)
+doc.AppendChild(body)
+
+stylesheet := css.Parse("table { width: 300px; }")
+styledTree := style.StyleTree(doc, stylesheet)
+
+containing := Dimensions{
+Content: Rect{Width: 800, Height: 600},
+}
+root := LayoutTree(styledTree, containing)
+
+if root == nil {
+t.Fatal("LayoutTree returned nil")
+}
+}
+
+func TestExpandRectFunction(t *testing.T) {
+rect := Rect{X: 10, Y: 20, Width: 100, Height: 50}
+edges := EdgeSizes{Top: 5, Right: 10, Bottom: 15, Left: 20}
+
+result := expandRect(rect, edges)
+
+if result.X != -10 { // 10 - 20
+t.Errorf("X = %v, want -10", result.X)
+}
+if result.Y != 15 { // 20 - 5
+t.Errorf("Y = %v, want 15", result.Y)
+}
+if result.Width != 130 { // 100 + 20 + 10
+t.Errorf("Width = %v, want 130", result.Width)
+}
+if result.Height != 70 { // 50 + 5 + 15
+t.Errorf("Height = %v, want 70", result.Height)
+}
+}

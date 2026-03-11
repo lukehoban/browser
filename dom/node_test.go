@@ -119,3 +119,82 @@ func TestClasses(t *testing.T) {
 		})
 	}
 }
+
+func TestNewDocument(t *testing.T) {
+doc := NewDocument()
+if doc.Type != DocumentNode {
+t.Errorf("Expected DocumentNode type, got %v", doc.Type)
+}
+if doc.Data != "#document" {
+t.Errorf("Expected data '#document', got %q", doc.Data)
+}
+if len(doc.Children) != 0 {
+t.Errorf("Expected empty children, got %d", len(doc.Children))
+}
+}
+
+func TestGetAttributeNilAttributes(t *testing.T) {
+// Node with nil attributes map should return empty string
+node := &Node{
+Type:       ElementNode,
+Data:       "div",
+Attributes: nil,
+}
+if got := node.GetAttribute("class"); got != "" {
+t.Errorf("Expected empty string for nil attributes, got %q", got)
+}
+}
+
+func TestSetAttributeNilAttributes(t *testing.T) {
+// SetAttribute on a node with nil attributes should create the map
+node := &Node{
+Type:       ElementNode,
+Data:       "div",
+Attributes: nil,
+}
+node.SetAttribute("id", "test")
+if got := node.GetAttribute("id"); got != "test" {
+t.Errorf("Expected 'test', got %q", got)
+}
+}
+
+func TestAppendChildSetsParent(t *testing.T) {
+parent := NewElement("div")
+child1 := NewElement("p")
+child2 := NewText("hello")
+
+parent.AppendChild(child1)
+parent.AppendChild(child2)
+
+if child1.Parent != parent {
+t.Error("Expected child1.Parent to be parent")
+}
+if child2.Parent != parent {
+t.Error("Expected child2.Parent to be parent")
+}
+if len(parent.Children) != 2 {
+t.Errorf("Expected 2 children, got %d", len(parent.Children))
+}
+}
+
+func TestIDReturnsEmptyForNoID(t *testing.T) {
+node := NewElement("div")
+if got := node.ID(); got != "" {
+t.Errorf("Expected empty ID, got %q", got)
+}
+}
+
+func TestClassesMultipleSpaces(t *testing.T) {
+node := NewElement("div")
+node.SetAttribute("class", "  foo   bar  baz  ")
+classes := node.Classes()
+expected := []string{"foo", "bar", "baz"}
+if len(classes) != len(expected) {
+t.Fatalf("Expected %d classes, got %d: %v", len(expected), len(classes), classes)
+}
+for i, c := range classes {
+if c != expected[i] {
+t.Errorf("Class[%d] = %q, want %q", i, c, expected[i])
+}
+}
+}
