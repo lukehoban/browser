@@ -881,3 +881,80 @@ func TestExtractURLFromCSS(t *testing.T) {
 		})
 	}
 }
+func TestCollapseWhitespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "empty_string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "single_space",
+			input:    " ",
+			expected: "",
+		},
+		{
+			name:     "multiple_spaces",
+			input:    "   ",
+			expected: "",
+		},
+		{
+			name:     "normal_text",
+			input:    "Hello World",
+			expected: "Hello World",
+		},
+		{
+			name:     "multiple_spaces_between",
+			input:    "Hello    World",
+			expected: "Hello World",
+		},
+		{
+			name:     "leading_spaces",
+			input:    "   Hello",
+			expected: "Hello",
+		},
+		{
+			name:     "trailing_spaces",
+			input:    "Hello   ",
+			expected: "Hello",
+		},
+		{
+			name:     "leading_and_trailing",
+			input:    "   Hello   ",
+			expected: "Hello",
+		},
+		{
+			name:     "newlines",
+			input:    "Hello\nWorld",
+			expected: "Hello World",
+		},
+		{
+			name:     "tabs",
+			input:    "Hello\tWorld",
+			expected: "Hello World",
+		},
+		{
+			name:     "mixed_whitespace",
+			input:    "Hello  \t\n\r  World",
+			expected: "Hello World",
+		},
+		{
+			name:     "multiple_words",
+			input:    "  The   quick  brown\t\nfox  ",
+			expected: "The quick brown fox",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := collapseWhitespace(tt.input)
+			if result != tt.expected {
+				t.Errorf("collapseWhitespace(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
