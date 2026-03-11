@@ -91,7 +91,7 @@ Example of styled HTML with borders, colors, and text formatting:
 
 ### Hacker News
 
-Latest Hacker News render (1024x768):
+Latest Hacker News render (800x600):
 
 ![Hacker News Rendering](./hackernews_screenshot.png)
 
