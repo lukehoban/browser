@@ -177,9 +177,7 @@ ResolveURLs(nil, "/base")
 
 func TestFetchExternalStylesheets(t *testing.T) {
 // Create a temporary CSS file
-tmpDir := "/tmp/test_fetch_css"
-os.MkdirAll(tmpDir, 0755)
-defer os.RemoveAll(tmpDir)
+tmpDir := t.TempDir()
 
 cssContent := "body { color: red; }"
 cssFile := tmpDir + "/style.css"

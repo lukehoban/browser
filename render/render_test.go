@@ -1280,7 +1280,7 @@ func TestSavePNG(t *testing.T) {
 canvas := NewCanvas(10, 10)
 canvas.Clear(color.RGBA{255, 0, 0, 255})
 
-tmpFile := "/tmp/test_save.png"
+tmpFile := t.TempDir() + "/test_save.png"
 err := canvas.SavePNG(tmpFile)
 if err != nil {
 t.Fatalf("SavePNG failed: %v", err)
@@ -1294,8 +1294,6 @@ t.Fatalf("File not found: %v", err)
 if info.Size() == 0 {
 t.Error("Expected non-empty file")
 }
-
-os.Remove(tmpFile)
 }
 
 func TestRenderIntegration(t *testing.T) {

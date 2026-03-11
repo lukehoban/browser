@@ -133,12 +133,11 @@ t.Errorf("Expected BaseURL 'http://example.com', got %q", loader.BaseURL)
 
 func TestLoadResourceFromFile(t *testing.T) {
 // Create a temporary file for testing
-tmpFile := "/tmp/test_loader_resource.txt"
+tmpFile := t.TempDir() + "/test_loader_resource.txt"
 content := []byte("hello world")
 if err := os.WriteFile(tmpFile, content, 0644); err != nil {
 t.Fatalf("Failed to create temp file: %v", err)
 }
-defer os.Remove(tmpFile)
 
 loader := NewResourceLoader("")
 data, err := loader.LoadResource(tmpFile)
@@ -151,12 +150,11 @@ t.Errorf("Expected 'hello world', got %q", string(data))
 }
 
 func TestLoadResourceAsString(t *testing.T) {
-tmpFile := "/tmp/test_loader_string.txt"
+tmpFile := t.TempDir() + "/test_loader_string.txt"
 content := []byte("test content")
 if err := os.WriteFile(tmpFile, content, 0644); err != nil {
 t.Fatalf("Failed to create temp file: %v", err)
 }
-defer os.Remove(tmpFile)
 
 loader := NewResourceLoader("")
 str, err := loader.LoadResourceAsString(tmpFile)

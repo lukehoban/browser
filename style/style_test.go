@@ -1,6 +1,7 @@
 package style
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/lukehoban/browser/css"
@@ -1297,25 +1298,12 @@ Children: []*StyledNode{child},
 
 ResolveCSSURLs(parent, "http://example.com/")
 
-if !contains(parent.Styles["background-image"], "http://example.com/parent.png") {
+if !strings.Contains(parent.Styles["background-image"], "http://example.com/parent.png") {
 t.Errorf("Parent URL not resolved: %q", parent.Styles["background-image"])
 }
-if !contains(child.Styles["background"], "http://example.com/child.png") {
+if !strings.Contains(child.Styles["background"], "http://example.com/child.png") {
 t.Errorf("Child URL not resolved: %q", child.Styles["background"])
 }
-}
-
-func contains(s, substr string) bool {
-return len(s) >= len(substr) && (s == substr || len(s) > 0 && stringContains(s, substr))
-}
-
-func stringContains(s, substr string) bool {
-for i := 0; i+len(substr) <= len(s); i++ {
-if s[i:i+len(substr)] == substr {
-return true
-}
-}
-return false
 }
 
 func TestMatchesDescendantSelector(t *testing.T) {
