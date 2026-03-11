@@ -1341,3 +1341,189 @@ if px != red {
 t.Errorf("Expected red at (20,20), got %v", px)
 }
 }
+
+func TestRenderImageNilStyledNode(t *testing.T) {
+canvas := NewCanvas(100, 100)
+box := &layout.LayoutBox{
+BoxType:    layout.BlockBox,
+StyledNode: nil,
+}
+// Should not panic
+renderImage(canvas, box)
+}
+
+func TestRenderImageNonImgElement(t *testing.T) {
+canvas := NewCanvas(100, 100)
+divNode := dom.NewElement("div")
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Node:   divNode,
+Styles: map[string]string{},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 0, Y: 0, Width: 100, Height: 100},
+},
+}
+// Should not render anything for non-img elements
+renderImage(canvas, box)
+}
+
+func TestRenderImageNoSrc(t *testing.T) {
+canvas := NewCanvas(100, 100)
+imgNode := dom.NewElement("img")
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Node:   imgNode,
+Styles: map[string]string{},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 0, Y: 0, Width: 100, Height: 100},
+},
+}
+// Should not panic for missing src
+renderImage(canvas, box)
+}
+
+func TestRenderImageInvalidSrc(t *testing.T) {
+canvas := NewCanvas(100, 100)
+imgNode := dom.NewElement("img")
+imgNode.SetAttribute("src", "/nonexistent/image.png")
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Node:   imgNode,
+Styles: map[string]string{},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 0, Y: 0, Width: 100, Height: 100},
+},
+}
+// Should not panic for invalid src
+renderImage(canvas, box)
+}
+
+func TestRenderTextWithWhitespace(t *testing.T) {
+canvas := NewCanvas(200, 50)
+canvas.Clear(color.RGBA{255, 255, 255, 255})
+
+textNode := &dom.Node{
+Type: dom.TextNode,
+Data: "  Hello   World  ",
+}
+
+box := &layout.LayoutBox{
+BoxType: layout.InlineBox,
+StyledNode: &style.StyledNode{
+Node: textNode,
+Styles: map[string]string{
+"color": "black",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 5, Width: 100, Height: 13},
+},
+}
+
+// Should not panic, whitespace gets collapsed
+renderText(canvas, box)
+}
+
+func TestRenderTextWithFontStyles(t *testing.T) {
+canvas := NewCanvas(200, 50)
+canvas.Clear(color.RGBA{255, 255, 255, 255})
+
+textNode := &dom.Node{
+Type: dom.TextNode,
+Data: "Bold Italic",
+}
+
+box := &layout.LayoutBox{
+BoxType: layout.InlineBox,
+StyledNode: &style.StyledNode{
+Node: textNode,
+Styles: map[string]string{
+"color":       "red",
+"font-weight": "bold",
+"font-style":  "italic",
+"font-size":   "16px",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 5, Width: 100, Height: 16},
+},
+}
+
+// Should not panic with styled text
+renderText(canvas, box)
+}
+
+func TestRenderBackgroundShorthand(t *testing.T) {
+canvas := NewCanvas(100, 100)
+canvas.Clear(color.RGBA{255, 255, 255, 255})
+
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+"background": "green",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 10, Y: 10, Width: 50, Height: 50},
+},
+}
+
+renderBackground(canvas, box)
+
+green := color.RGBA{0, 128, 0, 255}
+px := canvas.Pixels[20*canvas.Width+20]
+if px != green {
+t.Errorf("Expected green at (20,20), got %v", px)
+}
+}
+
+func TestRenderBordersAllSides(t *testing.T) {
+canvas := NewCanvas(200, 200)
+canvas.Clear(color.RGBA{255, 255, 255, 255})
+
+box := &layout.LayoutBox{
+BoxType: layout.BlockBox,
+StyledNode: &style.StyledNode{
+Styles: map[string]string{
+"border-style": "solid",
+"border-color": "black",
+},
+},
+Dimensions: layout.Dimensions{
+Content: layout.Rect{X: 50, Y: 50, Width: 100, Height: 100},
+Border:  layout.EdgeSizes{Top: 3, Right: 3, Bottom: 3, Left: 3},
+},
+}
+
+renderBorders(canvas, box)
+
+black := color.RGBA{0, 0, 0, 255}
+
+// Check left border
+leftBorderX := 47 // Content.X(50) - Border.Left(3)
+px := canvas.Pixels[60*canvas.Width+leftBorderX]
+if px != black {
+t.Errorf("Expected black at left border, got %v", px)
+}
+
+// Check right border
+rightBorderX := 150 // Content.X(50) + Content.Width(100)
+px = canvas.Pixels[60*canvas.Width+rightBorderX]
+if px != black {
+t.Errorf("Expected black at right border, got %v", px)
+}
+
+// Check bottom border
+bottomBorderY := 150 // Content.Y(50) + Content.Height(100)
+px = canvas.Pixels[bottomBorderY*canvas.Width+60]
+if px != black {
+t.Errorf("Expected black at bottom border, got %v", px)
+}
+}

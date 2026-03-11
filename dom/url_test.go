@@ -1,7 +1,9 @@
 package dom
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -171,4 +173,81 @@ t.Errorf("Expected href=%q, got %q", expected, got)
 func TestResolveURLsNilNode(t *testing.T) {
 // Should not panic on nil node
 ResolveURLs(nil, "/base")
+}
+
+func TestFetchExternalStylesheets(t *testing.T) {
+// Create a temporary CSS file
+tmpDir := "/tmp/test_fetch_css"
+os.MkdirAll(tmpDir, 0755)
+defer os.RemoveAll(tmpDir)
+
+cssContent := "body { color: red; }"
+cssFile := tmpDir + "/style.css"
+os.WriteFile(cssFile, []byte(cssContent), 0644)
+
+// Create DOM tree with a link element
+doc := NewDocument()
+head := NewElement("head")
+link := NewElement("link")
+link.SetAttribute("rel", "stylesheet")
+link.SetAttribute("href", cssFile)
+head.AppendChild(link)
+doc.AppendChild(head)
+
+result := FetchExternalStylesheets(doc)
+if result == "" {
+t.Error("Expected CSS content from external stylesheet")
+}
+if !strings.Contains(result, "color: red") {
+t.Errorf("Expected 'color: red' in result, got %q", result)
+}
+}
+
+func TestFetchExternalStylesheetsNoLink(t *testing.T) {
+doc := NewDocument()
+body := NewElement("body")
+doc.AppendChild(body)
+
+result := FetchExternalStylesheets(doc)
+if result != "" {
+t.Errorf("Expected empty result for no link elements, got %q", result)
+}
+}
+
+func TestFetchExternalStylesheetsNonStylesheet(t *testing.T) {
+doc := NewDocument()
+head := NewElement("head")
+link := NewElement("link")
+link.SetAttribute("rel", "icon")
+link.SetAttribute("href", "/favicon.ico")
+head.AppendChild(link)
+doc.AppendChild(head)
+
+result := FetchExternalStylesheets(doc)
+if result != "" {
+t.Errorf("Expected empty result for non-stylesheet link, got %q", result)
+}
+}
+
+func TestFetchExternalStylesheetsNilNode(t *testing.T) {
+result := FetchExternalStylesheets(nil)
+if result != "" {
+t.Errorf("Expected empty result for nil node, got %q", result)
+}
+}
+
+func TestFetchExternalStylesheetsMissingFile(t *testing.T) {
+doc := NewDocument()
+head := NewElement("head")
+link := NewElement("link")
+link.SetAttribute("rel", "stylesheet")
+link.SetAttribute("href", "/nonexistent/style.css")
+head.AppendChild(link)
+doc.AppendChild(head)
+
+// Should not panic, just skip the missing file
+result := FetchExternalStylesheets(doc)
+if result != "" {
+t.Errorf("Expected empty result for missing file, got %q", result)
+}
 }

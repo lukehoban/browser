@@ -333,3 +333,115 @@ func TestParseMathMLNamespace_Skipped(t *testing.T) {
 	// Should have MathML namespace (when namespace support is added)
 	// Expected: math.Namespace == "http://www.w3.org/1998/Math/MathML"
 }
+
+func TestParseTextAtDocumentLevel(t *testing.T) {
+// Text at document level (outside elements) should be handled
+input := "Hello World"
+doc := Parse(input)
+
+// The text should be a child of the document
+found := false
+for _, child := range doc.Children {
+if child.Type == dom.TextNode && child.Data == "Hello World" {
+found = true
+}
+}
+if !found {
+t.Error("Expected text node at document level")
+}
+}
+
+func TestParseWhitespaceOnlyTextAtDocumentLevel(t *testing.T) {
+// Whitespace-only text at document level should be ignored
+input := "   \n\t  <div>content</div>   \n  "
+doc := Parse(input)
+
+for _, child := range doc.Children {
+if child.Type == dom.TextNode {
+// Check that it's not whitespace-only
+allWs := true
+for _, c := range child.Data {
+if c != ' ' && c != '\t' && c != '\n' && c != '\r' {
+allWs = false
+break
+}
+}
+if allWs {
+t.Error("Whitespace-only text nodes at document level should be skipped")
+}
+}
+}
+}
+
+func TestParseTextInNestedElements(t *testing.T) {
+input := "<div><p>Hello</p> middle <p>World</p></div>"
+doc := Parse(input)
+
+if len(doc.Children) != 1 {
+t.Fatalf("Expected 1 child, got %d", len(doc.Children))
+}
+div := doc.Children[0]
+if div.Data != "div" {
+t.Errorf("Expected 'div', got %q", div.Data)
+}
+// Should have 3 children: p, text(" middle "), p
+if len(div.Children) != 3 {
+t.Fatalf("Expected 3 children in div, got %d", len(div.Children))
+}
+if div.Children[1].Type != dom.TextNode {
+t.Error("Expected middle child to be text node")
+}
+}
+
+func TestParseUnmatchedEndTag(t *testing.T) {
+// Unmatched end tags should be gracefully ignored
+input := "<div>Hello</span></div>"
+doc := Parse(input)
+
+if len(doc.Children) != 1 {
+t.Fatalf("Expected 1 child, got %d", len(doc.Children))
+}
+if doc.Children[0].Data != "div" {
+t.Errorf("Expected 'div', got %q", doc.Children[0].Data)
+}
+}
+
+func TestParseComment(t *testing.T) {
+// Comments should be skipped
+input := "<div><!-- comment -->Hello</div>"
+doc := Parse(input)
+
+if len(doc.Children) != 1 {
+t.Fatalf("Expected 1 child, got %d", len(doc.Children))
+}
+div := doc.Children[0]
+// The comment should not appear as a child
+for _, child := range div.Children {
+if child.Type == dom.TextNode && child.Data == "<!-- comment -->" {
+t.Error("Comment should not appear as a text node")
+}
+}
+}
+
+func TestParseDoctype(t *testing.T) {
+input := "<!DOCTYPE html><html><body>Hello</body></html>"
+doc := Parse(input)
+
+// Should parse without errors
+if doc == nil {
+t.Fatal("Parse returned nil")
+}
+if len(doc.Children) == 0 {
+t.Fatal("Expected children after doctype")
+}
+}
+
+func TestParseEmptyInput(t *testing.T) {
+doc := Parse("")
+if doc == nil {
+t.Fatal("Parse returned nil for empty input")
+}
+if doc.Type != dom.DocumentNode {
+t.Errorf("Expected DocumentNode, got %v", doc.Type)
+}
+}
