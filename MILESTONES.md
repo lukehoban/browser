@@ -599,7 +599,7 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 ---
 
 ## Future Enhancements (Post-MVP)
-- JavaScript support
+- JavaScript support (see Milestone 11 below)
 - CSS 3 features (flexbox, grid, transitions, animations)
 - Form handling
 - Media queries (responsive design)
@@ -614,11 +614,57 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 
 ---
 
+## Milestone 11: JavaScript Engine ✅ COMPLETE
+**Goal**: Execute inline JavaScript from `<script>` tags to enable dynamic DOM manipulation before rendering.
+
+### Tasks:
+- [x] JavaScript lexer (tokenizer) supporting ES5/ES6 syntax
+- [x] JavaScript parser producing a typed AST
+- [x] JavaScript interpreter (AST evaluator)
+- [x] Closures and lexical scoping
+- [x] Built-in objects: Math, JSON, Array, Object, String, Number, Boolean, Map, Set
+- [x] DOM bindings: document, element, classList, style
+- [x] HTML raw-text content model for `<script>` and `<style>` tags
+
+### Supported Language Features:
+- ✅ Variable declarations: `var`, `let`, `const`
+- ✅ Functions: declarations, expressions, arrow functions, closures
+- ✅ Control flow: `if/else`, `while`, `do/while`, `for`, `for...in`, `for...of`, `switch`
+- ✅ Operators: arithmetic, comparison, logical, bitwise, assignment, ternary, nullish coalescing
+- ✅ Exception handling: `try/catch/finally`, `throw`
+- ✅ Classes: basic ES6 `class` syntax with constructor and methods
+- ✅ Template literals: `` `hello ${name}` ``
+- ✅ Spread/rest operator
+- ✅ Destructuring (basic)
+
+### Supported DOM APIs:
+- ✅ `document.getElementById`, `querySelector`, `querySelectorAll`
+- ✅ `document.createElement`, `createTextNode`
+- ✅ `element.innerHTML`, `textContent`, `innerText` (get/set)
+- ✅ `element.style.propertyName` (camelCase, syncs to inline style attribute)
+- ✅ `element.classList.add/remove/toggle/contains`
+- ✅ `element.setAttribute`, `getAttribute`, `removeAttribute`
+- ✅ `element.appendChild`, `removeChild`, `insertBefore`
+- ✅ `element.dataset` for `data-*` attributes
+- ✅ `console.log`, `warn`, `error`, `info`
+
+### Known Limitations:
+- ⚠️ No event handling (onclick, addEventListener on user events)
+- ⚠️ No async/await (Promises run synchronously)
+- ⚠️ No `setTimeout`/`setInterval` delays (execute immediately)
+- ⚠️ No external script loading (`src=` attribute on `<script>` is skipped)
+- ⚠️ No regular expression support
+- ⚠️ No `window.history`, `window.localStorage`, etc.
+
+---
+
 ## Current Status
-**Completed**: Milestones 1-10 (Foundation through WebAssembly Support, including all core features)  
+**Completed**: Milestones 1-11 (Foundation through JavaScript Engine)  
 **Recent Updates**: 
+- JavaScript engine with DOM manipulation support (March 2026)
+- HTML parser now correctly handles raw text content in `<script>` and `<style>` elements
 - Architectural improvements: Consolidated color parsing, added comprehensive log warnings (December 2025)
 - WebAssembly support with interactive demo (December 2025)
 - Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)
 - Added baseline alignment for inline elements, text-align support, improved table layout (December 2025)
-**Last Updated**: 2025-12-27
+**Last Updated**: 2026-03-11

@@ -75,6 +75,18 @@ func (p *Parser) handleStartTag(token Token) {
 	current := p.currentNode()
 	current.AppendChild(elem)
 
+	// Script and style elements use the raw text content model:
+	// their content must not be parsed as HTML tags.
+	// HTML5 §12.2.5.14 (script data state) and §12.2.5.16 (rawtext state)
+	if token.Data == "script" || token.Data == "style" {
+		rawText := p.tokenizer.ReadRawText(token.Data)
+		if rawText != "" {
+			elem.AppendChild(dom.NewText(rawText))
+		}
+		// The closing tag was already consumed by ReadRawText; do not push onto stack.
+		return
+	}
+
 	// Push to stack unless self-closing or void element
 	if token.Type != SelfClosingTagToken && !isVoidElement(token.Data) {
 		p.stack = append(p.stack, elem)
