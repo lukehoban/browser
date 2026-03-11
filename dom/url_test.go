@@ -96,3 +96,59 @@ func TestResolveURLsNonImgElements(t *testing.T) {
 		t.Errorf("expected data-src=test.png, got %s", div.GetAttribute("data-src"))
 	}
 }
+
+func TestResolveURLString(t *testing.T) {
+	tests := []struct {
+		name     string
+		baseDir  string
+		urlStr   string
+		expected string
+	}{
+		{
+			name:     "relative_path",
+			baseDir:  "/home/test",
+			urlStr:   "logo.png",
+			expected: "/home/test/logo.png",
+		},
+		{
+			name:     "relative_path_with_subdirs",
+			baseDir:  "/var/www",
+			urlStr:   "images/icon.png",
+			expected: "/var/www/images/icon.png",
+		},
+		{
+			name:     "http_url",
+			baseDir:  "/home/test",
+			urlStr:   "http://example.com/image.png",
+			expected: "http://example.com/image.png",
+		},
+		{
+			name:     "https_url",
+			baseDir:  "/home/test",
+			urlStr:   "https://example.com/image.png",
+			expected: "https://example.com/image.png",
+		},
+		{
+			name:     "data_url",
+			baseDir:  "/home/test",
+			urlStr:   "data:image/png;base64,iVBORw0KGgo=",
+			expected: "data:image/png;base64,iVBORw0KGgo=",
+		},
+		{
+			name:     "absolute_path",
+			baseDir:  "/home/test",
+			urlStr:   "/absolute/path/image.png",
+			expected: "/home/test/absolute/path/image.png",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveURLString(tt.baseDir, tt.urlStr)
+			if result != tt.expected {
+				t.Errorf("ResolveURLString(%q, %q) = %q, expected %q",
+					tt.baseDir, tt.urlStr, result, tt.expected)
+			}
+		})
+	}
+}
