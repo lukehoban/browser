@@ -111,10 +111,10 @@ To view WPT test results from CI:
 | css-fonts | 4 | 4 | 0 | 100% |
 | css-inheritance | 3 | 3 | 0 | 100% |
 | css-position | 2 | 2 | 0 | 100% |
-| css-selectors | 5 | 5 | 0 | 100% |
-| css-selectors-advanced | 5 | 3 | 2 | 60% |
+| css-selectors | 6 | 6 | 0 | 100% |
+| css-selectors-advanced | 5 | 2 | 3 | 40% |
 | css-text-decor | 1 | 1 | 0 | 100% |
-| **Total** | **39** | **37** | **2** | **94.9%** |
+| **Total** | **39** | **36** | **3** | **92.3%** |
 
 ### Test Categories
 
@@ -173,9 +173,9 @@ To view WPT test results from CI:
     - Multiple selectors (comma-separated): ✅ Passing
 
 12. **css-selectors-advanced**: Advanced selector tests
-    - Child combinator (>): ✅ Passing (appears to work correctly)
     - Attribute selector ([attr="value"]): ✅ Passing (gracefully ignored)
     - :first-child pseudo-class: ✅ Passing (gracefully ignored)
+    - Child combinator (>): ❌ **FAILING** (not implemented)
     - Adjacent sibling combinator (+): ❌ **FAILING** (not implemented)
     - General sibling combinator (~): ❌ **FAILING** (not implemented)
 
@@ -186,11 +186,15 @@ To view WPT test results from CI:
 
 The following tests fail as expected, documenting features not yet implemented:
 
-1. **adjacent-sibling-001.html** - Adjacent sibling combinator (`+`) not implemented
+1. **child-combinator-001.html** - Child combinator (`>`) not implemented
+   - CSS 2.1 §5.6: Child selectors
+   - Status: Not implemented
+
+2. **adjacent-sibling-001.html** - Adjacent sibling combinator (`+`) not implemented
    - CSS 2.1 §5.7: Adjacent sibling selectors
    - Status: Not implemented
 
-2. **general-sibling-001.html** - General sibling combinator (`~`) not implemented
+3. **general-sibling-001.html** - General sibling combinator (`~`) not implemented
    - CSS Selectors Level 3: General sibling combinator
    - Status: Not implemented
 
