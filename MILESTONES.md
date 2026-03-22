@@ -5,11 +5,16 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 **Important**: Keep this document up to date as features are added or modified. When implementing new features, mark the corresponding tasks as complete and update the validation status.
 
-**Recent Improvements (December 2025)**:
+**Recent Improvements (January 2026)**:
+- ✅ Basic CSS Flexbox Layout support (display:flex, flex-direction:row, justify-content)
+- ✅ Comprehensive flexbox unit tests (6 new tests, all passing)
+- ✅ Flexbox demo HTML file showcasing alignment modes
+
+**Previous Improvements (December 2025)**:
 - ✅ Added comprehensive log warnings for unimplemented features
 - ✅ Consolidated color parsing to eliminate duplication
 - ✅ Clean API boundaries: css package owns value parsing
-- ✅ Proper warnings for CSS combinators (>, +, ~), positioning, floats, flexbox, grid
+- ✅ Proper warnings for CSS combinators (>, +, ~), positioning, floats, grid
 - ✅ Warnings for table features (rowspan, border-collapse) and !important
 
 ---
@@ -178,7 +183,8 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ⚠️ Inline layout implemented (December 2025) but lacks line wrapping and text alignment controls
 - ⚠️ No positioning schemes (absolute, relative, fixed) - CSS 2.1 §9.3 - warnings logged
 - ⚠️ No float support (CSS 2.1 §9.5) - warning logged when encountered
-- ⚠️ No flexbox or grid layout (CSS3) - warnings logged when encountered
+- ⚠️ Basic flexbox support (January 2026) - only row direction and basic justify-content
+- ⚠️ No grid layout (CSS3) - warnings logged when encountered
 
 ---
 
@@ -598,9 +604,67 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 
 ---
 
+## Milestone 11: Flexbox Layout Support ✅ COMPLETE
+**Goal**: Implement basic CSS Flexible Box Layout Module support
+
+**Spec References**:
+- CSS Flexible Box Layout Module Level 1: https://www.w3.org/TR/css-flexbox-1/
+
+### Tasks:
+- [x] Add FlexBox box type to layout engine
+- [x] Detect `display: flex` containers
+- [x] Implement flex container width/height calculation
+- [x] Implement `flex-direction: row` layout algorithm
+- [x] Implement `justify-content` property support:
+  - [x] `flex-start` - pack items at the start
+  - [x] `center` - center items in the container
+  - [x] `flex-end` - pack items at the end
+  - [x] `space-between` - distribute items with space between
+- [x] Handle flex items with margins, padding, borders
+- [x] Set flex container height based on tallest item
+- [x] Add comprehensive unit tests (6 new tests)
+- [x] Create flexbox demo HTML file
+- [x] Update warnings to reflect partial flexbox support
+
+### Deliverables:
+- ✅ Working flexbox layout for `display: flex` with `flex-direction: row`
+- ✅ Four `justify-content` alignment modes implemented
+- ✅ Flex items laid out as block-level children
+- ✅ Comprehensive test coverage (6 unit tests, all passing)
+- ✅ Demo HTML file showcasing flexbox features
+- ✅ Graceful degradation with warnings for unsupported properties
+
+### Validation:
+- ✅ Flex containers correctly identify as FlexBox type
+- ✅ Items positioned correctly with `justify-content: flex-start`
+- ✅ Items centered correctly with `justify-content: center`
+- ✅ Items packed at end correctly with `justify-content: flex-end`
+- ✅ Items distributed with even spacing using `justify-content: space-between`
+- ✅ Flex items with margins calculate correct positions
+- ✅ Flex container height matches tallest item
+- ✅ Demo HTML renders correctly showing all alignment modes
+
+### Known Limitations:
+- ⚠️ Only `display: flex` supported (not `inline-flex`) - warning logged
+- ⚠️ Only `flex-direction: row` supported (not column, row-reverse, column-reverse) - warnings logged
+- ⚠️ Only basic `justify-content` values supported (not space-around, space-evenly) - warnings logged
+- ⚠️ No `align-items`, `align-content`, `align-self` support - warnings logged
+- ⚠️ No `flex-wrap` support (always nowrap) - warning logged
+- ⚠️ No `flex`, `flex-grow`, `flex-shrink`, `flex-basis` properties for items
+- ⚠️ No `order` property for reordering items
+- ⚠️ No `gap` property support
+
+### Current Status:
+The browser now supports basic flexbox layouts with `display: flex` and `flex-direction: row`. The four essential `justify-content` alignment modes provide horizontal distribution of flex items. This enables common layout patterns like navigation bars, button groups, and horizontally-aligned content. All unit tests pass and a demo HTML file showcases the functionality.
+
+---
+
 ## Future Enhancements (Post-MVP)
 - JavaScript support
-- CSS 3 features (flexbox, grid, transitions, animations)
+- CSS 3 features:
+  - Flexbox: column direction, flex-wrap, align-items, flex-grow/shrink/basis
+  - Grid layout
+  - Transitions and animations
 - Form handling
 - Media queries (responsive design)
 - Advanced typography (web fonts, font-weight, etc.)
@@ -615,10 +679,11 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 ---
 
 ## Current Status
-**Completed**: Milestones 1-10 (Foundation through WebAssembly Support, including all core features)  
+**Completed**: Milestones 1-11 (Foundation through Flexbox Layout Support, including all core features)  
 **Recent Updates**: 
+- Basic flexbox support with display:flex, flex-direction:row, and justify-content (January 2026)
 - Architectural improvements: Consolidated color parsing, added comprehensive log warnings (December 2025)
 - WebAssembly support with interactive demo (December 2025)
 - Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)
 - Added baseline alignment for inline elements, text-align support, improved table layout (December 2025)
-**Last Updated**: 2025-12-27
+**Last Updated**: 2026-01-04
