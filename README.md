@@ -121,10 +121,8 @@ See [wasm/README.md](wasm/README.md) for more details.
 
 ## Current Status
 
-✅ Milestones 1-7 Complete: Foundation, HTML Parsing, CSS Parsing, Style Computation, Layout Engine, Rendering, Image Rendering  
-✅ Milestone 9 Complete: Network Support (HTTP/HTTPS, external CSS, remote images)  
-✅ Milestone 9.5 Complete: Data URL Support (RFC 2397, base64 & URL-encoded inline resources)  
-🔄 Milestone 8 In Progress: Testing & Validation (81.8% WPT pass rate)
+✅ Milestones 1-10 Complete: Foundation, HTML Parsing, CSS Parsing, Style Computation, Layout Engine, Rendering, Image Rendering, Testing & Validation, Network Support, Data URLs, WebAssembly  
+📊 81.8% W3C Web Platform Test pass rate
 
 See [MILESTONES.md](MILESTONES.md) for detailed progress and known limitations.
 
