@@ -1,6 +1,7 @@
 package style
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/lukehoban/browser/css"
@@ -1121,5 +1122,210 @@ func TestInlineStyleSpecificity(t *testing.T) {
 	// Inline style should win over all CSS rules
 	if divStyled.Styles["color"] != "red" {
 		t.Errorf("Expected inline style 'red' to win, got %v", divStyled.Styles["color"])
+	}
+}
+
+func TestRuleIndex(t *testing.T) {
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "red"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{ID: "main"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "background", Value: "blue"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{Classes: []string{"container"}}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "margin", Value: "10px"},
+				},
+			},
+			{
+				// Descendant selector: div p
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{
+						{TagName: "div"},
+						{TagName: "p"},
+					}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-size", Value: "14px"},
+				},
+			},
+		},
+	}
+
+	idx := buildRuleIndex(stylesheet)
+
+	// "div" tag rule should be in byTag
+	if len(idx.byTag["div"]) != 1 {
+		t.Errorf("Expected 1 rule indexed by tag 'div', got %d", len(idx.byTag["div"]))
+	}
+	// "div p" descendant selector is indexed by rightmost tag "p"
+	if len(idx.byTag["p"]) != 1 {
+		t.Errorf("Expected 1 rule indexed by tag 'p', got %d", len(idx.byTag["p"]))
+	}
+	// ID rule
+	if len(idx.byID["main"]) != 1 {
+		t.Errorf("Expected 1 rule indexed by ID 'main', got %d", len(idx.byID["main"]))
+	}
+	// Class rule
+	if len(idx.byClass["container"]) != 1 {
+		t.Errorf("Expected 1 rule indexed by class 'container', got %d", len(idx.byClass["container"]))
+	}
+}
+
+func TestRuleIndexMatchesOriginal(t *testing.T) {
+	// Create DOM: div#main.container > p.text > span
+	div := dom.NewElement("div")
+	div.SetAttribute("id", "main")
+	div.SetAttribute("class", "container")
+	p := dom.NewElement("p")
+	p.SetAttribute("class", "text")
+	span := dom.NewElement("span")
+	div.AppendChild(p)
+	p.AppendChild(span)
+
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "red"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{ID: "main"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "background", Value: "blue"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{Classes: []string{"container"}}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "margin-top", Value: "10px"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{
+						{TagName: "div"},
+						{TagName: "p"},
+					}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-size", Value: "14px"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{
+						{Classes: []string{"container"}},
+						{TagName: "span"},
+					}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-weight", Value: "bold"},
+				},
+			},
+		},
+	}
+
+	idx := buildRuleIndex(stylesheet)
+
+	// Test each node: indexed results should match original matchRules
+	for _, node := range []*dom.Node{div, p, span} {
+		original := matchRules(node, stylesheet)
+		indexed := matchRulesIndexed(node, idx)
+
+		if len(original) != len(indexed) {
+			t.Errorf("Node <%s>: matchRules returned %d rules, matchRulesIndexed returned %d",
+				node.Data, len(original), len(indexed))
+			continue
+		}
+
+		for i := range original {
+			if original[i].Rule != indexed[i].Rule {
+				t.Errorf("Node <%s>: rule mismatch at index %d", node.Data, i)
+			}
+			if original[i].Specificity != indexed[i].Specificity {
+				t.Errorf("Node <%s>: specificity mismatch at index %d: %+v vs %+v",
+					node.Data, i, original[i].Specificity, indexed[i].Specificity)
+			}
+		}
+	}
+}
+
+// BenchmarkMatchRulesLargeDOM benchmarks selector matching on a large DOM tree
+// similar to Hacker News with many table rows and cells.
+func BenchmarkMatchRulesLargeDOM(b *testing.B) {
+	// Build a large DOM: table with 100 rows, each with 3 cells
+	doc := dom.NewDocument()
+	table := dom.NewElement("table")
+	table.SetAttribute("id", "items")
+	doc.AppendChild(table)
+
+	for i := 0; i < 100; i++ {
+		tr := dom.NewElement("tr")
+		tr.SetAttribute("class", fmt.Sprintf("row-%d", i%2))
+		table.AppendChild(tr)
+		for j := 0; j < 3; j++ {
+			td := dom.NewElement("td")
+			td.SetAttribute("class", "cell")
+			tr.AppendChild(td)
+			a := dom.NewElement("a")
+			a.SetAttribute("href", "#")
+			td.AppendChild(a)
+			span := dom.NewElement("span")
+			span.SetAttribute("class", "text")
+			a.AppendChild(span)
+		}
+	}
+
+	// Stylesheet with various selectors
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{TagName: "table"}}}},
+				Declarations: []*css.Declaration{{Property: "width", Value: "100%"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{TagName: "tr"}}}},
+				Declarations: []*css.Declaration{{Property: "height", Value: "20px"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{TagName: "td"}}}},
+				Declarations: []*css.Declaration{{Property: "padding", Value: "2px"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{Classes: []string{"cell"}}}}},
+				Declarations: []*css.Declaration{{Property: "border", Value: "1px solid black"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{
+				{TagName: "table"},
+				{TagName: "td"},
+			}}},
+				Declarations: []*css.Declaration{{Property: "color", Value: "blue"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{
+				{Classes: []string{"cell"}},
+				{TagName: "a"},
+			}}},
+				Declarations: []*css.Declaration{{Property: "text-decoration", Value: "none"}}},
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		StyleTree(doc, stylesheet)
 	}
 }

@@ -125,6 +125,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - [x] Basic style property application
 - [x] Inline style attribute support (CSS 2.1 §6.4.3) - December 2025
 - [x] User-agent stylesheet (CSS 2.1 §6.4.4) - December 2025
+- [x] Rule index for O(1) candidate lookup by tag/ID/class - March 2026
 
 ### Deliverables:
 - ✅ Style computation engine
@@ -617,8 +618,9 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 ## Current Status
 **Completed**: Milestones 1-10 (Foundation through WebAssembly Support, including all core features)  
 **Recent Updates**: 
+- Performance: Rule index for O(1) selector candidate lookup during style computation (March 2026)
 - Architectural improvements: Consolidated color parsing, added comprehensive log warnings (December 2025)
 - WebAssembly support with interactive demo (December 2025)
 - Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)
 - Added baseline alignment for inline elements, text-align support, improved table layout (December 2025)
-**Last Updated**: 2025-12-27
+**Last Updated**: 2026-03-24

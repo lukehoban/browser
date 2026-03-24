@@ -71,6 +71,90 @@ func (s Specificity) Compare(other Specificity) int {
 	return s.D - other.D
 }
 
+// indexedRule pairs a rule with one of its selectors and precomputed specificity.
+type indexedRule struct {
+	Rule        *css.Rule
+	Selector    *css.Selector
+	Specificity Specificity
+}
+
+// RuleIndex indexes CSS rules by the rightmost simple selector's tag name,
+// ID, and class for O(1) candidate lookup instead of scanning all rules.
+type RuleIndex struct {
+	byTag   map[string][]indexedRule // rules indexed by rightmost tag name
+	byID    map[string][]indexedRule // rules indexed by rightmost ID
+	byClass map[string][]indexedRule // rules indexed by rightmost class
+	universal []indexedRule           // rules with no specific tag/ID/class (e.g., "*")
+}
+
+// buildRuleIndex creates a rule index from a stylesheet.
+// Each rule is indexed by the rightmost simple selector's most specific
+// attribute (ID > class > tag > universal).
+func buildRuleIndex(stylesheet *css.Stylesheet) *RuleIndex {
+	idx := &RuleIndex{
+		byTag:   make(map[string][]indexedRule),
+		byID:    make(map[string][]indexedRule),
+		byClass: make(map[string][]indexedRule),
+	}
+
+	for _, rule := range stylesheet.Rules {
+		for _, selector := range rule.Selectors {
+			if len(selector.Simple) == 0 {
+				continue
+			}
+			ir := indexedRule{
+				Rule:        rule,
+				Selector:    selector,
+				Specificity: calculateSpecificity(selector),
+			}
+			// Index by the rightmost simple selector (the one matched against the element)
+			rightmost := selector.Simple[len(selector.Simple)-1]
+			if rightmost.ID != "" {
+				idx.byID[rightmost.ID] = append(idx.byID[rightmost.ID], ir)
+			} else if len(rightmost.Classes) > 0 {
+				// Index by the first class of the rightmost selector
+				idx.byClass[rightmost.Classes[0]] = append(idx.byClass[rightmost.Classes[0]], ir)
+			} else if rightmost.TagName != "" {
+				idx.byTag[rightmost.TagName] = append(idx.byTag[rightmost.TagName], ir)
+			} else {
+				idx.universal = append(idx.universal, ir)
+			}
+		}
+	}
+
+	return idx
+}
+
+// candidateRules returns the set of indexed rules that could potentially match
+// a given node, based on the node's tag name, ID, and classes.
+func (idx *RuleIndex) candidateRules(node *dom.Node) []indexedRule {
+	var candidates []indexedRule
+
+	// Collect rules indexed by tag
+	if rules, ok := idx.byTag[node.Data]; ok {
+		candidates = append(candidates, rules...)
+	}
+
+	// Collect rules indexed by ID
+	if id := node.ID(); id != "" {
+		if rules, ok := idx.byID[id]; ok {
+			candidates = append(candidates, rules...)
+		}
+	}
+
+	// Collect rules indexed by class
+	for _, class := range node.Classes() {
+		if rules, ok := idx.byClass[class]; ok {
+			candidates = append(candidates, rules...)
+		}
+	}
+
+	// Always include universal rules
+	candidates = append(candidates, idx.universal...)
+
+	return candidates
+}
+
 // StyleTree computes styles for a DOM tree using a stylesheet.
 // CSS 2.1 §6 Assigning property values
 // CSS 2.1 §6.4.4: User agent -> Author stylesheet cascade
@@ -89,13 +173,16 @@ func StyleTree(root *dom.Node, authorStylesheet *css.Stylesheet) *StyledNode {
 	if authorStylesheet != nil {
 		mergedStylesheet.Rules = append(mergedStylesheet.Rules, authorStylesheet.Rules...)
 	}
+
+	// Build rule index once for O(1) candidate lookup per element
+	index := buildRuleIndex(mergedStylesheet)
 	
-	return styleNode(root, mergedStylesheet, make(map[string]string))
+	return styleNode(root, index, make(map[string]string))
 }
 
 // styleNode computes styles for a single node and its children.
 // CSS 2.1 §6.2: Font properties are inherited from parent to child
-func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[string]string) *StyledNode {
+func styleNode(node *dom.Node, index *RuleIndex, parentStyles map[string]string) *StyledNode {
 	styled := &StyledNode{
 		Node:     node,
 		Styles:   make(map[string]string),
@@ -138,7 +225,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		applyPresentationalHints(node, styled.Styles)
 		
 		// Find all matching rules
-		matchedRules := matchRules(node, stylesheet)
+		matchedRules := matchRulesIndexed(node, index)
 
 		// Apply rules in order of specificity
 		for _, matched := range matchedRules {
@@ -191,7 +278,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 
 	// Recursively style children
 	for _, child := range node.Children {
-		styledChild := styleNode(child, stylesheet, styled.Styles)
+		styledChild := styleNode(child, index, styled.Styles)
 		styled.Children = append(styled.Children, styledChild)
 	}
 
@@ -214,6 +301,43 @@ func matchRules(node *dom.Node, stylesheet *css.Stylesheet) []MatchedRule {
 				})
 				break // Only count each rule once
 			}
+		}
+	}
+
+	// Sort by specificity (simple bubble sort for small lists)
+	for i := 0; i < len(matched); i++ {
+		for j := i + 1; j < len(matched); j++ {
+			if matched[i].Specificity.Compare(matched[j].Specificity) > 0 {
+				matched[i], matched[j] = matched[j], matched[i]
+			}
+		}
+	}
+
+	return matched
+}
+
+// matchRulesIndexed finds all CSS rules that match a node using a prebuilt rule index.
+// Only candidate rules (those whose rightmost selector could match) are checked.
+// Returns rules sorted by specificity (lowest to highest).
+// CSS 2.1 §6.4.3
+func matchRulesIndexed(node *dom.Node, index *RuleIndex) []MatchedRule {
+	candidates := index.candidateRules(node)
+	matched := make([]MatchedRule, 0)
+
+	// Track rules we've already matched to avoid counting a rule twice
+	// (a rule could appear in multiple index buckets if it has multiple selectors)
+	seen := make(map[*css.Rule]struct{})
+
+	for _, ir := range candidates {
+		if _, ok := seen[ir.Rule]; ok {
+			continue
+		}
+		if matchesSelector(node, ir.Selector) {
+			matched = append(matched, MatchedRule{
+				Rule:        ir.Rule,
+				Specificity: ir.Specificity,
+			})
+			seen[ir.Rule] = struct{}{}
 		}
 	}
 
