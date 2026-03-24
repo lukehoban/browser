@@ -326,10 +326,10 @@ func matchRulesIndexed(node *dom.Node, index *RuleIndex) []MatchedRule {
 
 	// Track rules we've already matched to avoid counting a rule twice
 	// (a rule could appear in multiple index buckets if it has multiple selectors)
-	seen := make(map[*css.Rule]bool)
+	seen := make(map[*css.Rule]struct{})
 
 	for _, ir := range candidates {
-		if seen[ir.Rule] {
+		if _, ok := seen[ir.Rule]; ok {
 			continue
 		}
 		if matchesSelector(node, ir.Selector) {
@@ -337,7 +337,7 @@ func matchRulesIndexed(node *dom.Node, index *RuleIndex) []MatchedRule {
 				Rule:        ir.Rule,
 				Specificity: ir.Specificity,
 			})
-			seen[ir.Rule] = true
+			seen[ir.Rule] = struct{}{}
 		}
 	}
 
