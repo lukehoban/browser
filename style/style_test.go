@@ -354,7 +354,6 @@ func TestDescendantSelector(t *testing.T) {
 }
 
 func TestDescendantSelectorGreedyAncestorWalk(t *testing.T) {
-	// Create DOM: section > div > article > span
 	section := dom.NewElement("section")
 	div := dom.NewElement("div")
 	article := dom.NewElement("article")
