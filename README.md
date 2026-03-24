@@ -38,6 +38,62 @@ browser/
 └── test/            # Test files and fixtures
 ```
 
+## Architecture
+
+The browser follows a classic rendering pipeline that transforms HTML/CSS input into a rendered PNG image:
+
+```mermaid
+flowchart TB
+    subgraph Input["📥 Input"]
+        HTML["HTML File/URL"]
+        CSS["CSS Stylesheets"]
+    end
+
+    subgraph Parsing["🔍 Parsing"]
+        HTMLTokenizer["HTML Tokenizer<br/><i>html/tokenizer.go</i>"]
+        HTMLParser["HTML Parser<br/><i>html/parser.go</i>"]
+        CSSTokenizer["CSS Tokenizer<br/><i>css/tokenizer.go</i>"]
+        CSSParser["CSS Parser<br/><i>css/parser.go</i>"]
+    end
+
+    subgraph Trees["🌳 Data Structures"]
+        DOM["DOM Tree<br/><i>dom/node.go</i>"]
+        Stylesheet["Stylesheet<br/>(Rules + Selectors)"]
+        StyledTree["Styled Tree<br/>(DOM + Computed Styles)"]
+        LayoutTree["Layout Tree<br/>(Box Model)"]
+    end
+
+    subgraph Processing["⚙️ Processing"]
+        StyleEngine["Style Engine<br/><i>style/style.go</i><br/>Selector Matching<br/>Specificity & Cascade"]
+        LayoutEngine["Layout Engine<br/><i>layout/layout.go</i><br/>Box Model<br/>Block/Inline Layout"]
+    end
+
+    subgraph Output["📤 Output"]
+        RenderEngine["Render Engine<br/><i>render/render.go</i><br/>Canvas Drawing<br/>Text & Images"]
+        PNG["PNG Image"]
+    end
+
+    HTML --> HTMLTokenizer --> HTMLParser --> DOM
+    CSS --> CSSTokenizer --> CSSParser --> Stylesheet
+    DOM --> StyleEngine
+    Stylesheet --> StyleEngine
+    StyleEngine --> StyledTree
+    StyledTree --> LayoutEngine
+    LayoutEngine --> LayoutTree
+    LayoutTree --> RenderEngine
+    RenderEngine --> PNG
+```
+
+### Pipeline Stages
+
+| Stage | Module | Description |
+|-------|--------|-------------|
+| **1. HTML Parsing** | `html/` | Tokenizes HTML into tokens, builds DOM tree via tree construction algorithm |
+| **2. CSS Parsing** | `css/` | Tokenizes CSS, parses selectors and declarations into stylesheet rules |
+| **3. Style Computation** | `style/` | Matches selectors to DOM nodes, calculates specificity, cascades styles |
+| **4. Layout** | `layout/` | Calculates box dimensions (content, padding, border, margin) and positions |
+| **5. Rendering** | `render/` | Draws backgrounds, borders, text, and images to canvas; outputs PNG |
+
 ## Specifications
 
 This browser implementation follows these W3C specifications:
