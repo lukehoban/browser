@@ -2,6 +2,7 @@ package render
 
 import (
 	"image/color"
+	"os"
 	"testing"
 
 	"github.com/lukehoban/browser/css"
@@ -879,5 +880,119 @@ func TestExtractURLFromCSS(t *testing.T) {
 				t.Errorf("extractURLFromCSS(%q) = %q, want %q", tt.input, result, tt.expected)
 			}
 		})
+	}
+}
+
+func TestCollapseWhitespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "multiple spaces",
+			input:    "hello    world",
+			expected: "hello world",
+		},
+		{
+			name:     "tabs and spaces",
+			input:    "hello\t\t  world",
+			expected: "hello world",
+		},
+		{
+			name:     "newlines",
+			input:    "hello\n\nworld",
+			expected: "hello world",
+		},
+		{
+			name:     "mixed whitespace",
+			input:    "hello \t\n  \t world",
+			expected: "hello world",
+		},
+		{
+			name:     "leading whitespace",
+			input:    "   hello world",
+			expected: "hello world",
+		},
+		{
+			name:     "trailing whitespace",
+			input:    "hello world   ",
+			expected: "hello world",
+		},
+		{
+			name:     "single space",
+			input:    "hello world",
+			expected: "hello world",
+		},
+		{
+			name:     "no whitespace",
+			input:    "helloworld",
+			expected: "helloworld",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := collapseWhitespace(tt.input)
+			if result != tt.expected {
+				t.Errorf("collapseWhitespace(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestSavePNG(t *testing.T) {
+	c := NewCanvas(10, 10)
+	c.Clear(color.RGBA{255, 0, 0, 255})
+
+	// Create a temporary file
+	tmpFile := "/tmp/test_save_png.png"
+
+	err := c.SavePNG(tmpFile)
+	if err != nil {
+		t.Fatalf("SavePNG() failed: %v", err)
+	}
+
+	// Verify file exists and has content
+	data, err := os.ReadFile(tmpFile)
+	if err != nil {
+		t.Fatalf("Failed to read saved PNG: %v", err)
+	}
+
+	if len(data) == 0 {
+		t.Error("Saved PNG file is empty")
+	}
+
+	// Check PNG signature
+	if len(data) < 8 || string(data[1:4]) != "PNG" {
+		t.Error("File does not appear to be a valid PNG")
+	}
+
+	// Clean up
+	os.Remove(tmpFile)
+}
+
+func TestMax(t *testing.T) {
+	tests := []struct {
+		a, b, expected int
+	}{
+		{1, 2, 2},
+		{2, 1, 2},
+		{5, 5, 5},
+		{-1, -2, -1},
+		{0, 1, 1},
+		{-5, 0, 0},
+	}
+
+	for _, tt := range tests {
+		result := max(tt.a, tt.b)
+		if result != tt.expected {
+			t.Errorf("max(%v, %v) = %v, want %v", tt.a, tt.b, result, tt.expected)
+		}
 	}
 }
