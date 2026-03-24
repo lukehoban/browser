@@ -27,6 +27,7 @@
 package style
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -45,6 +46,20 @@ type StyledNode struct {
 type MatchedRule struct {
 	Rule        *css.Rule
 	Specificity Specificity
+}
+
+type indexedSelector struct {
+	Rule        *css.Rule
+	Selector    *css.Selector
+	Specificity Specificity
+	SourceOrder int
+}
+
+type selectorMatcher struct {
+	universal []*indexedSelector
+	byTag     map[string][]*indexedSelector
+	byID      map[string][]*indexedSelector
+	byClass   map[string][]*indexedSelector
 }
 
 // Specificity represents the specificity of a CSS selector.
@@ -80,22 +95,24 @@ func StyleTree(root *dom.Node, authorStylesheet *css.Stylesheet) *StyledNode {
 	mergedStylesheet := &css.Stylesheet{
 		Rules: make([]*css.Rule, 0),
 	}
-	
+
 	// Add user-agent styles first (lower specificity in cascade)
 	userAgentStylesheet := DefaultUserAgentStylesheet()
 	mergedStylesheet.Rules = append(mergedStylesheet.Rules, userAgentStylesheet.Rules...)
-	
+
 	// Add author styles second (higher specificity in cascade)
 	if authorStylesheet != nil {
 		mergedStylesheet.Rules = append(mergedStylesheet.Rules, authorStylesheet.Rules...)
 	}
-	
-	return styleNode(root, mergedStylesheet, make(map[string]string))
+
+	matcher := newSelectorMatcher(mergedStylesheet)
+
+	return styleNode(root, mergedStylesheet, matcher, make(map[string]string))
 }
 
 // styleNode computes styles for a single node and its children.
 // CSS 2.1 §6.2: Font properties are inherited from parent to child
-func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[string]string) *StyledNode {
+func styleNode(node *dom.Node, stylesheet *css.Stylesheet, matcher *selectorMatcher, parentStyles map[string]string) *StyledNode {
 	styled := &StyledNode{
 		Node:     node,
 		Styles:   make(map[string]string),
@@ -123,7 +140,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		"word-spacing",
 		"white-space",
 	}
-	
+
 	for _, prop := range inheritedProps {
 		if val, ok := parentStyles[prop]; ok {
 			styled.Styles[prop] = val
@@ -136,9 +153,9 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		// These have lower specificity than CSS rules, so apply them first
 		// HTML5 §2.4.4: Presentational hints
 		applyPresentationalHints(node, styled.Styles)
-		
+
 		// Find all matching rules
-		matchedRules := matchRules(node, stylesheet)
+		matchedRules := matchRulesWithMatcher(node, matcher)
 
 		// Apply rules in order of specificity
 		for _, matched := range matchedRules {
@@ -146,11 +163,11 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 				applyDeclaration(decl, styled.Styles)
 			}
 		}
-		
+
 		// cellpadding and cellspacing attribute handling
 		// HTML5 §14.3.9: These attributes override user-agent defaults
 		// Applied after CSS rules but before inline styles (similar to author CSS with higher specificity)
-		
+
 		// cellspacing attribute (used on <table>)
 		if node.Data == "table" {
 			if cellspacing := node.GetAttribute("cellspacing"); cellspacing != "" {
@@ -158,7 +175,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 				styled.Styles["border-spacing"] = cellspacing + "px"
 			}
 		}
-		
+
 		// cellpadding attribute inheritance from table to cells
 		if (node.Data == "td" || node.Data == "th") && node.Parent != nil {
 			// Walk up to find the containing table
@@ -178,7 +195,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 				parent = parent.Parent
 			}
 		}
-		
+
 		// Apply inline styles last - they have highest specificity
 		// CSS 2.1 §6.4.3: Inline styles have specificity A=1, higher than any selector
 		if styleAttr := node.GetAttribute("style"); styleAttr != "" {
@@ -191,7 +208,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 
 	// Recursively style children
 	for _, child := range node.Children {
-		styledChild := styleNode(child, stylesheet, styled.Styles)
+		styledChild := styleNode(child, stylesheet, matcher, styled.Styles)
 		styled.Children = append(styled.Children, styledChild)
 	}
 
@@ -202,31 +219,115 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 // Returns rules sorted by specificity (lowest to highest).
 // CSS 2.1 §6.4.3
 func matchRules(node *dom.Node, stylesheet *css.Stylesheet) []MatchedRule {
+	return matchRulesWithMatcher(node, newSelectorMatcher(stylesheet))
+}
+
+func matchRulesWithMatcher(node *dom.Node, matcher *selectorMatcher) []MatchedRule {
 	matched := make([]MatchedRule, 0)
+	matchedRules := make(map[*css.Rule]bool)
 
-	for _, rule := range stylesheet.Rules {
-		for _, selector := range rule.Selectors {
-			if matchesSelector(node, selector) {
-				specificity := calculateSpecificity(selector)
-				matched = append(matched, MatchedRule{
-					Rule:        rule,
-					Specificity: specificity,
-				})
-				break // Only count each rule once
-			}
+	for _, indexed := range matcher.candidates(node) {
+		if matchedRules[indexed.Rule] {
+			continue
+		}
+		if matchesSelector(node, indexed.Selector) {
+			matched = append(matched, MatchedRule{
+				Rule:        indexed.Rule,
+				Specificity: indexed.Specificity,
+			})
+			matchedRules[indexed.Rule] = true
 		}
 	}
 
-	// Sort by specificity (simple bubble sort for small lists)
-	for i := 0; i < len(matched); i++ {
-		for j := i + 1; j < len(matched); j++ {
-			if matched[i].Specificity.Compare(matched[j].Specificity) > 0 {
-				matched[i], matched[j] = matched[j], matched[i]
-			}
-		}
-	}
+	sort.SliceStable(matched, func(i, j int) bool {
+		return matched[i].Specificity.Compare(matched[j].Specificity) < 0
+	})
 
 	return matched
+}
+
+func newSelectorMatcher(stylesheet *css.Stylesheet) *selectorMatcher {
+	matcher := &selectorMatcher{
+		universal: make([]*indexedSelector, 0),
+		byTag:     make(map[string][]*indexedSelector),
+		byID:      make(map[string][]*indexedSelector),
+		byClass:   make(map[string][]*indexedSelector),
+	}
+
+	if stylesheet == nil {
+		return matcher
+	}
+
+	sourceOrder := 0
+	for _, rule := range stylesheet.Rules {
+		for _, selector := range rule.Selectors {
+			if len(selector.Simple) == 0 {
+				continue
+			}
+
+			indexed := &indexedSelector{
+				Rule:        rule,
+				Selector:    selector,
+				Specificity: calculateSpecificity(selector),
+				SourceOrder: sourceOrder,
+			}
+			sourceOrder++
+
+			rightmost := selector.Simple[len(selector.Simple)-1]
+			indexedAny := false
+
+			if rightmost.TagName != "" {
+				matcher.byTag[rightmost.TagName] = append(matcher.byTag[rightmost.TagName], indexed)
+				indexedAny = true
+			}
+			if rightmost.ID != "" {
+				matcher.byID[rightmost.ID] = append(matcher.byID[rightmost.ID], indexed)
+				indexedAny = true
+			}
+			for _, className := range rightmost.Classes {
+				matcher.byClass[className] = append(matcher.byClass[className], indexed)
+				indexedAny = true
+			}
+
+			if !indexedAny {
+				matcher.universal = append(matcher.universal, indexed)
+			}
+		}
+	}
+
+	return matcher
+}
+
+func (m *selectorMatcher) candidates(node *dom.Node) []*indexedSelector {
+	candidates := make([]*indexedSelector, 0, len(m.universal))
+	seen := make(map[*indexedSelector]bool)
+
+	addCandidates := func(selectors []*indexedSelector) {
+		for _, selector := range selectors {
+			if seen[selector] {
+				continue
+			}
+			seen[selector] = true
+			candidates = append(candidates, selector)
+		}
+	}
+
+	addCandidates(m.universal)
+	addCandidates(m.byTag[node.Data])
+
+	if id := node.ID(); id != "" {
+		addCandidates(m.byID[id])
+	}
+
+	for _, className := range node.Classes() {
+		addCandidates(m.byClass[className])
+	}
+
+	sort.Slice(candidates, func(i, j int) bool {
+		return candidates[i].SourceOrder < candidates[j].SourceOrder
+	})
+
+	return candidates
 }
 
 // matchesSelector checks if a node matches a CSS selector.
@@ -259,22 +360,18 @@ func matchesDescendant(node *dom.Node, selectors []*css.SimpleSelector) bool {
 		return true
 	}
 
-	// Walk up the tree looking for ancestors that match
 	current := node.Parent
-	for current != nil {
-		if matchesSimpleSelector(current, selectors[len(selectors)-1]) {
-			// Found a match, check remaining selectors
-			if len(selectors) == 1 {
-				return true
-			}
-			if matchesDescendant(current, selectors[:len(selectors)-1]) {
-				return true
-			}
+	for i := len(selectors) - 1; i >= 0; i-- {
+		for current != nil && !matchesSimpleSelector(current, selectors[i]) {
+			current = current.Parent
+		}
+		if current == nil {
+			return false
 		}
 		current = current.Parent
 	}
 
-	return false
+	return true
 }
 
 // matchesSimpleSelector checks if a node matches a simple selector.
@@ -324,7 +421,7 @@ func matchesSimpleSelector(node *dom.Node, selector *css.SimpleSelector) bool {
 			// Other pseudo-classes like :hover, :active, :focus are ignored
 			// (they're counted in specificity but don't affect matching)
 		}
-		
+
 		// If selector has :link, verify this is an <a> element with href
 		if hasLink {
 			if node.Data != "a" || node.GetAttribute("href") == "" {
@@ -580,12 +677,12 @@ func applyPresentationalHints(node *dom.Node, styles map[string]string) {
 			styles["color"] = color
 		}
 	}
-	
+
 	// bgcolor attribute (used on <table>, <tr>, <td>, <th>, <body>)
 	if bgcolor := node.GetAttribute("bgcolor"); bgcolor != "" {
 		styles["background-color"] = bgcolor
 	}
-	
+
 	// width attribute (used on many elements including <table>, <td>, <img>)
 	// HTML5 §14.3.9: Maps to CSS width property
 	if width := node.GetAttribute("width"); width != "" {
@@ -597,7 +694,7 @@ func applyPresentationalHints(node *dom.Node, styles map[string]string) {
 			styles["width"] = width + "px"
 		}
 	}
-	
+
 	// height attribute (used on many elements including <table>, <td>, <img>)
 	// HTML5 §14.3.9: Maps to CSS height property
 	if height := node.GetAttribute("height"); height != "" {
@@ -609,7 +706,7 @@ func applyPresentationalHints(node *dom.Node, styles map[string]string) {
 			styles["height"] = height + "px"
 		}
 	}
-	
+
 	// Note: cellspacing and cellpadding are handled after CSS rules are applied
 	// to ensure they override user-agent stylesheet defaults
 	// align and valign are also handled in the layout phase
@@ -622,14 +719,14 @@ func ResolveCSSURLs(root *StyledNode, baseURL string) {
 	if root == nil {
 		return
 	}
-	
+
 	// Resolve URLs in background and background-image properties
 	for _, prop := range []string{"background", "background-image"} {
 		if value, ok := root.Styles[prop]; ok && strings.Contains(value, "url(") {
 			root.Styles[prop] = resolveURLsInValue(value, baseURL)
 		}
 	}
-	
+
 	// Recursively process children
 	for _, child := range root.Children {
 		ResolveCSSURLs(child, baseURL)
@@ -648,13 +745,13 @@ func resolveURLsInValue(value, baseURL string) string {
 			break
 		}
 		idx += start
-		
+
 		// Find the end of url(...)
 		end := idx + 4 // len("url(")
 		parenCount := 1
 		inQuote := false
 		quoteChar := byte(0)
-		
+
 		for end < len(result) && parenCount > 0 {
 			ch := result[end]
 			if !inQuote {
@@ -673,20 +770,20 @@ func resolveURLsInValue(value, baseURL string) string {
 			}
 			end++
 		}
-		
+
 		// Extract the URL
 		urlPart := result[idx+4 : end-1] // Skip "url(" and ")"
 		urlPart = strings.TrimSpace(urlPart)
 		urlPart = strings.Trim(urlPart, "\"'")
-		
+
 		// Resolve the URL using dom package logic
 		resolvedURL := dom.ResolveURLString(baseURL, urlPart)
-		
+
 		// Replace in the result
 		newURLValue := "url(" + resolvedURL + ")"
 		result = result[:idx] + newURLValue + result[end:]
 		start = idx + len(newURLValue)
 	}
-	
+
 	return result
 }

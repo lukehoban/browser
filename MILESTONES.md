@@ -136,6 +136,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ✅ Correct selector matching
 - ✅ Proper cascade order by specificity
 - ✅ Descendant selectors work correctly
+- ✅ Selector matching now indexes rules by the rightmost simple selector to avoid scanning every rule for every element
 - ✅ Inline styles override all CSS rules (highest specificity)
 - ✅ User-agent styles apply as lowest priority in cascade
 - ✅ Default styles for headings, links, lists, and text elements
@@ -144,6 +145,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 - ⚠️ No inheritance implementation (partially complete - font properties inherit)
 - ⚠️ No `!important` support (CSS 2.1 §6.4.2) - warning logged when encountered
 - ⚠️ No computed value calculation (values used as-is)
+- ⚠️ Descendant matching still walks ancestors, but matching no longer scans unrelated selectors for each element
 
 ---
 
@@ -621,4 +623,5 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 - WebAssembly support with interactive demo (December 2025)
 - Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)
 - Added baseline alignment for inline elements, text-align support, improved table layout (December 2025)
-**Last Updated**: 2025-12-27
+- Optimized CSS selector matching by indexing rules on the rightmost selector and simplifying descendant ancestor walks (March 2026)
+**Last Updated**: 2026-03-11
