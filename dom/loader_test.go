@@ -99,3 +99,76 @@ func TestIsDataURL(t *testing.T) {
 		})
 	}
 }
+
+func TestIsURL(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"http://example.com/page.html", true},
+		{"https://example.com/image.png", true},
+		{"http://localhost:8080/test", true},
+		{"https://github.com/user/repo", true},
+		{"ftp://example.com/file", false},
+		{"file:///path/to/file", false},
+		{"/path/to/file", false},
+		{"relative/path.html", false},
+		{"data:text/plain;base64,test", false},
+		{"", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if got := isURL(tt.input); got != tt.want {
+				t.Errorf("isURL(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadResourceAsString(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+		wantErr  bool
+	}{
+		{
+			name:     "data URL text",
+			input:    "data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==",
+			expected: "Hello, World!",
+			wantErr:  false,
+		},
+		{
+			name:     "data URL SVG",
+			input:    "data:image/svg+xml,%3Csvg%3E%3C%2Fsvg%3E",
+			expected: "<svg></svg>",
+			wantErr:  false,
+		},
+		{
+			name:    "invalid data URL",
+			input:   "data:invalid",
+			wantErr: true,
+		},
+		{
+			name:    "nonexistent file",
+			input:   "/nonexistent/file/path.txt",
+			wantErr: true,
+		},
+	}
+
+	loader := NewResourceLoader("")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := loader.LoadResourceAsString(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("LoadResourceAsString() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got != tt.expected {
+				t.Errorf("LoadResourceAsString() = %q, want %q", got, tt.expected)
+			}
+		})
+	}
+}
