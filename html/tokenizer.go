@@ -131,6 +131,36 @@ func (t *Tokenizer) readText() Token {
 	}
 }
 
+// ReadRawText reads raw text content until the specified closing tag is found.
+// This is used for script and style elements, which must not have their content
+// interpreted as HTML (HTML5 §12.2.5.14 Script data state).
+// The closing tag delimiter (e.g., "</script>") is consumed but not included in the result.
+func (t *Tokenizer) ReadRawText(endTag string) string {
+	endDelim := "</" + endTag
+	start := t.pos
+	for t.pos < len(t.input) {
+		// Case-insensitive search for end tag
+		remaining := t.input[t.pos:]
+		if len(remaining) >= len(endDelim) &&
+			strings.EqualFold(remaining[:len(endDelim)], endDelim) {
+			// Found end tag - extract content and skip past the full closing tag
+			content := t.input[start:t.pos]
+			t.pos += len(endDelim)
+			// Skip to '>'
+			for t.pos < len(t.input) && t.input[t.pos] != '>' {
+				t.pos++
+			}
+			if t.pos < len(t.input) {
+				t.pos++ // consume '>'
+			}
+			return content
+		}
+		t.pos++
+	}
+	// End of input without finding closing tag
+	return t.input[start:]
+}
+
 // readStartTag reads a start tag.
 // HTML5 §12.2.5.8 Tag name state
 func (t *Tokenizer) readStartTag() Token {

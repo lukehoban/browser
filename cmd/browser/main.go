@@ -20,6 +20,7 @@ import (
 	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/html"
+	"github.com/lukehoban/browser/js"
 	"github.com/lukehoban/browser/layout"
 	"github.com/lukehoban/browser/log"
 	"github.com/lukehoban/browser/render"
@@ -131,6 +132,12 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Resolving URLs...\n")
 	dom.ResolveURLs(doc, baseURL)
 	fmt.Fprintf(os.Stderr, "URLs resolved\n")
+
+	// Execute JavaScript
+	// Scripts run before CSS/layout so they can modify the DOM
+	fmt.Fprintf(os.Stderr, "Executing JavaScript...\n")
+	js.Execute(doc)
+	fmt.Fprintf(os.Stderr, "JavaScript executed\n")
 
 	// Extract CSS from <style> tags and <link> tags
 	fmt.Fprintf(os.Stderr, "Extracting CSS...\n")
