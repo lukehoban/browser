@@ -27,6 +27,7 @@
 package style
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -71,6 +72,90 @@ func (s Specificity) Compare(other Specificity) int {
 	return s.D - other.D
 }
 
+// indexedRule pairs a rule with one of its selectors for indexed lookup.
+type indexedRule struct {
+	rule     *css.Rule
+	selector *css.Selector
+}
+
+// RuleIndex indexes stylesheet rules by the key selector (rightmost simple
+// selector) for fast candidate filtering during style computation.
+// Instead of checking every rule against every element, we look up only
+// the rules whose key selector could potentially match.
+type RuleIndex struct {
+	byTagName map[string][]indexedRule
+	byID      map[string][]indexedRule
+	byClass   map[string][]indexedRule
+	universal []indexedRule
+}
+
+// buildRuleIndex creates a rule index from a stylesheet.
+// Each (rule, selector) pair is categorized by the most specific part
+// of the rightmost simple selector:
+//  1. ID → byID
+//  2. Class (first) → byClass
+//  3. Tag name → byTagName
+//  4. Otherwise → universal
+func buildRuleIndex(stylesheet *css.Stylesheet) *RuleIndex {
+	idx := &RuleIndex{
+		byTagName: make(map[string][]indexedRule),
+		byID:      make(map[string][]indexedRule),
+		byClass:   make(map[string][]indexedRule),
+	}
+
+	for _, rule := range stylesheet.Rules {
+		for _, selector := range rule.Selectors {
+			if len(selector.Simple) == 0 {
+				continue
+			}
+
+			entry := indexedRule{rule: rule, selector: selector}
+			key := selector.Simple[len(selector.Simple)-1]
+
+			if key.ID != "" {
+				idx.byID[key.ID] = append(idx.byID[key.ID], entry)
+			} else if len(key.Classes) > 0 {
+				idx.byClass[key.Classes[0]] = append(idx.byClass[key.Classes[0]], entry)
+			} else if key.TagName != "" {
+				idx.byTagName[key.TagName] = append(idx.byTagName[key.TagName], entry)
+			} else {
+				idx.universal = append(idx.universal, entry)
+			}
+		}
+	}
+
+	return idx
+}
+
+// candidateRules returns all indexed rules that could potentially match the given node.
+func (idx *RuleIndex) candidateRules(node *dom.Node) []indexedRule {
+	var candidates []indexedRule
+
+	// Collect from tag name bucket
+	if entries, ok := idx.byTagName[node.Data]; ok {
+		candidates = append(candidates, entries...)
+	}
+
+	// Collect from ID bucket
+	if id := node.ID(); id != "" {
+		if entries, ok := idx.byID[id]; ok {
+			candidates = append(candidates, entries...)
+		}
+	}
+
+	// Collect from class buckets
+	for _, class := range node.Classes() {
+		if entries, ok := idx.byClass[class]; ok {
+			candidates = append(candidates, entries...)
+		}
+	}
+
+	// Always include universal rules
+	candidates = append(candidates, idx.universal...)
+
+	return candidates
+}
+
 // StyleTree computes styles for a DOM tree using a stylesheet.
 // CSS 2.1 §6 Assigning property values
 // CSS 2.1 §6.4.4: User agent -> Author stylesheet cascade
@@ -90,12 +175,12 @@ func StyleTree(root *dom.Node, authorStylesheet *css.Stylesheet) *StyledNode {
 		mergedStylesheet.Rules = append(mergedStylesheet.Rules, authorStylesheet.Rules...)
 	}
 	
-	return styleNode(root, mergedStylesheet, make(map[string]string))
+	return styleNode(root, buildRuleIndex(mergedStylesheet), make(map[string]string))
 }
 
 // styleNode computes styles for a single node and its children.
 // CSS 2.1 §6.2: Font properties are inherited from parent to child
-func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[string]string) *StyledNode {
+func styleNode(node *dom.Node, index *RuleIndex, parentStyles map[string]string) *StyledNode {
 	styled := &StyledNode{
 		Node:     node,
 		Styles:   make(map[string]string),
@@ -138,7 +223,7 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		applyPresentationalHints(node, styled.Styles)
 		
 		// Find all matching rules
-		matchedRules := matchRules(node, stylesheet)
+		matchedRules := matchRules(node, index)
 
 		// Apply rules in order of specificity
 		for _, matched := range matchedRules {
@@ -191,40 +276,38 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 
 	// Recursively style children
 	for _, child := range node.Children {
-		styledChild := styleNode(child, stylesheet, styled.Styles)
+		styledChild := styleNode(child, index, styled.Styles)
 		styled.Children = append(styled.Children, styledChild)
 	}
 
 	return styled
 }
 
-// matchRules finds all CSS rules that match a node.
+// matchRules finds all CSS rules that match a node using the rule index.
 // Returns rules sorted by specificity (lowest to highest).
 // CSS 2.1 §6.4.3
-func matchRules(node *dom.Node, stylesheet *css.Stylesheet) []MatchedRule {
+func matchRules(node *dom.Node, index *RuleIndex) []MatchedRule {
 	matched := make([]MatchedRule, 0)
+	seen := make(map[*css.Rule]bool)
 
-	for _, rule := range stylesheet.Rules {
-		for _, selector := range rule.Selectors {
-			if matchesSelector(node, selector) {
-				specificity := calculateSpecificity(selector)
-				matched = append(matched, MatchedRule{
-					Rule:        rule,
-					Specificity: specificity,
-				})
-				break // Only count each rule once
-			}
+	for _, candidate := range index.candidateRules(node) {
+		if seen[candidate.rule] {
+			continue
+		}
+		if matchesSelector(node, candidate.selector) {
+			specificity := calculateSpecificity(candidate.selector)
+			matched = append(matched, MatchedRule{
+				Rule:        candidate.rule,
+				Specificity: specificity,
+			})
+			seen[candidate.rule] = true
 		}
 	}
 
-	// Sort by specificity (simple bubble sort for small lists)
-	for i := 0; i < len(matched); i++ {
-		for j := i + 1; j < len(matched); j++ {
-			if matched[i].Specificity.Compare(matched[j].Specificity) > 0 {
-				matched[i], matched[j] = matched[j], matched[i]
-			}
-		}
-	}
+	// Sort by specificity
+	sort.Slice(matched, func(i, j int) bool {
+		return matched[i].Specificity.Compare(matched[j].Specificity) < 0
+	})
 
 	return matched
 }
