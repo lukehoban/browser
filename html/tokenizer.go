@@ -61,8 +61,9 @@ type Token struct {
 // Tokenizer tokenizes HTML input.
 // This is a simplified implementation based on HTML5 §12.2.5.
 type Tokenizer struct {
-	input string
-	pos   int
+	input          string
+	pos            int
+	pendingRawText string // non-empty when inside a raw text element (script, style)
 }
 
 // NewTokenizer creates a new HTML tokenizer.
@@ -77,6 +78,12 @@ func NewTokenizer(input string) *Tokenizer {
 func (t *Tokenizer) Next() (Token, bool) {
 	if t.pos >= len(t.input) {
 		return Token{}, false
+	}
+
+	// HTML5 §12.2.5.14/16: If we're inside a raw text element (script, style),
+	// read everything until the matching closing tag as raw text.
+	if t.pendingRawText != "" {
+		return t.readRawText(), true
 	}
 
 	// HTML5 §12.2.5.1 Data state
@@ -131,6 +138,50 @@ func (t *Tokenizer) readText() Token {
 	}
 }
 
+// readRawText reads raw text content inside a raw text element (script, style).
+// HTML5 §12.2.5.14 (script data state) / §12.2.5.16 (RAWTEXT state)
+// Everything until the matching </tag> is treated as raw text (no HTML parsing).
+func (t *Tokenizer) readRawText() Token {
+	tagName := t.pendingRawText
+	t.pendingRawText = ""
+
+	start := t.pos
+	endTag := "</" + tagName + ">"
+
+	// Search case-insensitively for the end tag
+	remaining := t.input[t.pos:]
+	idx := -1
+	endTagLower := strings.ToLower(endTag)
+	for i := 0; i <= len(remaining)-len(endTag); i++ {
+		if strings.ToLower(remaining[i:i+len(endTag)]) == endTagLower {
+			idx = i
+			break
+		}
+	}
+
+	if idx >= 0 {
+		rawText := t.input[start : t.pos+idx]
+		t.pos += idx // position at start of end tag, which will be read next
+		return Token{
+			Type: TextToken,
+			Data: rawText,
+		}
+	}
+
+	// No closing tag found - consume rest of input as raw text
+	t.pos = len(t.input)
+	return Token{
+		Type: TextToken,
+		Data: t.input[start:],
+	}
+}
+
+// isRawTextElement returns true if the element's content should be treated as raw text.
+// HTML5 §12.2.5.14/16: script and style elements contain raw text.
+func isRawTextElement(tagName string) bool {
+	return tagName == "script" || tagName == "style"
+}
+
 // readStartTag reads a start tag.
 // HTML5 §12.2.5.8 Tag name state
 func (t *Tokenizer) readStartTag() Token {
@@ -153,9 +204,18 @@ func (t *Tokenizer) readStartTag() Token {
 		tokenType = SelfClosingTagToken
 	}
 
+	lowerName := strings.ToLower(tagName)
+
+	// HTML5 §12.2.5.14/16: Raw text elements (script, style) need special handling.
+	// Content inside these elements is not parsed as HTML - everything until the
+	// matching end tag is treated as raw text.
+	if !selfClosing && isRawTextElement(lowerName) {
+		t.pendingRawText = lowerName
+	}
+
 	return Token{
 		Type:       tokenType,
-		Data:       strings.ToLower(tagName),
+		Data:       lowerName,
 		Attributes: attrs,
 	}
 }

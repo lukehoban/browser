@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>JavaScript Engine Test</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            font-size: 24px;
+        }
+        .container {
+            background-color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+        }
+        .highlight {
+            color: #c00;
+            font-weight: bold;
+        }
+        .item {
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <h1>JavaScript Engine Test</h1>
+
+    <div class="container">
+        <p id="greeting">Original text</p>
+    </div>
+
+    <div class="container" id="dynamic-list">
+        <p>Items added by JavaScript:</p>
+    </div>
+
+    <div class="container" id="styled-box">
+        <p>This box is styled by JavaScript</p>
+    </div>
+
+    <script>
+        // Test 1: Modify existing element text
+        var greeting = document.getElementById("greeting");
+        greeting.textContent = "Hello from JavaScript!";
+        greeting.className = "highlight";
+
+        // Test 2: Create and append new elements
+        var list = document.getElementById("dynamic-list");
+        var items = ["First item", "Second item", "Third item", "Fourth item"];
+        for (var i = 0; i < items.length; i++) {
+            var div = document.createElement("div");
+            div.className = "item";
+            div.textContent = items[i];
+            list.appendChild(div);
+        }
+
+        // Test 3: Style manipulation
+        var styledBox = document.getElementById("styled-box");
+        styledBox.style.backgroundColor = "#e8f4e8";
+        styledBox.style.borderColor = "#4a4";
+        styledBox.style.color = "#2a6d2a";
+    </script>
+</body>
+</html>

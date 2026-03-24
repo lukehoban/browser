@@ -20,6 +20,7 @@ import (
 	"github.com/lukehoban/browser/css"
 	"github.com/lukehoban/browser/dom"
 	"github.com/lukehoban/browser/html"
+	"github.com/lukehoban/browser/js"
 	"github.com/lukehoban/browser/layout"
 	"github.com/lukehoban/browser/log"
 	"github.com/lukehoban/browser/render"
@@ -125,6 +126,22 @@ func main() {
 	fmt.Fprintf(os.Stderr, "Parsing HTML...\n")
 	doc := html.Parse(content)
 	fmt.Fprintf(os.Stderr, "HTML parsed\n")
+
+	// Execute JavaScript from <script> tags
+	// Scripts run after DOM construction but before styling, as they may modify the DOM.
+	fmt.Fprintf(os.Stderr, "Executing JavaScript...\n")
+	scripts := js.ExtractScripts(doc)
+	if len(scripts) > 0 {
+		engine := js.NewEngine(doc)
+		for i, script := range scripts {
+			if err := engine.Execute(script); err != nil {
+				fmt.Fprintf(os.Stderr, "JavaScript error in script %d: %v\n", i+1, err)
+			}
+		}
+		fmt.Fprintf(os.Stderr, "Executed %d script(s)\n", len(scripts))
+	} else {
+		fmt.Fprintf(os.Stderr, "No scripts found\n")
+	}
 
 	// Resolve relative URLs (e.g., image paths) against the document's base URL
 	// HTML5 §2.5: URLs in documents are resolved against a base URL

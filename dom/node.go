@@ -5,6 +5,8 @@
 // - DOM Level 2 Core: https://www.w3.org/TR/DOM-Level-2-Core/
 package dom
 
+import "strings"
+
 // NodeType represents the type of a DOM node.
 type NodeType int
 
@@ -99,4 +101,112 @@ func (n *Node) Classes() []string {
 		}
 	}
 	return classes
+}
+
+// RemoveChild removes a child node from this node and returns it.
+// Returns nil if the child is not found.
+func (n *Node) RemoveChild(child *Node) *Node {
+	for i, c := range n.Children {
+		if c == child {
+			n.Children = append(n.Children[:i], n.Children[i+1:]...)
+			child.Parent = nil
+			return child
+		}
+	}
+	return nil
+}
+
+// InsertBefore inserts newChild before refChild. If refChild is nil,
+// newChild is appended at the end.
+func (n *Node) InsertBefore(newChild, refChild *Node) {
+	if refChild == nil {
+		n.AppendChild(newChild)
+		return
+	}
+	for i, c := range n.Children {
+		if c == refChild {
+			newChild.Parent = n
+			// Insert at position i
+			n.Children = append(n.Children[:i], append([]*Node{newChild}, n.Children[i:]...)...)
+			return
+		}
+	}
+	// refChild not found, append
+	n.AppendChild(newChild)
+}
+
+// GetElementByID searches the subtree for an element with the given ID.
+// Returns nil if not found.
+func (n *Node) GetElementByID(id string) *Node {
+	if n.Type == ElementNode && n.ID() == id {
+		return n
+	}
+	for _, child := range n.Children {
+		if found := child.GetElementByID(id); found != nil {
+			return found
+		}
+	}
+	return nil
+}
+
+// GetElementsByTagName returns all descendant elements with the given tag name.
+func (n *Node) GetElementsByTagName(tagName string) []*Node {
+	var results []*Node
+	tagName = strings.ToLower(tagName)
+	n.getElementsByTagNameHelper(tagName, &results)
+	return results
+}
+
+func (n *Node) getElementsByTagNameHelper(tagName string, results *[]*Node) {
+	if n.Type == ElementNode && strings.ToLower(n.Data) == tagName {
+		*results = append(*results, n)
+	}
+	for _, child := range n.Children {
+		child.getElementsByTagNameHelper(tagName, results)
+	}
+}
+
+// GetElementsByClassName returns all descendant elements with the given class name.
+func (n *Node) GetElementsByClassName(className string) []*Node {
+	var results []*Node
+	n.getElementsByClassNameHelper(className, &results)
+	return results
+}
+
+func (n *Node) getElementsByClassNameHelper(className string, results *[]*Node) {
+	if n.Type == ElementNode {
+		for _, c := range n.Classes() {
+			if c == className {
+				*results = append(*results, n)
+				break
+			}
+		}
+	}
+	for _, child := range n.Children {
+		child.getElementsByClassNameHelper(className, results)
+	}
+}
+
+// TextContent returns the text content of the node and its descendants.
+func (n *Node) TextContent() string {
+	if n.Type == TextNode {
+		return n.Data
+	}
+	var sb strings.Builder
+	for _, child := range n.Children {
+		sb.WriteString(child.TextContent())
+	}
+	return sb.String()
+}
+
+// SetTextContent replaces the node's children with a single text node.
+func (n *Node) SetTextContent(text string) {
+	// Clear existing children
+	for _, child := range n.Children {
+		child.Parent = nil
+	}
+	n.Children = make([]*Node, 0)
+	if text != "" {
+		n.AppendChild(NewText(text))
+	}
 }
