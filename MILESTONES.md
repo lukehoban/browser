@@ -65,7 +65,7 @@ This document tracks the milestones for implementing a simple web browser in Go,
 
 ### Known Limitations:
 - ⚠️ Simplified error recovery
-- ⚠️ No script/style CDATA sections
+- ✅ ~~No script/style CDATA sections~~ Fixed in Milestone 11 (raw text element handling)
 - ⚠️ No namespace support
 
 ---
@@ -599,7 +599,7 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 ---
 
 ## Future Enhancements (Post-MVP)
-- JavaScript support
+- ~~JavaScript support~~ ✅ Added in Milestone 11
 - CSS 3 features (flexbox, grid, transitions, animations)
 - Form handling
 - Media queries (responsive design)
@@ -614,11 +614,85 @@ The browser successfully compiles to WebAssembly and runs entirely in a web brow
 
 ---
 
+## Milestone 11: JavaScript Engine ✅ COMPLETE
+**Goal**: Add a JavaScript execution engine to run `<script>` tags and manipulate the DOM
+
+### Tasks:
+- [x] Add goja (pure Go ECMAScript 5.1+) dependency
+- [x] Create js/ package with Engine wrapper
+  - [x] Script extraction from `<script>` tags
+  - [x] Document object with DOM query methods
+  - [x] Element wrapper with properties and methods
+  - [x] console.log/warn/error bindings
+  - [x] Style property (camelCase to CSS property conversion)
+- [x] Enhance DOM package with query/mutation methods
+  - [x] GetElementByID, GetElementsByTagName, GetElementsByClassName
+  - [x] RemoveChild, InsertBefore
+  - [x] TextContent, SetTextContent
+- [x] Fix HTML tokenizer for raw text elements
+  - [x] Script content no longer parsed as HTML (HTML5 §12.2.5.14)
+  - [x] Style content no longer parsed as HTML (HTML5 §12.2.5.16)
+- [x] Integrate JS execution into rendering pipeline
+  - [x] Scripts execute after DOM construction, before style computation
+- [x] Add comprehensive tests (28 tests)
+- [x] Create test HTML file demonstrating JS features
+
+### Deliverables:
+- ✅ ECMAScript 5.1+ execution via goja
+- ✅ DOM manipulation (create, modify, remove elements)
+- ✅ Attribute and style manipulation
+- ✅ Tree navigation (parent, children, siblings)
+- ✅ Node identity preservation across JS/Go boundary
+
+### DOM API Coverage:
+**Document methods:**
+- `document.getElementById(id)`
+- `document.getElementsByTagName(tagName)`
+- `document.getElementsByClassName(className)`
+- `document.createElement(tagName)`
+- `document.createTextNode(text)`
+- `document.body`, `document.documentElement`, `document.head`, `document.title`
+
+**Element properties:**
+- `tagName`, `nodeName`, `nodeType`, `nodeValue`
+- `id`, `className` (get/set)
+- `textContent`, `innerHTML` (get/set)
+- `parentNode`, `parentElement`
+- `children`, `childNodes`
+- `firstChild`, `lastChild`, `firstElementChild`, `lastElementChild`
+- `nextSibling`, `previousSibling`
+- `style.*` (camelCase CSS property access)
+
+**Element methods:**
+- `appendChild(child)`, `removeChild(child)`, `insertBefore(new, ref)`
+- `setAttribute(name, value)`, `getAttribute(name)`
+- `hasAttribute(name)`, `removeAttribute(name)`
+- `getElementsByTagName(tagName)`, `getElementsByClassName(className)`
+- `hasChildNodes()`, `cloneNode(deep)`
+
+### Known Limitations:
+- External scripts (`<script src="...">`) not supported
+- No event handling (onclick, addEventListener, etc.)
+- No setTimeout/setInterval (no event loop)
+- No XMLHttpRequest/fetch
+- innerHTML parser is simplified (basic HTML only)
+
+### Validation:
+- ✅ 28 unit tests passing
+- ✅ DOM manipulation verified (create, append, remove, modify)
+- ✅ Style property manipulation works (camelCase → CSS property)
+- ✅ Node identity preserved across multiple accesses
+- ✅ Integration test with rendered output showing JS-modified DOM
+- ✅ All existing tests continue to pass (no regressions)
+
+---
+
 ## Current Status
-**Completed**: Milestones 1-10 (Foundation through WebAssembly Support, including all core features)  
+**Completed**: Milestones 1-11 (Foundation through JavaScript Engine, including all core features)  
 **Recent Updates**: 
+- JavaScript engine with DOM bindings using goja (March 2026)
 - Architectural improvements: Consolidated color parsing, added comprehensive log warnings (December 2025)
 - WebAssembly support with interactive demo (December 2025)
 - Fixed Hacker News rendering issues - HTML entities, pt font sizes, hidden elements (December 2025)
 - Added baseline alignment for inline elements, text-align support, improved table layout (December 2025)
-**Last Updated**: 2025-12-27
+**Last Updated**: 2026-03-24

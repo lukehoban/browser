@@ -7,18 +7,19 @@ This document provides a technical summary of the browser implementation, detail
 The browser follows a classic rendering pipeline:
 
 ```
-HTML Input → Tokenization → DOM Tree → Style Computation → Layout → Rendering → PNG Output
-                                ↓
-                          CSS Parsing (from <style> tags)
+HTML Input → Tokenization → DOM Tree → JavaScript Execution → Style Computation → Layout → Rendering → PNG Output
+                                               ↓                       ↓
+                                     (DOM manipulation)       CSS Parsing (from <style> tags)
 ```
 
 ### Key Components
 
 1. **HTML Parser** (`html/`): Tokenizes and parses HTML into a DOM tree
 2. **CSS Parser** (`css/`): Tokenizes and parses CSS stylesheets
-3. **Style Engine** (`style/`): Matches selectors and computes styles
-4. **Layout Engine** (`layout/`): Calculates box model and positions
-5. **Render Engine** (`render/`): Draws to canvas and outputs PNG
+3. **JavaScript Engine** (`js/`): Executes `<script>` tags and provides DOM bindings
+4. **Style Engine** (`style/`): Matches selectors and computes styles
+5. **Layout Engine** (`layout/`): Calculates box model and positions
+6. **Render Engine** (`render/`): Draws to canvas and outputs PNG
 
 ## Implementation Details
 
@@ -191,6 +192,37 @@ Style → Layout → Render (loads from absolute paths)
 
 **Test Coverage**: Unit tests for URL resolution and image rendering
 
+### 7. JavaScript Engine
+**Files**: `js/engine.go`  
+**Dependency**: github.com/dop251/goja (pure Go ECMAScript 5.1+ implementation)
+
+**Key Features**:
+- ECMAScript 5.1+ execution via goja runtime
+- DOM bindings via DynamicObject interface:
+  - `document` global with query methods (getElementById, getElementsByTagName, etc.)
+  - Element wrappers with properties (tagName, textContent, innerHTML, style, etc.)
+  - Tree navigation (parentNode, children, siblings)
+  - DOM mutation (appendChild, removeChild, insertBefore)
+- Script extraction from `<script>` tags (skips external src, non-JS types)
+- Node identity preservation: same DOM node always returns same JS object
+- `console.log/warn/error` and `alert()` mapped to Go logger
+- `element.style.*` with camelCase to CSS property conversion
+
+**Architecture**:
+```
+HTML Parse → DOM Tree → Script Extraction → JS Execution → Modified DOM → Style/Layout/Render
+                                                  ↕
+                                          DOM Bindings (goja ↔ dom.Node)
+```
+
+**Design Decisions**:
+- Scripts execute synchronously after DOM construction, before styling
+- DynamicObject pattern for lazy property evaluation (no stale values)
+- innerHTML uses a minimal HTML fragment parser (not the full HTML parser)
+- External scripts are logged as warnings but not fetched
+
+**Test Coverage**: 28 unit tests covering DOM manipulation, properties, methods, and edge cases
+
 ## Specification Compliance
 
 ### HTML5 Compliance
@@ -204,7 +236,7 @@ Style → Layout → Render (loads from absolute paths)
 **Not Implemented**:
 - Character references (`&amp;`, `&lt;`, etc.)
 - Advanced error recovery
-- Script/style CDATA sections
+- ~~Script/style CDATA sections~~ ✅ Fixed (raw text element handling)
 - Namespaces (SVG, MathML)
 
 ### CSS 2.1 Compliance
@@ -274,14 +306,16 @@ browser/
 │   ├── browser/      # Main CLI application
 │   └── wptrunner/    # WPT reftest runner
 ├── dom/              # DOM tree data structure
-│   ├── node.go       # Node type, element/text nodes
+│   ├── node.go       # Node type, element/text nodes, query methods
 │   └── url.go        # URL resolution (HTML5 §2.5)
 ├── html/             # HTML parsing
-│   ├── tokenizer.go  # HTML tokenization
+│   ├── tokenizer.go  # HTML tokenization (with raw text element support)
 │   └── parser.go     # Tree construction
 ├── css/              # CSS parsing
 │   ├── tokenizer.go  # CSS tokenization
 │   └── parser.go     # Selector and declaration parsing
+├── js/               # JavaScript engine
+│   └── engine.go     # goja runtime, DOM bindings, script extraction
 ├── style/            # Style computation
 │   └── style.go      # Selector matching, specificity, cascade
 ├── layout/           # Layout engine
@@ -293,6 +327,7 @@ browser/
 └── test/             # Test HTML files
     ├── simple.html
     ├── styled.html
+    ├── js_test.html  # JavaScript engine test
     └── hackernews.html
 ```
 
@@ -321,6 +356,7 @@ This browser demonstrates fundamental web rendering concepts with clean, specifi
 - ✅ Implements W3C specifications with citations
 - ✅ Calculates accurate layout per CSS box model
 - ✅ Renders visual output with text, colors, borders, and images
+- ✅ Executes JavaScript with DOM manipulation support
 - ✅ Maintains high test coverage
 - ✅ Provides educational value through clear code organization
 
