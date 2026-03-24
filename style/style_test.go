@@ -1123,3 +1123,253 @@ func TestInlineStyleSpecificity(t *testing.T) {
 		t.Errorf("Expected inline style 'red' to win, got %v", divStyled.Styles["color"])
 	}
 }
+
+func TestBuildRuleIndex(t *testing.T) {
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "red"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{ID: "main"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "background", Value: "blue"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{Classes: []string{"container"}}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "margin", Value: "10px"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					// descendant selector: div span
+					{Simple: []*css.SimpleSelector{{TagName: "div"}, {TagName: "span"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-weight", Value: "bold"},
+				},
+			},
+		},
+	}
+
+	idx := buildRuleIndex(stylesheet)
+
+	// Tag-based rule should be indexed under "div"
+	if len(idx.byTagName["div"]) != 1 {
+		t.Errorf("Expected 1 rule indexed under tag 'div', got %d", len(idx.byTagName["div"]))
+	}
+	// Descendant selector "div span" should be indexed under "span" (rightmost)
+	if len(idx.byTagName["span"]) != 1 {
+		t.Errorf("Expected 1 rule indexed under tag 'span', got %d", len(idx.byTagName["span"]))
+	}
+	// ID-based rule
+	if len(idx.byID["main"]) != 1 {
+		t.Errorf("Expected 1 rule indexed under ID 'main', got %d", len(idx.byID["main"]))
+	}
+	// Class-based rule
+	if len(idx.byClass["container"]) != 1 {
+		t.Errorf("Expected 1 rule indexed under class 'container', got %d", len(idx.byClass["container"]))
+	}
+	// No universal rules in this stylesheet
+	if len(idx.universal) != 0 {
+		t.Errorf("Expected 0 universal rules, got %d", len(idx.universal))
+	}
+}
+
+func TestRuleIndexCandidates(t *testing.T) {
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "red"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "p"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "green"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{ID: "main"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "background", Value: "blue"},
+				},
+			},
+		},
+	}
+
+	idx := buildRuleIndex(stylesheet)
+
+	// A <div> node should only get candidates for "div" tag, not "p"
+	divNode := dom.NewElement("div")
+	candidates := idx.candidateRules(divNode)
+	if len(candidates) != 1 {
+		t.Errorf("Expected 1 candidate for <div>, got %d", len(candidates))
+	}
+
+	// A <div id="main"> should get candidates for "div" tag AND "main" ID
+	divWithID := dom.NewElement("div")
+	divWithID.SetAttribute("id", "main")
+	candidates = idx.candidateRules(divWithID)
+	if len(candidates) != 2 {
+		t.Errorf("Expected 2 candidates for <div id='main'>, got %d", len(candidates))
+	}
+}
+
+func TestRuleIndexMatchesOriginalBehavior(t *testing.T) {
+	// Create DOM: div#main.container > p.text > span
+	doc := dom.NewDocument()
+	div := dom.NewElement("div")
+	div.SetAttribute("id", "main")
+	div.SetAttribute("class", "container")
+	p := dom.NewElement("p")
+	p.SetAttribute("class", "text")
+	span := dom.NewElement("span")
+	text := dom.NewText("Hello")
+	span.AppendChild(text)
+	p.AppendChild(span)
+	div.AppendChild(p)
+	doc.AppendChild(div)
+
+	// Multiple selectors with various types
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "color", Value: "red"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{ID: "main"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "background", Value: "blue"},
+				},
+			},
+			{
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{Classes: []string{"container"}}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "margin", Value: "5px"},
+				},
+			},
+			{
+				// descendant selector: div p
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{TagName: "div"}, {TagName: "p"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-size", Value: "14px"},
+				},
+			},
+			{
+				// descendant selector: .container span
+				Selectors: []*css.Selector{
+					{Simple: []*css.SimpleSelector{{Classes: []string{"container"}}, {TagName: "span"}}},
+				},
+				Declarations: []*css.Declaration{
+					{Property: "font-weight", Value: "bold"},
+				},
+			},
+		},
+	}
+
+	styledTree := StyleTree(doc, stylesheet)
+	divStyled := styledTree.Children[0]
+	pStyled := divStyled.Children[0]
+	spanStyled := pStyled.Children[0]
+
+	// div should have color, background, margin
+	if divStyled.Styles["color"] != "red" {
+		t.Errorf("Expected div color 'red', got %v", divStyled.Styles["color"])
+	}
+	if divStyled.Styles["background"] != "blue" {
+		t.Errorf("Expected div background 'blue', got %v", divStyled.Styles["background"])
+	}
+
+	// p should have font-size from "div p" descendant selector
+	if pStyled.Styles["font-size"] != "14px" {
+		t.Errorf("Expected p font-size '14px', got %v", pStyled.Styles["font-size"])
+	}
+
+	// span should have font-weight from ".container span" descendant selector
+	if spanStyled.Styles["font-weight"] != "bold" {
+		t.Errorf("Expected span font-weight 'bold', got %v", spanStyled.Styles["font-weight"])
+	}
+}
+
+func BenchmarkStyleTreeLargeDOM(b *testing.B) {
+	// Build a large DOM tree similar to Hacker News: table with many rows/cells
+	doc := dom.NewDocument()
+	html := dom.NewElement("html")
+	body := dom.NewElement("body")
+	table := dom.NewElement("table")
+	table.SetAttribute("class", "itemlist")
+
+	for i := 0; i < 100; i++ {
+		tr := dom.NewElement("tr")
+		tr.SetAttribute("class", "athing")
+		for j := 0; j < 3; j++ {
+			td := dom.NewElement("td")
+			td.SetAttribute("class", "title")
+			a := dom.NewElement("a")
+			a.SetAttribute("class", "storylink")
+			a.SetAttribute("href", "https://example.com")
+			text := dom.NewText("Story title")
+			a.AppendChild(text)
+			td.AppendChild(a)
+			tr.AppendChild(td)
+		}
+		table.AppendChild(tr)
+	}
+
+	body.AppendChild(table)
+	html.AppendChild(body)
+	doc.AppendChild(html)
+
+	// Typical stylesheet with various selector types
+	stylesheet := &css.Stylesheet{
+		Rules: []*css.Rule{
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{TagName: "table"}}}}, Declarations: []*css.Declaration{{Property: "width", Value: "100%"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{TagName: "tr"}}}}, Declarations: []*css.Declaration{{Property: "display", Value: "table-row"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{TagName: "td"}}}}, Declarations: []*css.Declaration{{Property: "display", Value: "table-cell"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{Classes: []string{"itemlist"}}}}}, Declarations: []*css.Declaration{{Property: "border", Value: "0"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{Classes: []string{"athing"}}}}}, Declarations: []*css.Declaration{{Property: "height", Value: "auto"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{Classes: []string{"title"}}}}}, Declarations: []*css.Declaration{{Property: "font-size", Value: "10pt"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{Classes: []string{"storylink"}}}}}, Declarations: []*css.Declaration{{Property: "color", Value: "#000000"}}},
+			// Descendant selectors
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{Classes: []string{"itemlist"}}, {TagName: "tr"}}}}, Declarations: []*css.Declaration{{Property: "background", Value: "#f6f6ef"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{TagName: "table"}, {TagName: "td"}}}}, Declarations: []*css.Declaration{{Property: "padding", Value: "2px"}}},
+			{Selectors: []*css.Selector{{Simple: []*css.SimpleSelector{{Classes: []string{"athing"}}, {Classes: []string{"title"}}}}}, Declarations: []*css.Declaration{{Property: "font-weight", Value: "normal"}}},
+		},
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		StyleTree(doc, stylesheet)
+	}
+}
