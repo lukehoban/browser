@@ -380,7 +380,16 @@ func isURL(input string) bool {
 
 // fetchURL fetches content from a URL and returns it as a string
 func fetchURL(urlStr string) (string, error) {
-	resp, err := http.Get(urlStr)
+	client := &http.Client{}
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+
+	// Set a User-Agent header to avoid being blocked by sites like Wikipedia
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch URL: %w", err)
 	}
