@@ -7,6 +7,7 @@
 package font
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/lukehoban/browser/css"
@@ -19,6 +20,12 @@ import (
 	"golang.org/x/image/font/opentype"
 )
 
+// faceKey uniquely identifies a font face configuration.
+type faceKey struct {
+	fontIndex int // 0=regular, 1=bold, 2=italic, 3=boldItalic
+	size      float64
+}
+
 var (
 	// Global font cache to avoid reloading fonts
 	// The Go fonts are embedded in the binary and always available
@@ -28,6 +35,11 @@ var (
 	goBoldItalicFont *opentype.Font
 	fontOnce         sync.Once
 	fontErr          error
+
+	// Face cache: avoids creating a new opentype.Face on every text operation.
+	// Faces are safe to share across goroutines for read operations (measuring, drawing).
+	faceCache   = make(map[faceKey]font.Face)
+	faceCacheMu sync.RWMutex
 )
 
 // Style represents font styling properties.
@@ -80,6 +92,58 @@ func LoadGoFonts() error {
 	return fontErr
 }
 
+// fontIndexForStyle returns the cache index (0-3) for a given style.
+func fontIndexForStyle(style Style) int {
+	if style.Weight == "bold" && style.Style == "italic" {
+		return 3
+	} else if style.Weight == "bold" {
+		return 1
+	} else if style.Style == "italic" {
+		return 2
+	}
+	return 0
+}
+
+// GetOrCreateFace returns a cached font.Face for the given style, creating one if needed.
+// The returned face must NOT be closed by the caller — it is owned by the cache.
+// Returns (nil, error) if fonts are unavailable.
+func GetOrCreateFace(style Style) (font.Face, error) {
+	selectedFont := SelectFont(style)
+	if selectedFont == nil {
+		return nil, fmt.Errorf("no font available")
+	}
+
+	key := faceKey{fontIndex: fontIndexForStyle(style), size: style.Size}
+
+	faceCacheMu.RLock()
+	if f, ok := faceCache[key]; ok {
+		faceCacheMu.RUnlock()
+		return f, nil
+	}
+	faceCacheMu.RUnlock()
+
+	face, err := opentype.NewFace(selectedFont, &opentype.FaceOptions{
+		Size:    style.Size,
+		DPI:     72,
+		Hinting: font.HintingFull,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	faceCacheMu.Lock()
+	// Check again under write lock to avoid duplicate creation.
+	if f, ok := faceCache[key]; ok {
+		faceCacheMu.Unlock()
+		_ = face.Close() // discard the duplicate
+		return f, nil
+	}
+	faceCache[key] = face
+	faceCacheMu.Unlock()
+
+	return face, nil
+}
+
 // SelectFont selects the appropriate font based on weight and style.
 // Returns the selected font, or nil if fonts are not loaded.
 func SelectFont(style Style) *opentype.Font {
@@ -120,12 +184,8 @@ func MeasureText(text string, style Style) (float64, float64) {
 		return width, height
 	}
 	
-	// Create face with proper DPI and size
-	face, err := opentype.NewFace(selectedFont, &opentype.FaceOptions{
-		Size:    style.Size,
-		DPI:     72,
-		Hinting: font.HintingFull,
-	})
+	// Get or create a cached face for this style.
+	face, err := GetOrCreateFace(style)
 	if err != nil {
 		// Fallback to basicfont dimensions with scaling
 		basicFace := basicfont.Face7x13
@@ -134,8 +194,7 @@ func MeasureText(text string, style Style) (float64, float64) {
 		height := float64(basicFace.Height) * scale
 		return width, height
 	}
-	defer face.Close()
-	
+
 	// Measure text using font drawer
 	metrics := face.Metrics()
 	drawer := &font.Drawer{

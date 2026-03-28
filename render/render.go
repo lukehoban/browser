@@ -52,7 +52,6 @@ import (
 	"github.com/lukehoban/browser/svg"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
-	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -113,10 +112,32 @@ func (c *Canvas) SetPixel(x, y int, col color.RGBA) {
 
 // FillRect fills a rectangle with the given color.
 // CSS 2.1 §14.2 The background
+// Clips to canvas bounds once, then fills each row with a direct slice assignment.
 func (c *Canvas) FillRect(x, y, width, height int, col color.RGBA) {
-	for dy := 0; dy < height; dy++ {
-		for dx := 0; dx < width; dx++ {
-			c.SetPixel(x+dx, y+dy, col)
+	// Clip to canvas bounds (single check instead of per-pixel).
+	x0 := x
+	y0 := y
+	x1 := x + width
+	y1 := y + height
+	if x0 < 0 {
+		x0 = 0
+	}
+	if y0 < 0 {
+		y0 = 0
+	}
+	if x1 > c.Width {
+		x1 = c.Width
+	}
+	if y1 > c.Height {
+		y1 = c.Height
+	}
+	if x0 >= x1 || y0 >= y1 {
+		return
+	}
+	for row := y0; row < y1; row++ {
+		rowSlice := c.Pixels[row*c.Width+x0 : row*c.Width+x1]
+		for i := range rowSlice {
+			rowSlice[i] = col
 		}
 	}
 }
@@ -167,13 +188,9 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	var metrics font.Metrics
 	
 	if selectedFont != nil {
-		// Create face with proper DPI and size
+		// Use cached face — do NOT close it, the cache owns it.
 		var err error
-		face, err = opentype.NewFace(selectedFont, &opentype.FaceOptions{
-			Size:    style.Size,
-			DPI:     72,
-			Hinting: font.HintingFull,
-		})
+		face, err = browserfont.GetOrCreateFace(style)
 		if err != nil {
 			// Fall back to basicfont if face creation fails
 			face = basicfont.Face7x13
@@ -185,7 +202,6 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 			c.drawScaledBasicFont(text, x, y, col, style, face, scale)
 			return
 		}
-		defer face.Close()
 		metrics = face.Metrics()
 	} else {
 		// Fallback to bitmap font if Go font loading fails
@@ -459,12 +475,15 @@ func (c *Canvas) LoadImage(path string) (image.Image, error) {
 }
 
 // ToImage converts the canvas to an image.Image.
+// Writes directly into img.Pix to avoid interface dispatch and color-model conversions.
 func (c *Canvas) ToImage() *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, c.Width, c.Height))
-	for y := 0; y < c.Height; y++ {
-		for x := 0; x < c.Width; x++ {
-			img.Set(x, y, c.Pixels[y*c.Width+x])
-		}
+	for i, px := range c.Pixels {
+		j := i * 4
+		img.Pix[j] = px.R
+		img.Pix[j+1] = px.G
+		img.Pix[j+2] = px.B
+		img.Pix[j+3] = px.A
 	}
 	return img
 }
