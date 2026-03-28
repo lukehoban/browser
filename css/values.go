@@ -57,34 +57,29 @@ func ParseFontSize(value string) float64 {
 		return size
 	}
 
-	// CSS 2.1 §15.7: Named sizes
-	namedSizes := map[string]float64{
-		"xx-small": 9.0,
-		"x-small":  10.0,
-		"small":    12.0,
-		"medium":   BaseFontHeight,
-		"large":    16.0,
-		"x-large":  20.0,
-		"xx-large": 24.0,
-	}
-
-	if size, ok := namedSizes[value]; ok {
+	if size, ok := namedFontSizes[value]; ok {
 		return size
 	}
 
 	return 0
 }
 
-// ParseColor parses a CSS color value and returns a color.RGBA.
-// CSS 2.1 §4.3.6: Supports basic color names and hex colors
-// Extended color keywords from CSS Color Module Level 3
-func ParseColor(value string) color.RGBA {
-	value = strings.TrimSpace(strings.ToLower(value))
+// namedFontSizes maps CSS 2.1 §15.7 named font-size keywords to pixel values.
+// Defined at package level to avoid re-allocating the map on every ParseFontSize call.
+var namedFontSizes = map[string]float64{
+	"xx-small": 9.0,
+	"x-small":  10.0,
+	"small":    12.0,
+	"medium":   BaseFontHeight,
+	"large":    16.0,
+	"x-large":  20.0,
+	"xx-large": 24.0,
+}
 
-	// CSS 2.1 §4.3.6: Named colors
-	// CSS 2.1 defines 17 basic color keywords (including orange added in CSS 2.1)
-	// CSS Color Module Level 3: Extended color keywords (147 total colors)
-	namedColors := map[string]color.RGBA{
+// namedColors maps CSS color name keywords to RGBA values.
+// Defined at package level to avoid re-allocating the map on every ParseColor call.
+// CSS 2.1 defines 17 basic color keywords; CSS Color Level 3 extends to 147.
+var namedColors = map[string]color.RGBA{
 		// CSS 2.1 Basic 17 colors
 		"black":   {0, 0, 0, 255},
 		"silver":  {192, 192, 192, 255},
@@ -236,7 +231,13 @@ func ParseColor(value string) color.RGBA {
 		"wheat":                {245, 222, 179, 255},
 		"whitesmoke":           {245, 245, 245, 255},
 		"yellowgreen":          {154, 205, 50, 255},
-	}
+}
+
+// ParseColor parses a CSS color value and returns a color.RGBA.
+// CSS 2.1 §4.3.6: Supports basic color names and hex colors
+// Extended color keywords from CSS Color Module Level 3
+func ParseColor(value string) color.RGBA {
+	value = strings.TrimSpace(strings.ToLower(value))
 
 	if col, ok := namedColors[value]; ok {
 		return col

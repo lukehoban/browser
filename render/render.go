@@ -598,39 +598,32 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 		// Parse the URL from url(...)
 		url := extractURLFromCSS(urlValue)
 		if url != "" {
-			// Load the image/SVG data
-			// Note: URLs in attributes are already resolved by dom.ResolveURLs
-			// For CSS background-image, we need to resolve them here
-			loader := dom.NewResourceLoader("")
-			data, err := loader.LoadResource(url)
-			if err == nil {
-				contentBox := box.Dimensions.Content
-				width := int(contentBox.Width)
-				height := int(contentBox.Height)
-				
-				// Check if it's an SVG by looking for SVG XML structure
-				// Look for <svg tag with word boundaries to avoid false positives
-				isSVG := false
-				dataStr := string(data)
-				if strings.Contains(dataStr, "<svg ") || 
-				   strings.Contains(dataStr, "<svg>") || 
-				   strings.HasPrefix(strings.TrimSpace(dataStr), "<svg") ||
-				   strings.Contains(dataStr, "<?xml") && strings.Contains(dataStr, "<svg") {
-					isSVG = true
-				}
-				
-				if isSVG {
-					// Render as SVG
-					err := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height)
-					if err == nil {
+			contentBox := box.Dimensions.Content
+			width := int(contentBox.Width)
+			height := int(contentBox.Height)
+
+			// SVG fast path by file extension.
+			if svg.IsSVGFile(url) {
+				loader := dom.NewResourceLoader("")
+				data, err := loader.LoadResource(url)
+				if err == nil {
+					if drawErr := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height); drawErr == nil {
 						return
 					}
-					// If SVG rendering fails, fall through to regular background handling
-				} else {
-					// Try to render as regular image (PNG, JPEG, GIF)
-					img, _, err := image.Decode(bytes.NewReader(data))
-					if err == nil {
-						canvas.DrawImage(img, int(contentBox.X), int(contentBox.Y), width, height)
+				}
+				// Fall through to solid-color background on failure.
+			} else {
+				// Raster image: use LoadImage which caches the decoded image.
+				img, err := canvas.LoadImage(url)
+				if err == nil {
+					canvas.DrawImage(img, int(contentBox.X), int(contentBox.Y), width, height)
+					return
+				}
+				// If raster decode failed, try SVG content check.
+				loader := dom.NewResourceLoader("")
+				data, loadErr := loader.LoadResource(url)
+				if loadErr == nil && svg.IsSVG(data) {
+					if drawErr := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height); drawErr == nil {
 						return
 					}
 				}
@@ -900,41 +893,41 @@ func renderImage(canvas *Canvas, box *layout.LayoutBox) {
 		return
 	}
 
-	// Load the resource data first
-	loader := dom.NewResourceLoader("")
-	data, err := loader.LoadResource(src)
-	if err != nil {
+	width := int(box.Dimensions.Content.Width)
+	height := int(box.Dimensions.Content.Height)
+	if width <= 0 || height <= 0 {
 		return
 	}
+	x := int(box.Dimensions.Content.X)
+	y := int(box.Dimensions.Content.Y)
 
-	// Check if it's an SVG by extension or content signature
-	// SVG detection per SVG 1.1 §5.1 (document structure) and W3C media type registration
-	// https://www.w3.org/TR/SVG11/struct.html#NewDocument
-	// https://www.w3.org/TR/SVGTiny12/mimereg.html
-	if svg.IsSVGFile(src) || svg.IsSVG(data) {
-		// Render SVG
-		width := int(box.Dimensions.Content.Width)
-		height := int(box.Dimensions.Content.Height)
-		if width <= 0 || height <= 0 {
+	// Fast path for SVG identified by file extension (no data fetch needed).
+	// SVG detection per SVG 1.1 §5.1 and W3C media type registration.
+	if svg.IsSVGFile(src) {
+		loader := dom.NewResourceLoader("")
+		data, err := loader.LoadResource(src)
+		if err != nil {
 			return
 		}
-
-		_ = canvas.DrawSVG(data, int(box.Dimensions.Content.X), int(box.Dimensions.Content.Y), width, height)
+		_ = canvas.DrawSVG(data, x, y, width, height)
 		return
 	}
 
-	// Try to decode as raster image (PNG, JPEG, GIF)
-	img, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
+	// For raster images, use LoadImage which caches the decoded image.
+	// If the file turns out to be SVG (rare: no .svg extension), fall back to content check.
+	img, err := canvas.LoadImage(src)
+	if err == nil {
+		canvas.DrawImage(img, x, y, width, height)
 		return
 	}
 
-	// Render the image in the content box
-	canvas.DrawImage(
-		img,
-		int(box.Dimensions.Content.X),
-		int(box.Dimensions.Content.Y),
-		int(box.Dimensions.Content.Width),
-		int(box.Dimensions.Content.Height),
-	)
+	// Final fallback: load raw bytes and check SVG content signature.
+	loader := dom.NewResourceLoader("")
+	data, loadErr := loader.LoadResource(src)
+	if loadErr != nil {
+		return
+	}
+	if svg.IsSVG(data) {
+		_ = canvas.DrawSVG(data, x, y, width, height)
+	}
 }

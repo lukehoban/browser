@@ -516,25 +516,7 @@ func parseBorderValue(value string) (width, style, color string) {
 
 // splitWhitespace splits a string on whitespace characters.
 func splitWhitespace(s string) []string {
-	var result []string
-	var current string
-
-	for _, ch := range s {
-		if ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' {
-			if current != "" {
-				result = append(result, current)
-				current = ""
-			}
-		} else {
-			current += string(ch)
-		}
-	}
-
-	if current != "" {
-		result = append(result, current)
-	}
-
-	return result
+	return strings.Fields(s)
 }
 
 // applyDeclaration applies a CSS declaration to a styles map, expanding shorthand properties.
