@@ -99,3 +99,57 @@ func TestIsDataURL(t *testing.T) {
 		})
 	}
 }
+
+func TestIsURL(t *testing.T) {
+	tests := []struct {
+		input string
+		want  bool
+	}{
+		{"http://example.com/image.png", true},
+		{"https://example.com/image.png", true},
+		{"http://localhost:8080/file", true},
+		{"data:text/plain;base64,SGVsbG8=", false},
+		{"/path/to/file.png", false},
+		{"relative/path.png", false},
+		{"", false},
+		{"ftp://example.com/file", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if got := isURL(tt.input); got != tt.want {
+				t.Errorf("isURL(%q) = %v, want %v", tt.input, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestLoadResourceAsString(t *testing.T) {
+	loader := NewResourceLoader("")
+
+	result, err := loader.LoadResourceAsString("data:text/plain;base64,SGVsbG8sIFdvcmxkIQ==")
+	if err != nil {
+		t.Fatalf("LoadResourceAsString() failed: %v", err)
+	}
+	if result != "Hello, World!" {
+		t.Errorf("LoadResourceAsString() = %q, want %q", result, "Hello, World!")
+	}
+}
+
+func TestLoadResourceAsString_Error(t *testing.T) {
+	loader := NewResourceLoader("")
+
+	_, err := loader.LoadResourceAsString("data:text/plain;base64,!!!invalid!!!")
+	if err == nil {
+		t.Error("LoadResourceAsString() expected error for invalid base64, got nil")
+	}
+}
+
+func TestLoadResource_FileNotFound(t *testing.T) {
+	loader := NewResourceLoader("")
+
+	_, err := loader.LoadResource("/nonexistent/path/to/file.txt")
+	if err == nil {
+		t.Error("LoadResource() expected error for nonexistent file, got nil")
+	}
+}

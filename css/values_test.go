@@ -59,3 +59,108 @@ func TestBaseFontHeight(t *testing.T) {
 		t.Errorf("BaseFontHeight = %v, expected 13.0", BaseFontHeight)
 	}
 }
+
+func TestParseColor(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		r, g, b  uint8
+	}{
+		// CSS 2.1 basic named colors
+		{"black", "black", 0, 0, 0},
+		{"white", "white", 255, 255, 255},
+		{"red", "red", 255, 0, 0},
+		{"green", "green", 0, 128, 0},
+		{"blue", "blue", 0, 0, 255},
+		{"yellow", "yellow", 255, 255, 0},
+		{"navy", "navy", 0, 0, 128},
+		{"purple", "purple", 128, 0, 128},
+		{"silver", "silver", 192, 192, 192},
+		{"gray", "gray", 128, 128, 128},
+		{"grey", "grey", 128, 128, 128},
+		{"maroon", "maroon", 128, 0, 0},
+		{"olive", "olive", 128, 128, 0},
+		{"teal", "teal", 0, 128, 128},
+		{"lime", "lime", 0, 255, 0},
+		{"orange", "orange", 255, 165, 0},
+		{"fuchsia", "fuchsia", 255, 0, 255},
+		{"magenta", "magenta", 255, 0, 255},
+		{"aqua", "aqua", 0, 255, 255},
+		{"cyan", "cyan", 0, 255, 255},
+		// Extended colors
+		{"lightgray", "lightgray", 211, 211, 211},
+		{"lightgrey", "lightgrey", 211, 211, 211},
+		{"darkgray", "darkgray", 169, 169, 169},
+		{"darkgreen", "darkgreen", 0, 100, 0},
+		{"pink", "pink", 255, 192, 203},
+		{"gold", "gold", 255, 215, 0},
+		{"brown", "brown", 165, 42, 42},
+		{"coral", "coral", 255, 127, 80},
+		{"crimson", "crimson", 220, 20, 60},
+		{"indigo", "indigo", 75, 0, 130},
+		// Case insensitivity
+		{"uppercase RED", "RED", 255, 0, 0},
+		{"mixed Blue", "Blue", 0, 0, 255},
+		// Hex colors - 6 digit
+		{"#FF0000", "#FF0000", 255, 0, 0},
+		{"#00FF00", "#00FF00", 0, 255, 0},
+		{"#0000FF", "#0000FF", 0, 0, 255},
+		{"#FFFFFF", "#FFFFFF", 255, 255, 255},
+		{"#000000", "#000000", 0, 0, 0},
+		{"#2196F3", "#2196F3", 33, 150, 243},
+		// Hex colors - 3 digit shorthand
+		{"#f00", "#f00", 255, 0, 0},
+		{"#0f0", "#0f0", 0, 255, 0},
+		{"#00f", "#00f", 0, 0, 255},
+		{"#fff", "#fff", 255, 255, 255},
+		{"#000", "#000", 0, 0, 0},
+		// Unknown defaults to black
+		{"unknown", "unknown", 0, 0, 0},
+		{"empty", "", 0, 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ParseColor(tt.input)
+			if result.R != tt.r || result.G != tt.g || result.B != tt.b {
+				t.Errorf("ParseColor(%q) = {R:%d,G:%d,B:%d}, expected {R:%d,G:%d,B:%d}",
+					tt.input, result.R, result.G, result.B, tt.r, tt.g, tt.b)
+			}
+			if result.A != 255 {
+				t.Errorf("ParseColor(%q) alpha = %d, expected 255", tt.input, result.A)
+			}
+		})
+	}
+}
+
+func TestParseHexColor(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		r, g, b uint8
+	}{
+		{"6-digit red", "#FF0000", 255, 0, 0},
+		{"6-digit green", "#00FF00", 0, 255, 0},
+		{"6-digit blue", "#0000FF", 0, 0, 255},
+		{"6-digit mixed", "#4CAF50", 76, 175, 80},
+		{"3-digit red", "#f00", 255, 0, 0},
+		{"3-digit green", "#0f0", 0, 255, 0},
+		{"3-digit blue", "#00f", 0, 0, 255},
+		{"3-digit white", "#fff", 255, 255, 255},
+		{"3-digit black", "#000", 0, 0, 0},
+		{"3-digit gray", "#999", 153, 153, 153},
+		// Invalid length returns zero color
+		{"invalid length", "#1234", 0, 0, 0},
+		{"empty after #", "#", 0, 0, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := parseHexColor(tt.input)
+			if result.R != tt.r || result.G != tt.g || result.B != tt.b {
+				t.Errorf("parseHexColor(%q) = {R:%d,G:%d,B:%d}, expected {R:%d,G:%d,B:%d}",
+					tt.input, result.R, result.G, result.B, tt.r, tt.g, tt.b)
+			}
+		})
+	}
+}

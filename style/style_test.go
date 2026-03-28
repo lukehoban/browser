@@ -1123,3 +1123,190 @@ func TestInlineStyleSpecificity(t *testing.T) {
 		t.Errorf("Expected inline style 'red' to win, got %v", divStyled.Styles["color"])
 	}
 }
+
+func TestPresentationalHints_Width(t *testing.T) {
+	tests := []struct {
+		name     string
+		node     *dom.Node
+		expected map[string]string
+	}{
+		{
+			name: "width as pixels",
+			node: func() *dom.Node {
+				n := dom.NewElement("table")
+				n.SetAttribute("width", "500")
+				return n
+			}(),
+			expected: map[string]string{"width": "500px"},
+		},
+		{
+			name: "width as percentage",
+			node: func() *dom.Node {
+				n := dom.NewElement("table")
+				n.SetAttribute("width", "100%")
+				return n
+			}(),
+			expected: map[string]string{"width": "100%"},
+		},
+		{
+			name: "height as pixels",
+			node: func() *dom.Node {
+				n := dom.NewElement("td")
+				n.SetAttribute("height", "50")
+				return n
+			}(),
+			expected: map[string]string{"height": "50px"},
+		},
+		{
+			name: "height as percentage",
+			node: func() *dom.Node {
+				n := dom.NewElement("td")
+				n.SetAttribute("height", "50%")
+				return n
+			}(),
+			expected: map[string]string{"height": "50%"},
+		},
+		{
+			name: "strong element bold",
+			node: dom.NewElement("strong"),
+			expected: map[string]string{"font-weight": "bold"},
+		},
+		{
+			name: "b element bold",
+			node: dom.NewElement("b"),
+			expected: map[string]string{"font-weight": "bold"},
+		},
+		{
+			name: "em element italic",
+			node: dom.NewElement("em"),
+			expected: map[string]string{"font-style": "italic"},
+		},
+		{
+			name: "i element italic",
+			node: dom.NewElement("i"),
+			expected: map[string]string{"font-style": "italic"},
+		},
+		{
+			name: "u element underline",
+			node: dom.NewElement("u"),
+			expected: map[string]string{"text-decoration": "underline"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			styles := make(map[string]string)
+			applyPresentationalHints(tt.node, styles)
+
+			for key, expectedVal := range tt.expected {
+				if actualVal, ok := styles[key]; !ok {
+					t.Errorf("Expected style %s to be set", key)
+				} else if actualVal != expectedVal {
+					t.Errorf("Style %s = %v, expected %v", key, actualVal, expectedVal)
+				}
+			}
+		})
+	}
+}
+
+func TestResolveCSSURLs(t *testing.T) {
+	root := &StyledNode{
+		Styles: map[string]string{
+			"background-image": "url(image.png)",
+			"color":            "red",
+		},
+		Children: []*StyledNode{
+			{
+				Styles: map[string]string{
+					"background": "url(child.png)",
+				},
+				Children: []*StyledNode{},
+			},
+		},
+	}
+
+	ResolveCSSURLs(root, "/var/www")
+
+	// The background-image URL should be resolved
+	bgImage := root.Styles["background-image"]
+	if bgImage == "url(image.png)" {
+		t.Error("Expected background-image URL to be resolved, but it was not")
+	}
+
+	// Non-URL styles should be unchanged
+	if root.Styles["color"] != "red" {
+		t.Errorf("Expected color to remain 'red', got %v", root.Styles["color"])
+	}
+
+	// Child URLs should also be resolved
+	childBg := root.Children[0].Styles["background"]
+	if childBg == "url(child.png)" {
+		t.Error("Expected child background URL to be resolved, but it was not")
+	}
+}
+
+func TestResolveCSSURLs_Nil(t *testing.T) {
+	// Should not panic on nil
+	ResolveCSSURLs(nil, "/var/www")
+}
+
+func TestResolveCSSURLs_NoURLs(t *testing.T) {
+	root := &StyledNode{
+		Styles: map[string]string{
+			"color":      "blue",
+			"font-size":  "14px",
+		},
+		Children: []*StyledNode{},
+	}
+
+	ResolveCSSURLs(root, "/var/www")
+
+	// Styles without URLs should be unchanged
+	if root.Styles["color"] != "blue" {
+		t.Errorf("Expected color to remain 'blue', got %v", root.Styles["color"])
+	}
+}
+
+func TestCellpaddingInheritance(t *testing.T) {
+	// Create a table with cellpadding
+	table := dom.NewElement("table")
+	table.SetAttribute("cellpadding", "5")
+	tr := dom.NewElement("tr")
+	table.AppendChild(tr)
+	td := dom.NewElement("td")
+	tr.AppendChild(td)
+
+	// Style the tree
+	doc := dom.NewDocument()
+	doc.AppendChild(table)
+
+	styledTree := StyleTree(doc, &css.Stylesheet{Rules: []*css.Rule{}})
+
+	// Find the td node in the styled tree
+	tableStyled := styledTree.Children[0]
+	trStyled := tableStyled.Children[0]
+	tdStyled := trStyled.Children[0]
+
+	// The td should have padding applied from cellpadding
+	if tdStyled.Styles["padding-top"] != "5px" {
+		t.Errorf("Expected td padding-top '5px' from cellpadding, got %v", tdStyled.Styles["padding-top"])
+	}
+	if tdStyled.Styles["padding-right"] != "5px" {
+		t.Errorf("Expected td padding-right '5px' from cellpadding, got %v", tdStyled.Styles["padding-right"])
+	}
+}
+
+func TestCellspacingAttribute(t *testing.T) {
+	table := dom.NewElement("table")
+	table.SetAttribute("cellspacing", "3")
+
+	doc := dom.NewDocument()
+	doc.AppendChild(table)
+
+	styledTree := StyleTree(doc, &css.Stylesheet{Rules: []*css.Rule{}})
+
+	tableStyled := styledTree.Children[0]
+	if tableStyled.Styles["border-spacing"] != "3px" {
+		t.Errorf("Expected border-spacing '3px' from cellspacing, got %v", tableStyled.Styles["border-spacing"])
+	}
+}
