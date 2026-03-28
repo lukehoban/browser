@@ -52,7 +52,6 @@ import (
 	"github.com/lukehoban/browser/svg"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/basicfont"
-	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
 )
 
@@ -113,10 +112,32 @@ func (c *Canvas) SetPixel(x, y int, col color.RGBA) {
 
 // FillRect fills a rectangle with the given color.
 // CSS 2.1 §14.2 The background
+// Clips to canvas bounds once, then fills each row with a direct slice assignment.
 func (c *Canvas) FillRect(x, y, width, height int, col color.RGBA) {
-	for dy := 0; dy < height; dy++ {
-		for dx := 0; dx < width; dx++ {
-			c.SetPixel(x+dx, y+dy, col)
+	// Clip to canvas bounds (single check instead of per-pixel).
+	x0 := x
+	y0 := y
+	x1 := x + width
+	y1 := y + height
+	if x0 < 0 {
+		x0 = 0
+	}
+	if y0 < 0 {
+		y0 = 0
+	}
+	if x1 > c.Width {
+		x1 = c.Width
+	}
+	if y1 > c.Height {
+		y1 = c.Height
+	}
+	if x0 >= x1 || y0 >= y1 {
+		return
+	}
+	for row := y0; row < y1; row++ {
+		rowSlice := c.Pixels[row*c.Width+x0 : row*c.Width+x1]
+		for i := range rowSlice {
+			rowSlice[i] = col
 		}
 	}
 }
@@ -167,13 +188,9 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	var metrics font.Metrics
 	
 	if selectedFont != nil {
-		// Create face with proper DPI and size
+		// Use cached face — do NOT close it, the cache owns it.
 		var err error
-		face, err = opentype.NewFace(selectedFont, &opentype.FaceOptions{
-			Size:    style.Size,
-			DPI:     72,
-			Hinting: font.HintingFull,
-		})
+		face, err = browserfont.GetOrCreateFace(style)
 		if err != nil {
 			// Fall back to basicfont if face creation fails
 			face = basicfont.Face7x13
@@ -185,7 +202,6 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 			c.drawScaledBasicFont(text, x, y, col, style, face, scale)
 			return
 		}
-		defer face.Close()
 		metrics = face.Metrics()
 	} else {
 		// Fallback to bitmap font if Go font loading fails
@@ -459,12 +475,15 @@ func (c *Canvas) LoadImage(path string) (image.Image, error) {
 }
 
 // ToImage converts the canvas to an image.Image.
+// Writes directly into img.Pix to avoid interface dispatch and color-model conversions.
 func (c *Canvas) ToImage() *image.RGBA {
 	img := image.NewRGBA(image.Rect(0, 0, c.Width, c.Height))
-	for y := 0; y < c.Height; y++ {
-		for x := 0; x < c.Width; x++ {
-			img.Set(x, y, c.Pixels[y*c.Width+x])
-		}
+	for i, px := range c.Pixels {
+		j := i * 4
+		img.Pix[j] = px.R
+		img.Pix[j+1] = px.G
+		img.Pix[j+2] = px.B
+		img.Pix[j+3] = px.A
 	}
 	return img
 }
@@ -579,39 +598,32 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 		// Parse the URL from url(...)
 		url := extractURLFromCSS(urlValue)
 		if url != "" {
-			// Load the image/SVG data
-			// Note: URLs in attributes are already resolved by dom.ResolveURLs
-			// For CSS background-image, we need to resolve them here
-			loader := dom.NewResourceLoader("")
-			data, err := loader.LoadResource(url)
-			if err == nil {
-				contentBox := box.Dimensions.Content
-				width := int(contentBox.Width)
-				height := int(contentBox.Height)
-				
-				// Check if it's an SVG by looking for SVG XML structure
-				// Look for <svg tag with word boundaries to avoid false positives
-				isSVG := false
-				dataStr := string(data)
-				if strings.Contains(dataStr, "<svg ") || 
-				   strings.Contains(dataStr, "<svg>") || 
-				   strings.HasPrefix(strings.TrimSpace(dataStr), "<svg") ||
-				   strings.Contains(dataStr, "<?xml") && strings.Contains(dataStr, "<svg") {
-					isSVG = true
-				}
-				
-				if isSVG {
-					// Render as SVG
-					err := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height)
-					if err == nil {
+			contentBox := box.Dimensions.Content
+			width := int(contentBox.Width)
+			height := int(contentBox.Height)
+
+			// SVG fast path by file extension.
+			if svg.IsSVGFile(url) {
+				loader := dom.NewResourceLoader("")
+				data, err := loader.LoadResource(url)
+				if err == nil {
+					if drawErr := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height); drawErr == nil {
 						return
 					}
-					// If SVG rendering fails, fall through to regular background handling
-				} else {
-					// Try to render as regular image (PNG, JPEG, GIF)
-					img, _, err := image.Decode(bytes.NewReader(data))
-					if err == nil {
-						canvas.DrawImage(img, int(contentBox.X), int(contentBox.Y), width, height)
+				}
+				// Fall through to solid-color background on failure.
+			} else {
+				// Raster image: use LoadImage which caches the decoded image.
+				img, err := canvas.LoadImage(url)
+				if err == nil {
+					canvas.DrawImage(img, int(contentBox.X), int(contentBox.Y), width, height)
+					return
+				}
+				// If raster decode failed, try SVG content check.
+				loader := dom.NewResourceLoader("")
+				data, loadErr := loader.LoadResource(url)
+				if loadErr == nil && svg.IsSVG(data) {
+					if drawErr := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height); drawErr == nil {
 						return
 					}
 				}
@@ -881,41 +893,41 @@ func renderImage(canvas *Canvas, box *layout.LayoutBox) {
 		return
 	}
 
-	// Load the resource data first
-	loader := dom.NewResourceLoader("")
-	data, err := loader.LoadResource(src)
-	if err != nil {
+	width := int(box.Dimensions.Content.Width)
+	height := int(box.Dimensions.Content.Height)
+	if width <= 0 || height <= 0 {
 		return
 	}
+	x := int(box.Dimensions.Content.X)
+	y := int(box.Dimensions.Content.Y)
 
-	// Check if it's an SVG by extension or content signature
-	// SVG detection per SVG 1.1 §5.1 (document structure) and W3C media type registration
-	// https://www.w3.org/TR/SVG11/struct.html#NewDocument
-	// https://www.w3.org/TR/SVGTiny12/mimereg.html
-	if svg.IsSVGFile(src) || svg.IsSVG(data) {
-		// Render SVG
-		width := int(box.Dimensions.Content.Width)
-		height := int(box.Dimensions.Content.Height)
-		if width <= 0 || height <= 0 {
+	// Fast path for SVG identified by file extension (no data fetch needed).
+	// SVG detection per SVG 1.1 §5.1 and W3C media type registration.
+	if svg.IsSVGFile(src) {
+		loader := dom.NewResourceLoader("")
+		data, err := loader.LoadResource(src)
+		if err != nil {
 			return
 		}
-
-		_ = canvas.DrawSVG(data, int(box.Dimensions.Content.X), int(box.Dimensions.Content.Y), width, height)
+		_ = canvas.DrawSVG(data, x, y, width, height)
 		return
 	}
 
-	// Try to decode as raster image (PNG, JPEG, GIF)
-	img, _, err := image.Decode(bytes.NewReader(data))
-	if err != nil {
+	// For raster images, use LoadImage which caches the decoded image.
+	// If the file turns out to be SVG (rare: no .svg extension), fall back to content check.
+	img, err := canvas.LoadImage(src)
+	if err == nil {
+		canvas.DrawImage(img, x, y, width, height)
 		return
 	}
 
-	// Render the image in the content box
-	canvas.DrawImage(
-		img,
-		int(box.Dimensions.Content.X),
-		int(box.Dimensions.Content.Y),
-		int(box.Dimensions.Content.Width),
-		int(box.Dimensions.Content.Height),
-	)
+	// Final fallback: load raw bytes and check SVG content signature.
+	loader := dom.NewResourceLoader("")
+	data, loadErr := loader.LoadResource(src)
+	if loadErr != nil {
+		return
+	}
+	if svg.IsSVG(data) {
+		_ = canvas.DrawSVG(data, x, y, width, height)
+	}
 }
