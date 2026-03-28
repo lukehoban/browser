@@ -881,3 +881,32 @@ func TestExtractURLFromCSS(t *testing.T) {
 		})
 	}
 }
+
+func TestCollapseWhitespace(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{"empty string", "", ""},
+		{"single word", "hello", "hello"},
+		{"multiple spaces", "hello   world", "hello world"},
+		{"leading spaces", "   hello", "hello"},
+		{"trailing spaces", "hello   ", "hello"},
+		{"tabs", "hello\tworld", "hello world"},
+		{"newlines", "hello\nworld", "hello world"},
+		{"carriage returns", "hello\rworld", "hello world"},
+		{"mixed whitespace", "hello \t\n world", "hello world"},
+		{"only spaces", "   ", ""},
+		{"multiple words", "  hello   world  foo  ", "hello world foo"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := collapseWhitespace(tt.input)
+			if result != tt.expected {
+				t.Errorf("collapseWhitespace(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}

@@ -96,3 +96,117 @@ func TestResolveURLsNonImgElements(t *testing.T) {
 		t.Errorf("expected data-src=test.png, got %s", div.GetAttribute("data-src"))
 	}
 }
+
+func TestResolveURLsLinkElement(t *testing.T) {
+	doc := NewDocument()
+	link := NewElement("link")
+	link.SetAttribute("rel", "stylesheet")
+	link.SetAttribute("href", "style.css")
+	doc.AppendChild(link)
+
+	ResolveURLs(doc, "/var/www")
+
+	expected := filepath.Join("/var/www", "style.css")
+	if link.GetAttribute("href") != expected {
+		t.Errorf("expected href=%s, got %s", expected, link.GetAttribute("href"))
+	}
+}
+
+func TestResolveURLString(t *testing.T) {
+	tests := []struct {
+		name        string
+		baseURL     string
+		relativeURL string
+		expected    string
+	}{
+		{
+			name:        "data URL passthrough",
+			baseURL:     "/home/test",
+			relativeURL: "data:text/plain;base64,SGVsbG8=",
+			expected:    "data:text/plain;base64,SGVsbG8=",
+		},
+		{
+			name:        "absolute http URL passthrough",
+			baseURL:     "/home/test",
+			relativeURL: "http://example.com/image.png",
+			expected:    "http://example.com/image.png",
+		},
+		{
+			name:        "absolute https URL passthrough",
+			baseURL:     "/home/test",
+			relativeURL: "https://example.com/style.css",
+			expected:    "https://example.com/style.css",
+		},
+		{
+			name:        "relative path with file base",
+			baseURL:     "/home/test",
+			relativeURL: "image.png",
+			expected:    filepath.Join("/home/test", "image.png"),
+		},
+		{
+			name:        "relative path with subdirectory",
+			baseURL:     "/var/www",
+			relativeURL: "images/logo.png",
+			expected:    filepath.Join("/var/www", "images/logo.png"),
+		},
+		{
+			name:        "HTTP base with relative URL",
+			baseURL:     "http://example.com/page/",
+			relativeURL: "image.png",
+			expected:    "http://example.com/page/image.png",
+		},
+		{
+			name:        "HTTPS base with relative URL",
+			baseURL:     "https://example.com/",
+			relativeURL: "style.css",
+			expected:    "https://example.com/style.css",
+		},
+		{
+			name:        "HTTP base with path traversal",
+			baseURL:     "http://example.com/dir/page.html",
+			relativeURL: "../images/logo.png",
+			expected:    "http://example.com/images/logo.png",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := ResolveURLString(tt.baseURL, tt.relativeURL)
+			if result != tt.expected {
+				t.Errorf("ResolveURLString(%q, %q) = %q, want %q",
+					tt.baseURL, tt.relativeURL, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestFetchExternalStylesheets(t *testing.T) {
+	// Test with no link elements
+	doc := NewDocument()
+	body := NewElement("body")
+	doc.AppendChild(body)
+
+	result := FetchExternalStylesheets(doc)
+	if result != "" {
+		t.Errorf("FetchExternalStylesheets() with no links = %q, want %q", result, "")
+	}
+}
+
+func TestFetchExternalStylesheets_NonStylesheet(t *testing.T) {
+	// Test with a link element that is not a stylesheet
+	doc := NewDocument()
+	link := NewElement("link")
+	link.SetAttribute("rel", "icon")
+	link.SetAttribute("href", "favicon.ico")
+	doc.AppendChild(link)
+
+	result := FetchExternalStylesheets(doc)
+	if result != "" {
+		t.Errorf("FetchExternalStylesheets() with non-stylesheet link = %q, want empty", result)
+	}
+}
+
+func TestResolveURLs_NilNode(t *testing.T) {
+	// Should not panic on nil node
+	ResolveURLs(nil, "/home/test")
+}
