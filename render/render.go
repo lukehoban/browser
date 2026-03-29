@@ -551,9 +551,53 @@ func renderLayoutBox(canvas *Canvas, box *layout.LayoutBox) {
 	renderBorders(canvas, box)
 	renderText(canvas, box)
 	renderImage(canvas, box)
+	renderListMarker(canvas, box)
 
 	for _, child := range box.Children {
 		renderLayoutBox(canvas, child)
+	}
+}
+
+// renderListMarker renders a bullet marker for list items.
+// CSS 2.1 §12.5: Lists
+func renderListMarker(canvas *Canvas, box *layout.LayoutBox) {
+	if box.StyledNode == nil || box.StyledNode.Node == nil {
+		return
+	}
+
+	// Only render markers for <li> elements
+	if box.StyledNode.Node.Type != dom.ElementNode || box.StyledNode.Node.Data != "li" {
+		return
+	}
+
+	// Get text color (default to black)
+	textColor := css.ParseColor(box.StyledNode.Styles["color"])
+	if textColor == (color.RGBA{0, 0, 0, 0}) {
+		textColor = color.RGBA{0, 0, 0, 255}
+	}
+
+	// Draw a bullet disc to the left of the content
+	fontSize := 13.0
+	if fs := box.StyledNode.Styles["font-size"]; fs != "" {
+		if size := css.ParseFontSize(fs); size > 0 {
+			fontSize = size
+		}
+	}
+
+	bulletSize := int(fontSize * 0.3)
+	if bulletSize < 2 {
+		bulletSize = 2
+	}
+
+	// Position bullet to the left of content, vertically centered on first line
+	bulletX := int(box.Dimensions.Content.X) - bulletSize*3
+	bulletY := int(box.Dimensions.Content.Y) + int(fontSize*0.4)
+
+	// Draw filled circle (approximated as a small square for simplicity)
+	for dy := 0; dy < bulletSize; dy++ {
+		for dx := 0; dx < bulletSize; dx++ {
+			canvas.SetPixel(bulletX+dx, bulletY+dy, textColor)
+		}
 	}
 }
 

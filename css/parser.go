@@ -36,8 +36,9 @@ type SimpleSelector struct {
 // Declaration represents a CSS declaration.
 // CSS 2.1 §4.1.8 Declarations and properties
 type Declaration struct {
-	Property string
-	Value    string
+	Property  string
+	Value     string
+	Important bool // CSS 2.1 §6.4.2: !important flag
 }
 
 // Parser parses CSS stylesheets.
@@ -233,13 +234,14 @@ func (p *Parser) parseSelector() *Selector {
 		// CSS3 Selectors: General sibling combinator (~)
 		if next.Type == IdentToken {
 			if next.Value == ">" {
-				log.Warnf("CSS 2.1 §5.6: Child combinator (>) not yet implemented, skipping selector")
-				return nil
+				// Treat child combinator as descendant combinator (less strict but functional)
+				p.tokenizer.Next() // consume '>'
+				continue
 			} else if next.Value == "+" {
-				log.Warnf("CSS 2.1 §5.7: Adjacent sibling combinator (+) not yet implemented, skipping selector")
+				log.Debugf("CSS 2.1 §5.7: Adjacent sibling combinator (+) not yet implemented, skipping selector")
 				return nil
 			} else if next.Value == "~" {
-				log.Warnf("CSS3 Selectors: General sibling combinator (~) not yet implemented, skipping selector")
+				log.Debugf("CSS3 Selectors: General sibling combinator (~) not yet implemented, skipping selector")
 				return nil
 			}
 		}
@@ -428,17 +430,19 @@ func (p *Parser) parseDeclaration() *Declaration {
 			break
 		}
 		
-		// CSS 2.1 §6.4.2: Check for !important - not yet implemented
-		// Look ahead for '!' followed by 'important'
+		// CSS 2.1 §6.4.2: Check for !important
 		if token.Type == IdentToken && token.Value == "!" {
 			savedPos := p.tokenizer.pos
 			p.tokenizer.Next() // consume '!'
 			p.tokenizer.SkipWhitespace()
 			nextToken := p.tokenizer.Peek()
 			if nextToken.Type == IdentToken && nextToken.Value == "important" {
-				log.Warnf("CSS 2.1 §6.4.2: !important declarations not yet implemented (property: %s)", property)
 				p.tokenizer.Next() // consume "important"
-				break
+				return &Declaration{
+					Property:  property,
+					Value:     value,
+					Important: true,
+				}
 			}
 			// Not !important, restore and continue
 			p.tokenizer.pos = savedPos

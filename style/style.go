@@ -140,11 +140,21 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		// Find all matching rules
 		matchedRules := matchRules(node, stylesheet)
 
-		// Apply rules in order of specificity
+		// CSS 2.1 §6.4.2: Apply rules in order of specificity,
+		// then apply !important declarations (which override everything)
+		importantDecls := make([]*css.Declaration, 0)
 		for _, matched := range matchedRules {
 			for _, decl := range matched.Rule.Declarations {
-				applyDeclaration(decl, styled.Styles)
+				if decl.Important {
+					importantDecls = append(importantDecls, decl)
+				} else {
+					applyDeclaration(decl, styled.Styles)
+				}
 			}
+		}
+		// Apply !important declarations last so they override everything
+		for _, decl := range importantDecls {
+			applyDeclaration(decl, styled.Styles)
 		}
 		
 		// cellpadding and cellspacing attribute handling
