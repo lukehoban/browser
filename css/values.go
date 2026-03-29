@@ -52,6 +52,34 @@ func ParseFontSize(value string) float64 {
 		return 0
 	}
 
+	// CSS 2.1 §4.3.2: em units (relative to inherited font size)
+	// When used in font-size, em refers to the parent's font size
+	if strings.HasSuffix(value, "em") {
+		numStr := strings.TrimSuffix(value, "em")
+		if factor, err := strconv.ParseFloat(numStr, 64); err == nil && factor > 0 {
+			return factor * BaseFontHeight
+		}
+		return 0
+	}
+
+	// CSS 2.1 §4.3.2: rem units (relative to root font size)
+	if strings.HasSuffix(value, "rem") {
+		numStr := strings.TrimSuffix(value, "rem")
+		if factor, err := strconv.ParseFloat(numStr, 64); err == nil && factor > 0 {
+			return factor * BaseFontHeight
+		}
+		return 0
+	}
+
+	// Percentage (relative to inherited font size)
+	if strings.HasSuffix(value, "%") {
+		numStr := strings.TrimSuffix(value, "%")
+		if pct, err := strconv.ParseFloat(numStr, 64); err == nil && pct > 0 {
+			return BaseFontHeight * pct / 100.0
+		}
+		return 0
+	}
+
 	// Plain number (treat as pixels)
 	if size, err := strconv.ParseFloat(value, 64); err == nil && size > 0 {
 		return size

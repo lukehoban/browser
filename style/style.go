@@ -197,6 +197,15 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 				applyDeclaration(decl, styled.Styles)
 			}
 		}
+
+		// Resolve relative font-size values (em, %, rem) against parent
+		// Done after all style application so inline styles are included
+		if fs := styled.Styles["font-size"]; fs != "" {
+			resolvedSize := resolveRelativeFontSize(fs, parentStyles)
+			if resolvedSize > 0 {
+				styled.Styles["font-size"] = strconv.FormatFloat(resolvedSize, 'f', 1, 64) + "px"
+			}
+		}
 	}
 
 	// Recursively style children
@@ -368,12 +377,67 @@ func calculateSpecificity(selector *css.Selector) Specificity {
 	return spec
 }
 
+// resolveRelativeFontSize resolves relative font-size values (em, %, rem) against parent.
+// CSS 2.1 §15.7: When font-size uses relative units, it's relative to the parent's font-size.
+func resolveRelativeFontSize(value string, parentStyles map[string]string) float64 {
+	value = strings.TrimSpace(strings.ToLower(value))
+
+	// Get parent's computed font size
+	parentSize := css.BaseFontHeight
+	if parentFS := parentStyles["font-size"]; parentFS != "" {
+		if ps := css.ParseFontSize(parentFS); ps > 0 {
+			parentSize = ps
+		}
+	}
+
+	// em units - relative to parent font size
+	if strings.HasSuffix(value, "em") && !strings.HasSuffix(value, "rem") {
+		numStr := strings.TrimSuffix(value, "em")
+		if factor, err := strconv.ParseFloat(numStr, 64); err == nil && factor > 0 {
+			return factor * parentSize
+		}
+	}
+
+	// Percentage - relative to parent font size
+	if strings.HasSuffix(value, "%") {
+		numStr := strings.TrimSuffix(value, "%")
+		if pct, err := strconv.ParseFloat(numStr, 64); err == nil && pct > 0 {
+			return parentSize * pct / 100.0
+		}
+	}
+
+	// rem - relative to root (base) font size
+	if strings.HasSuffix(value, "rem") {
+		numStr := strings.TrimSuffix(value, "rem")
+		if factor, err := strconv.ParseFloat(numStr, 64); err == nil && factor > 0 {
+			return factor * css.BaseFontHeight
+		}
+	}
+
+	// Not a relative value - return 0 to indicate no resolution needed
+	return 0
+}
+
 // expandShorthand expands CSS shorthand properties to their longhand equivalents.
 // CSS 2.1 §8.3, §8.4: Margin and padding shorthand expansion
 // CSS 2.1 §8.5: Border shorthand expansion
 // Supports 1-4 value patterns per CSS 2.1 specification
 func expandShorthand(property, value string) map[string]string {
 	result := make(map[string]string)
+
+	// Handle background shorthand - extract color when it's a simple color value
+	// CSS 2.1 §14.2.1: The background shorthand
+	if property == "background" {
+		if !strings.Contains(value, "url(") {
+			// Simple background color value (e.g., "background: #eaecf0")
+			// Also keep as "background" for backward compat with renderer
+			result["background-color"] = value
+			result["background"] = value
+			return result
+		}
+		result[property] = value
+		return result
+	}
 
 	// Handle border shorthand properties
 	// CSS 2.1 §8.5.4: The border shorthand property

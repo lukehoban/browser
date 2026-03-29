@@ -816,7 +816,7 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 
 	// Calculate dimensions based on wrapped lines
 	maxLineWidth := 0.0
-	lineHeight := fontSize * 1.2 // CSS default line-height is ~1.2
+	lineHeight := resolveLineHeight(box.StyledNode.Styles, fontSize)
 	totalHeight := lineHeight * float64(len(lines))
 
 	for _, line := range lines {
@@ -832,9 +832,10 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	box.Dimensions.Content.Width = maxLineWidth
 	box.Dimensions.Content.Height = totalHeight
 
-	// Store wrapped lines for rendering
+	// Store wrapped lines and container width for rendering (text-align)
 	if box.StyledNode != nil {
 		box.StyledNode.Node.WrappedLines = lines
+		box.StyledNode.Node.ContainerWidth = containingBlock.Content.Width
 	}
 }
 
@@ -866,6 +867,43 @@ func wrapText(text string, fontStyle font.Style, maxWidth float64) []string {
 	lines = append(lines, currentLine)
 
 	return lines
+}
+
+// resolveLineHeight resolves the CSS line-height property to a pixel value.
+// CSS 2.1 §10.8.1: Line height calculations
+func resolveLineHeight(styles map[string]string, fontSize float64) float64 {
+	lh := styles["line-height"]
+	if lh == "" || lh == "normal" {
+		return fontSize * 1.2 // CSS 2.1 default
+	}
+
+	// Unitless number - multiply by font size
+	if num, err := strconv.ParseFloat(lh, 64); err == nil {
+		return num * fontSize
+	}
+
+	// em units
+	if strings.HasSuffix(lh, "em") {
+		if em, err := strconv.ParseFloat(lh[:len(lh)-2], 64); err == nil {
+			return em * fontSize
+		}
+	}
+
+	// px units
+	if strings.HasSuffix(lh, "px") {
+		if px, err := strconv.ParseFloat(lh[:len(lh)-2], 64); err == nil {
+			return px
+		}
+	}
+
+	// Percentage
+	if strings.HasSuffix(lh, "%") {
+		if pct, err := strconv.ParseFloat(lh[:len(lh)-1], 64); err == nil {
+			return fontSize * pct / 100.0
+		}
+	}
+
+	return fontSize * 1.2
 }
 
 // extractFontSize extracts the font-size from CSS styles and returns it in pixels.

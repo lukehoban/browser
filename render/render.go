@@ -802,10 +802,27 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 	// Check if we have pre-wrapped lines from layout
 	if lines := box.StyledNode.Node.WrappedLines; len(lines) > 0 {
 		x := int(box.Dimensions.Content.X)
+		// Use the container width (from parent block) for text-align, not the text's own width
+		containerWidth := box.StyledNode.Node.ContainerWidth
+		if containerWidth <= 0 {
+			containerWidth = box.Dimensions.Content.Width
+		}
 		lineHeight := fontStyle.Size * 1.2
+		textAlign := box.StyledNode.Styles["text-align"]
+
 		for i, line := range lines {
+			lineX := x
+			// CSS 2.1 §16.2: Apply text-align
+			if textAlign == "center" || textAlign == "right" {
+				lineWidth, _ := browserfont.MeasureText(line, browserfont.Style(fontStyle))
+				if textAlign == "center" {
+					lineX = x + int((containerWidth-lineWidth)/2)
+				} else {
+					lineX = x + int(containerWidth-lineWidth)
+				}
+			}
 			y := int(box.Dimensions.Content.Y) + int(fontStyle.Size) + int(float64(i)*lineHeight)
-			canvas.DrawStyledText(line, x, y, textColor, fontStyle)
+			canvas.DrawStyledText(line, lineX, y, textColor, fontStyle)
 		}
 		return
 	}
