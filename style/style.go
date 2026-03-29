@@ -140,11 +140,21 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 		// Find all matching rules
 		matchedRules := matchRules(node, stylesheet)
 
-		// Apply rules in order of specificity
+		// CSS 2.1 §6.4.2: Apply rules in order of specificity,
+		// then apply !important declarations (which override everything)
+		importantDecls := make([]*css.Declaration, 0)
 		for _, matched := range matchedRules {
 			for _, decl := range matched.Rule.Declarations {
-				applyDeclaration(decl, styled.Styles)
+				if decl.Important {
+					importantDecls = append(importantDecls, decl)
+				} else {
+					applyDeclaration(decl, styled.Styles)
+				}
 			}
+		}
+		// Apply !important declarations last so they override everything
+		for _, decl := range importantDecls {
+			applyDeclaration(decl, styled.Styles)
 		}
 		
 		// cellpadding and cellspacing attribute handling
@@ -185,6 +195,15 @@ func styleNode(node *dom.Node, stylesheet *css.Stylesheet, parentStyles map[stri
 			inlineDecls := css.ParseInlineStyle(styleAttr)
 			for _, decl := range inlineDecls {
 				applyDeclaration(decl, styled.Styles)
+			}
+		}
+
+		// Resolve relative font-size values (em, %, rem) against parent
+		// Done after all style application so inline styles are included
+		if fs := styled.Styles["font-size"]; fs != "" {
+			resolvedSize := resolveRelativeFontSize(fs, parentStyles)
+			if resolvedSize > 0 {
+				styled.Styles["font-size"] = strconv.FormatFloat(resolvedSize, 'f', 1, 64) + "px"
 			}
 		}
 	}
@@ -280,8 +299,8 @@ func matchesDescendant(node *dom.Node, selectors []*css.SimpleSelector) bool {
 // matchesSimpleSelector checks if a node matches a simple selector.
 // CSS 2.1 §5.2 Selector syntax
 func matchesSimpleSelector(node *dom.Node, selector *css.SimpleSelector) bool {
-	// Check element type
-	if selector.TagName != "" && selector.TagName != node.Data {
+	// Check element type ("*" is universal selector - matches any element)
+	if selector.TagName != "" && selector.TagName != "*" && selector.TagName != node.Data {
 		return false
 	}
 
@@ -358,12 +377,101 @@ func calculateSpecificity(selector *css.Selector) Specificity {
 	return spec
 }
 
+// resolveRelativeFontSize resolves relative font-size values (em, %, rem) against parent.
+// CSS 2.1 §15.7: When font-size uses relative units, it's relative to the parent's font-size.
+func resolveRelativeFontSize(value string, parentStyles map[string]string) float64 {
+	value = strings.TrimSpace(strings.ToLower(value))
+
+	// Get parent's computed font size
+	parentSize := css.BaseFontHeight
+	if parentFS := parentStyles["font-size"]; parentFS != "" {
+		if ps := css.ParseFontSize(parentFS); ps > 0 {
+			parentSize = ps
+		}
+	}
+
+	// em units - relative to parent font size
+	if strings.HasSuffix(value, "em") && !strings.HasSuffix(value, "rem") {
+		numStr := strings.TrimSuffix(value, "em")
+		if factor, err := strconv.ParseFloat(numStr, 64); err == nil && factor > 0 {
+			return factor * parentSize
+		}
+	}
+
+	// Percentage - relative to parent font size
+	if strings.HasSuffix(value, "%") {
+		numStr := strings.TrimSuffix(value, "%")
+		if pct, err := strconv.ParseFloat(numStr, 64); err == nil && pct > 0 {
+			return parentSize * pct / 100.0
+		}
+	}
+
+	// rem - relative to root (base) font size
+	if strings.HasSuffix(value, "rem") {
+		numStr := strings.TrimSuffix(value, "rem")
+		if factor, err := strconv.ParseFloat(numStr, 64); err == nil && factor > 0 {
+			return factor * css.BaseFontHeight
+		}
+	}
+
+	// Not a relative value - return 0 to indicate no resolution needed
+	return 0
+}
+
 // expandShorthand expands CSS shorthand properties to their longhand equivalents.
 // CSS 2.1 §8.3, §8.4: Margin and padding shorthand expansion
 // CSS 2.1 §8.5: Border shorthand expansion
 // Supports 1-4 value patterns per CSS 2.1 specification
 func expandShorthand(property, value string) map[string]string {
 	result := make(map[string]string)
+
+	// Handle font shorthand
+	// CSS 2.1 §15.8: font shorthand
+	if property == "font" {
+		if value == "inherit" {
+			// Just pass through - inheritance handles this
+			result[property] = value
+			return result
+		}
+		// Basic font shorthand parsing - extract font-size if present
+		parts := splitWhitespace(value)
+		for _, part := range parts {
+			if size := css.ParseFontSize(part); size > 0 {
+				result["font-size"] = part
+			} else if part == "bold" || part == "bolder" {
+				result["font-weight"] = part
+			} else if part == "italic" || part == "oblique" {
+				result["font-style"] = part
+			} else if part == "normal" {
+				// Skip - it's a reset value
+			}
+		}
+		if len(result) == 0 {
+			result[property] = value
+		}
+		return result
+	}
+
+	// Handle list-style shorthand
+	// CSS 2.1 §12.5: list-style shorthand
+	if property == "list-style" || property == "list-style-type" {
+		result[property] = value
+		return result
+	}
+
+	// Handle background shorthand - extract color when it's a simple color value
+	// CSS 2.1 §14.2.1: The background shorthand
+	if property == "background" {
+		if !strings.Contains(value, "url(") {
+			// Simple background color value (e.g., "background: #eaecf0")
+			// Also keep as "background" for backward compat with renderer
+			result["background-color"] = value
+			result["background"] = value
+			return result
+		}
+		result[property] = value
+		return result
+	}
 
 	// Handle border shorthand properties
 	// CSS 2.1 §8.5.4: The border shorthand property

@@ -19,11 +19,13 @@ const (
 
 // Node represents a node in the DOM tree.
 type Node struct {
-	Type       NodeType
-	Data       string            // Tag name for elements, text content for text nodes
-	Attributes map[string]string // Attributes for element nodes
-	Children   []*Node           // Child nodes
-	Parent     *Node             // Parent node (nil for root)
+	Type           NodeType
+	Data           string            // Tag name for elements, text content for text nodes
+	Attributes     map[string]string // Attributes for element nodes
+	Children       []*Node           // Child nodes
+	Parent         *Node             // Parent node (nil for root)
+	WrappedLines   []string          // Pre-computed wrapped text lines (set during layout)
+	ContainerWidth float64           // Width of containing block (for text-align)
 }
 
 // NewElement creates a new element node with the given tag name.

@@ -551,9 +551,53 @@ func renderLayoutBox(canvas *Canvas, box *layout.LayoutBox) {
 	renderBorders(canvas, box)
 	renderText(canvas, box)
 	renderImage(canvas, box)
+	renderListMarker(canvas, box)
 
 	for _, child := range box.Children {
 		renderLayoutBox(canvas, child)
+	}
+}
+
+// renderListMarker renders a bullet marker for list items.
+// CSS 2.1 §12.5: Lists
+func renderListMarker(canvas *Canvas, box *layout.LayoutBox) {
+	if box.StyledNode == nil || box.StyledNode.Node == nil {
+		return
+	}
+
+	// Only render markers for <li> elements
+	if box.StyledNode.Node.Type != dom.ElementNode || box.StyledNode.Node.Data != "li" {
+		return
+	}
+
+	// Get text color (default to black)
+	textColor := css.ParseColor(box.StyledNode.Styles["color"])
+	if textColor == (color.RGBA{0, 0, 0, 0}) {
+		textColor = color.RGBA{0, 0, 0, 255}
+	}
+
+	// Draw a bullet disc to the left of the content
+	fontSize := 13.0
+	if fs := box.StyledNode.Styles["font-size"]; fs != "" {
+		if size := css.ParseFontSize(fs); size > 0 {
+			fontSize = size
+		}
+	}
+
+	bulletSize := int(fontSize * 0.3)
+	if bulletSize < 2 {
+		bulletSize = 2
+	}
+
+	// Position bullet to the left of content, vertically centered on first line
+	bulletX := int(box.Dimensions.Content.X) - bulletSize*3
+	bulletY := int(box.Dimensions.Content.Y) + int(fontSize*0.4)
+
+	// Draw filled circle (approximated as a small square for simplicity)
+	for dy := 0; dy < bulletSize; dy++ {
+		for dx := 0; dx < bulletSize; dx++ {
+			canvas.SetPixel(bulletX+dx, bulletY+dy, textColor)
+		}
 	}
 }
 
@@ -746,21 +790,6 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 		return
 	}
 
-	// Get the text content
-	text := box.StyledNode.Node.Data
-	if text == "" {
-		return
-	}
-
-	// CSS 2.1 §16.6.1: Whitespace processing
-	// Collapse sequences of whitespace (spaces, tabs, newlines) into a single space
-	// This is the default behavior for normal text (not pre-formatted)
-	text = collapseWhitespace(text)
-	
-	if text == "" {
-		return
-	}
-
 	// Get text color from styles (default to black)
 	textColor := css.ParseColor(box.StyledNode.Styles["color"])
 	if textColor == (color.RGBA{0, 0, 0, 0}) {
@@ -769,9 +798,46 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 
 	// Extract font properties from styles
 	fontStyle := extractFontStyle(box.StyledNode.Styles)
-	
-	// Render the text at the box's position
-	// Add a vertical offset to position text at baseline
+
+	// Check if we have pre-wrapped lines from layout
+	if lines := box.StyledNode.Node.WrappedLines; len(lines) > 0 {
+		x := int(box.Dimensions.Content.X)
+		// Use the container width (from parent block) for text-align, not the text's own width
+		containerWidth := box.StyledNode.Node.ContainerWidth
+		if containerWidth <= 0 {
+			containerWidth = box.Dimensions.Content.Width
+		}
+		lineHeight := fontStyle.Size * 1.2
+		textAlign := box.StyledNode.Styles["text-align"]
+
+		for i, line := range lines {
+			lineX := x
+			// CSS 2.1 §16.2: Apply text-align
+			if textAlign == "center" || textAlign == "right" {
+				lineWidth, _ := browserfont.MeasureText(line, browserfont.Style(fontStyle))
+				if textAlign == "center" {
+					lineX = x + int((containerWidth-lineWidth)/2)
+				} else {
+					lineX = x + int(containerWidth-lineWidth)
+				}
+			}
+			y := int(box.Dimensions.Content.Y) + int(fontStyle.Size) + int(float64(i)*lineHeight)
+			canvas.DrawStyledText(line, lineX, y, textColor, fontStyle)
+		}
+		return
+	}
+
+	// Fallback: render single line (for inline text without wrapping)
+	text := box.StyledNode.Node.Data
+	if text == "" {
+		return
+	}
+
+	text = collapseWhitespace(text)
+	if text == "" {
+		return
+	}
+
 	x := int(box.Dimensions.Content.X)
 	y := int(box.Dimensions.Content.Y) + int(fontStyle.Size)
 

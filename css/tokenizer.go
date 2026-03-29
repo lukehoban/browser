@@ -163,6 +163,10 @@ func (t *Tokenizer) Next() Token {
 		// Treat as an identifier for now to avoid breaking parsing
 		t.pos++
 		return Token{Type: IdentToken, Value: "~"}
+	case '*':
+		// CSS 2.1 §5.3: Universal selector
+		t.pos++
+		return Token{Type: IdentToken, Value: "*"}
 	case '{':
 		t.pos++
 		return Token{Type: LeftBraceToken, Value: "{"}

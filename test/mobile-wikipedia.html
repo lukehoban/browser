@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>Go (programming language) - Wikipedia</title>
+<style>
+  /* Reset and base */
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.65em;
+    color: #202122;
+    background-color: #fff;
+    margin: 0;
+    padding: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Header / chrome */
+  .header-container {
+    background-color: #fff;
+    border-bottom: 1px solid #c8ccd1;
+    padding: 0.5em 1em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header-container .site-title {
+    font-size: 1em;
+    font-weight: bold;
+    color: #000;
+    text-decoration: none;
+  }
+  .header-container .search-icon {
+    font-size: 1.2em;
+    color: #54595d;
+    cursor: pointer;
+  }
+
+  /* Main content area */
+  .mw-body {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 0 1em 2em 1em;
+  }
+  .mw-body-content {
+    line-height: 1.65em;
+    font-size: 0.875em;
+  }
+  .mw-content-ltr {
+    direction: ltr;
+  }
+  .mw-parser-output {
+    word-wrap: break-word;
+  }
+
+  /* Page title */
+  .mw-first-heading {
+    font-family: "Linux Libertine", Georgia, Times, serif;
+    font-size: 1.8em;
+    line-height: 1.2em;
+    margin: 0.5em 0 0.25em 0;
+    padding: 0;
+    border-bottom: 1px solid #a2a9b1;
+    color: #000;
+  }
+
+  /* Tagline */
+  .tagline {
+    display: none;
+    font-size: 0.8em;
+    color: #72777d;
+  }
+
+  /* Section headings */
+  .mw-parser-output h2 {
+    font-family: "Linux Libertine", Georgia, Times, serif;
+    font-size: 1.5em;
+    font-weight: normal;
+    border-bottom: 1px solid #a2a9b1;
+    margin-top: 1em;
+    margin-bottom: 0.25em;
+    padding-bottom: 0.15em;
+    color: #000;
+  }
+  .mw-parser-output h3 {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-top: 0.8em;
+    margin-bottom: 0.2em;
+    color: #000;
+  }
+
+  /* Paragraphs */
+  .mw-parser-output p {
+    margin: 0.5em 0;
+  }
+
+  /* Links */
+  .mw-parser-output a {
+    color: #3366cc;
+    text-decoration: none;
+  }
+  .mw-parser-output a:visited { color: #795cb2; }
+  .mw-parser-output a:hover { text-decoration: underline; }
+
+  /* Table of contents */
+  .toc {
+    background-color: #f8f9fa;
+    border: 1px solid #a2a9b1;
+    padding: 0.75em 1em;
+    margin: 0.5em 0 1em 0;
+    display: block;
+  }
+  .toc-title {
+    font-weight: bold;
+    text-align: center;
+    font-size: 1.1em;
+    margin-bottom: 0.5em;
+  }
+  .toc ul {
+    list-style: none;
+    margin: 0;
+    padding-left: 1.5em;
+  }
+  .toc > ul { padding-left: 0; }
+  .toc li { margin: 0.2em 0; }
+  .toc a { color: #3366cc; text-decoration: none; }
+  .tocnumber { margin-right: 0.4em; color: #202122; }
+
+  /* Infobox */
+  .infobox {
+    border: 1px solid #a2a9b1;
+    border-collapse: collapse;
+    background-color: #f8f9fa;
+    width: 100%;
+    max-width: 320px;
+    margin: 0.5em 0 0.5em 1em;
+    padding: 0;
+    float: right;
+    clear: right;
+    font-size: 0.85em;
+    line-height: 1.5em;
+  }
+  .infobox caption,
+  .infobox .infobox-title {
+    background-color: #cce;
+    font-weight: bold;
+    text-align: center;
+    padding: 0.4em;
+    font-size: 1.1em;
+  }
+  .infobox td,
+  .infobox th {
+    border: 1px solid #a2a9b1;
+    padding: 0.35em 0.6em;
+    vertical-align: top;
+  }
+  .infobox th {
+    background-color: #e8e8e8;
+    text-align: left;
+    white-space: nowrap;
+  }
+  .infobox .infobox-image {
+    text-align: center;
+    padding: 0.6em;
+    background-color: #fff;
+  }
+  .infobox .infobox-image img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  /* Generic table styling */
+  .wikitable {
+    border-collapse: collapse;
+    margin: 1em 0;
+    background-color: #f8f9fa;
+    border: 1px solid #a2a9b1;
+    font-size: 0.9em;
+    width: 100%;
+  }
+  .wikitable th, .wikitable td {
+    border: 1px solid #a2a9b1;
+    padding: 0.4em 0.6em;
+    text-align: left;
+  }
+  .wikitable th {
+    background-color: #eaecf0;
+    font-weight: bold;
+  }
+
+  /* Lists */
+  .mw-parser-output ul {
+    margin: 0.3em 0 0.3em 1.6em;
+    padding: 0;
+  }
+  .mw-parser-output li { margin-bottom: 0.25em; }
+
+  /* Image placeholder */
+  .thumb {
+    border: 1px solid #c8ccd1;
+    background-color: #f8f9fa;
+    padding: 3px;
+    margin: 0.5em 0 0.5em 1em;
+    max-width: 220px;
+    float: right;
+    clear: right;
+    text-align: center;
+  }
+  .thumb .thumbinner {
+    font-size: 0.8em;
+    color: #54595d;
+  }
+  .thumb img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    background-color: #eee;
+  }
+  .thumbcaption { padding: 4px; line-height: 1.4em; }
+
+  /* Categories / footer */
+  .mw-footer {
+    border-top: 1px solid #c8ccd1;
+    margin-top: 2em;
+    padding: 1em;
+    font-size: 0.8em;
+    color: #72777d;
+    text-align: center;
+  }
+
+  /* Collapsible section toggle (mobile) */
+  .section-heading .mw-ui-icon { display: none; }
+  .mw-references-wrap { font-size: 0.85em; }
+  .reflist { list-style-type: decimal; }
+
+  /* Hatnote */
+  .hatnote {
+    font-style: italic;
+    padding-left: 1.6em;
+    margin-bottom: 0.5em;
+    color: #54595d;
+    font-size: 0.9em;
+  }
+
+  /* Short description (hidden on mobile) */
+  .shortdescription { display: none; }
+
+  /* Responsive adjustments */
+  @media screen and (max-width: 720px) {
+    .infobox {
+      float: none;
+      margin: 0.5em auto;
+      max-width: 100%;
+    }
+    .thumb {
+      float: none;
+      margin: 0.5em auto;
+      max-width: 100%;
+    }
+  }
+</style>
+</head>
+<body>
+  <header class="header-container">
+    <a href="#" class="site-title">Wikipedia</a>
+    <span class="search-icon">&#128269;</span>
+  </header>
+
+  <article class="mw-body" role="main">
+    <h1 class="mw-first-heading">Go (programming language)</h1>
+    <div class="tagline">From Wikipedia, the free encyclopedia</div>
+    <div class="shortdescription">Programming language designed at Google</div>
+
+    <div id="bodyContent" class="mw-body-content mw-content-ltr">
+      <div class="mw-parser-output">
+
+        <div class="hatnote">For other uses, see <a href="#">Go (disambiguation)</a>.</div>
+
+        <!-- Infobox -->
+        <table class="infobox">
+          <tr><td colspan="2" class="infobox-title">Go</td></tr>
+          <tr><td colspan="2" class="infobox-image">
+            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='60'%3E%3Crect width='120' height='60' fill='%2300ADD8'/%3E%3Ctext x='60' y='38' text-anchor='middle' fill='white' font-size='24' font-family='Arial'%3EGo%3C/text%3E%3C/svg%3E" alt="Go Logo" width="120" height="60">
+          </td></tr>
+          <tr><th><a href="#">Paradigm</a></th><td><a href="#">Multi-paradigm</a>: <a href="#">concurrent</a>, <a href="#">functional</a>, <a href="#">imperative</a>, <a href="#">object-oriented</a></td></tr>
+          <tr><th>Designed&nbsp;by</th><td><a href="#">Robert Griesemer</a>, <a href="#">Rob Pike</a>, <a href="#">Ken Thompson</a></td></tr>
+          <tr><th>Developer</th><td>The Go Authors</td></tr>
+          <tr><th>First&nbsp;appeared</th><td>November 10, 2009</td></tr>
+          <tr><th><a href="#">Stable release</a></th><td>1.22.1 / March 5, 2024</td></tr>
+          <tr><th><a href="#">Typing</a></th><td><a href="#">Static</a>, <a href="#">strong</a>, <a href="#">inferred</a>, <a href="#">structural</a></td></tr>
+          <tr><th><a href="#">OS</a></th><td><a href="#">Linux</a>, <a href="#">macOS</a>, <a href="#">Windows</a>, <a href="#">FreeBSD</a>, and others</td></tr>
+          <tr><th><a href="#">License</a></th><td><a href="#">BSD-style</a> + patent grant</td></tr>
+          <tr><th>Website</th><td><a href="https://go.dev">go.dev</a></td></tr>
+        </table>
+
+        <!-- Lead section -->
+        <p><b>Go</b> is a <a href="#">statically typed</a>, <a href="#">compiled</a> <a href="#">high-level programming language</a> designed at <a href="#">Google</a> by <a href="#">Robert Griesemer</a>, <a href="#">Rob Pike</a>, and <a href="#">Ken Thompson</a>. It is syntactically similar to <a href="#">C</a>, but also has <a href="#">memory safety</a>, <a href="#">garbage collection</a>, <a href="#">structural typing</a>, and <a href="#">CSP</a>-style <a href="#">concurrency</a>. It is often referred to as <b>Golang</b> because of its former domain name, <code>golang.org</code>, but its proper name is <i>Go</i>.</p>
+
+        <p>There are two major implementations: Google's self-hosting <a href="#">toolchain</a>, targeting multiple <a href="#">operating systems</a> and <a href="#">WebAssembly</a>; and <a href="#">gccgo</a>, a <a href="#">GCC</a> frontend. A third-party source-to-source compiler, <a href="#">GopherJS</a>, compiles Go to <a href="#">JavaScript</a> for front-end <a href="#">web development</a>.</p>
+
+        <!-- Table of Contents -->
+        <nav class="toc" role="navigation">
+          <div class="toc-title">Contents</div>
+          <ul>
+            <li><span class="tocnumber">1</span> <a href="#History">History</a></li>
+            <li><span class="tocnumber">2</span> <a href="#Design">Design</a>
+              <ul>
+                <li><span class="tocnumber">2.1</span> <a href="#Syntax">Syntax</a></li>
+                <li><span class="tocnumber">2.2</span> <a href="#Types">Types</a></li>
+              </ul>
+            </li>
+            <li><span class="tocnumber">3</span> <a href="#Concurrency">Concurrency</a></li>
+            <li><span class="tocnumber">4</span> <a href="#Suitability">Suitability</a></li>
+            <li><span class="tocnumber">5</span> <a href="#Versions">Version history</a></li>
+            <li><span class="tocnumber">6</span> <a href="#See_also">See also</a></li>
+          </ul>
+        </nav>
+
+        <!-- History section -->
+        <section id="History">
+          <h2>History</h2>
+          <p>Go was designed at <a href="#">Google</a> in 2007 to improve programming productivity in an era of <a href="#">multicore processors</a>, networked machines, and large <a href="#">codebases</a>. The designers wanted to address criticism of other languages in use at Google, but keep their useful characteristics. The designers were primarily motivated by their shared dislike of <a href="#">C++</a>.</p>
+
+          <p>Go was publicly announced in November 2009, and version 1.0 was released in March 2012. Go is widely used in production at Google and in many other organizations and <a href="#">open-source</a> projects. In November 2016, the Go and Go Mono fonts were released by type designers <a href="#">Charles Bigelow</a> and <a href="#">Kris Holmes</a> specifically for use by the Go project.</p>
+
+          <div class="thumb">
+            <div class="thumbinner">
+              <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='120'%3E%3Crect width='200' height='120' fill='%23dde3e9'/%3E%3Ctext x='100' y='55' text-anchor='middle' fill='%23555' font-size='14' font-family='Arial'%3EGo mascot%3C/text%3E%3Ctext x='100' y='75' text-anchor='middle' fill='%23555' font-size='12' font-family='Arial'%3E(Gopher)%3C/text%3E%3C/svg%3E" alt="The Go gopher mascot" width="200" height="120">
+              <div class="thumbcaption">The Go gopher, the language's mascot, designed by <a href="#">Renee French</a>.</div>
+            </div>
+          </div>
+
+          <p>In August 2018, the Go principal contributors published two <i>draft designs</i> for new language features: <a href="#">generics</a> and <a href="#">error handling</a>, along with a change to the existing <a href="#">error</a> value semantics. Generics were eventually added in Go 1.18 in March 2022, representing the most significant change to the language since its initial release.</p>
+        </section>
+
+        <!-- Design section -->
+        <section id="Design">
+          <h2>Design</h2>
+          <p>Go is influenced by C, but with an emphasis on greater simplicity and safety. The language consists of:</p>
+
+          <ul>
+            <li>A syntax and environment adopting patterns more common in <a href="#">dynamic languages</a></li>
+            <li>Built-in concurrency primitives: lightweight <b>goroutines</b> and typed <b>channels</b></li>
+            <li>A fast compilation toolchain that uses a simple <a href="#">linking model</a></li>
+            <li>An interface system in place of <a href="#">virtual inheritance</a></li>
+            <li>A standard library with broad utility, including a built-in <a href="#">HTTP server</a></li>
+            <li>Automatic garbage collection for <a href="#">memory management</a></li>
+          </ul>
+
+          <p>Go deliberately omits certain features common in other languages, including <a href="#">inheritance</a>, <a href="#">assertions</a>, <a href="#">pointer arithmetic</a>, implicit <a href="#">type conversions</a>, <a href="#">tagged unions</a>, and <a href="#">exceptions</a>. The designers argue that these omissions make the language simpler and reduce sources of bugs.</p>
+
+          <h3 id="Syntax">Syntax</h3>
+          <p>Go's syntax includes changes from C aimed at keeping code concise and readable. A combined declaration/initialization operator (<code>:=</code>) was introduced to allow the compiler to <i>infer</i> the type of a variable. There is no need for semicolons as line terminators; they are added automatically by the compiler. Functions may return multiple values, which is used extensively in idiomatic Go to handle errors alongside normal return values.</p>
+
+          <h3 id="Types">Types</h3>
+          <p>Go has a number of built-in types, including numeric ones (<code>byte</code>, <code>int64</code>, <code>float32</code>, etc.), <code>bool</code>, and <code>string</code>. <a href="#">Strings</a> are immutable; built-in operators and keywords (rather than functions) provide concatenation, comparison, and <a href="#">UTF-8</a> encoding/decoding. Record types can be defined with the <code>struct</code> keyword.</p>
+        </section>
+
+        <!-- Concurrency section -->
+        <section id="Concurrency">
+          <h2>Concurrency</h2>
+          <p>Go provides facilities for writing concurrent programs. <b>Goroutines</b> are <a href="#">lightweight threads</a> managed by the Go runtime, started with the <code>go</code> keyword. <b>Channels</b> are typed conduits through which values can be sent and received, providing <a href="#">synchronization</a> without explicit locks or condition variables.</p>
+
+          <p>The <code>select</code> statement in Go allows a goroutine to wait on multiple communication operations. This model of concurrency is derived from <a href="#">Hoare's Communicating Sequential Processes</a> (CSP), and is considered one of Go's most distinctive and powerful features. Multiple goroutines can communicate efficiently through channels, enabling developers to build <i>highly concurrent</i> systems with relatively straightforward code.</p>
+        </section>
+
+        <!-- Suitability section -->
+        <section id="Suitability">
+          <h2>Suitability</h2>
+          <p>Go is used extensively for building:</p>
+          <ul>
+            <li><a href="#">Cloud infrastructure</a> tools (e.g., <a href="#">Docker</a>, <a href="#">Kubernetes</a>)</li>
+            <li>Command-line interfaces and developer tools</li>
+            <li><a href="#">Microservices</a> and <a href="#">API</a> servers</li>
+            <li>Distributed systems and databases</li>
+            <li>Network servers and <a href="#">web applications</a></li>
+          </ul>
+          <p>Notable projects written in Go include <a href="#">Docker</a>, <a href="#">Kubernetes</a>, <a href="#">Terraform</a>, <a href="#">etcd</a>, <a href="#">CockroachDB</a>, and the <a href="#">Hugo</a> static site generator.</p>
+        </section>
+
+        <!-- Version history section -->
+        <section id="Versions">
+          <h2>Version history</h2>
+          <table class="wikitable">
+            <tr><th>Version</th><th>Release date</th><th>Key features</th></tr>
+            <tr><td>1.0</td><td>March 2012</td><td>Initial stable release</td></tr>
+            <tr><td>1.5</td><td>August 2015</td><td>Concurrent garbage collector; shared libraries</td></tr>
+            <tr><td>1.11</td><td>August 2018</td><td><a href="#">Go modules</a> (preliminary support)</td></tr>
+            <tr><td>1.13</td><td>September 2019</td><td>Number literal improvements; TLS 1.3 by default</td></tr>
+            <tr><td>1.16</td><td>February 2021</td><td>Modules on by default; <code>embed</code> package</td></tr>
+            <tr><td>1.18</td><td>March 2022</td><td><b>Generics</b>; fuzzing support; workspaces</td></tr>
+            <tr><td>1.21</td><td>August 2023</td><td>Built-in functions <code>min</code>, <code>max</code>, <code>clear</code></td></tr>
+            <tr><td>1.22</td><td>February 2024</td><td>Rangefunc iterators; improved routing</td></tr>
+          </table>
+        </section>
+
+        <!-- See also section -->
+        <section id="See_also">
+          <h2>See also</h2>
+          <ul>
+            <li><a href="#">Comparison of programming languages</a></li>
+            <li><a href="#">Rust (programming language)</a></li>
+            <li><a href="#">Dart (programming language)</a></li>
+            <li><a href="#">Crystal (programming language)</a></li>
+          </ul>
+        </section>
+
+      </div>
+    </div>
+  </article>
+
+  <footer class="mw-footer" role="contentinfo">
+    <p>Content is available under <a href="#" style="color:#3366cc;">CC BY-SA 4.0</a> unless otherwise noted.</p>
+    <p>Privacy policy &middot; About Wikipedia &middot; Disclaimers</p>
+  </footer>
+</body>
+</html>

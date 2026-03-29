@@ -380,7 +380,12 @@ func isURL(input string) bool {
 
 // fetchURL fetches content from a URL and returns it as a string
 func fetchURL(urlStr string) (string, error) {
-	resp, err := http.Get(urlStr)
+	req, err := http.NewRequest("GET", urlStr, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; GoBrowser/1.0; +https://github.com/lukehoban/browser)")
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to fetch URL: %w", err)
 	}
