@@ -319,9 +319,9 @@ func (box *LayoutBox) calculateBlockWidth(containingBlock Dimensions) {
 	// Default to auto
 	width := parseLength(styles["width"], containingBlock.Content.Width)
 
-	// Margins (default to 0 if not specified)
-	marginLeft := parseLengthOr0(styles["margin-left"], containingBlock.Content.Width)
-	marginRight := parseLengthOr0(styles["margin-right"], containingBlock.Content.Width)
+	// Margins (default to 0 if not specified; can be negative per CSS 2.1 §8.3)
+	marginLeft := parseMargin(styles["margin-left"], containingBlock.Content.Width)
+	marginRight := parseMargin(styles["margin-right"], containingBlock.Content.Width)
 
 	// Padding (default to 0)
 	paddingLeft := parseLengthOr0(styles["padding-left"], containingBlock.Content.Width)
@@ -383,9 +383,9 @@ func (box *LayoutBox) calculateBlockWidth(containingBlock Dimensions) {
 func (box *LayoutBox) calculateBlockPosition(containingBlock Dimensions) {
 	styles := box.StyledNode.Styles
 
-	// Margin (default to 0)
-	box.Dimensions.Margin.Top = parseLengthOr0(styles["margin-top"], containingBlock.Content.Width)
-	box.Dimensions.Margin.Bottom = parseLengthOr0(styles["margin-bottom"], containingBlock.Content.Width)
+	// Margin (can be negative per CSS 2.1 §8.3)
+	box.Dimensions.Margin.Top = parseMargin(styles["margin-top"], containingBlock.Content.Width)
+	box.Dimensions.Margin.Bottom = parseMargin(styles["margin-bottom"], containingBlock.Content.Width)
 
 	// Padding (default to 0)
 	box.Dimensions.Padding.Top = parseLengthOr0(styles["padding-top"], containingBlock.Content.Width)
@@ -751,6 +751,20 @@ func parseLengthOr0(value string, referenceLength float64) float64 {
 	return result
 }
 
+// parseMargin parses a CSS margin value, allowing negative values.
+// CSS 2.1 §8.3: Margins can be negative.
+func parseMargin(value string, referenceLength float64) float64 {
+	value = strings.TrimSpace(value)
+	if value == "" || value == "auto" {
+		return 0
+	}
+	result := parseLengthWithFont(value, referenceLength, css.BaseFontHeight)
+	if result == -1 {
+		return 0 // "auto" or invalid
+	}
+	return result
+}
+
 // marginBox returns the box including margin.
 func (box *LayoutBox) marginBox() Rect {
 	return expandRect(box.borderBox(), box.Dimensions.Margin)
@@ -856,6 +870,8 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 
 // wrapText breaks text into lines that fit within the given width.
 // CSS 2.1 §16.6: Line breaking occurs at word boundaries.
+// CSS3 overflow-wrap: If a single word exceeds the line width, it overflows
+// (we don't break mid-word to keep rendering simple).
 func wrapText(text string, fontStyle font.Style, maxWidth float64) []string {
 	if maxWidth <= 0 {
 		return []string{text}
@@ -867,9 +883,13 @@ func wrapText(text string, fontStyle font.Style, maxWidth float64) []string {
 	}
 
 	var lines []string
-	currentLine := words[0]
+	currentLine := ""
 
-	for _, word := range words[1:] {
+	for _, word := range words {
+		if currentLine == "" {
+			currentLine = word
+			continue
+		}
 		testLine := currentLine + " " + word
 		w, _ := font.MeasureText(testLine, fontStyle)
 		if w <= maxWidth {
@@ -879,7 +899,9 @@ func wrapText(text string, fontStyle font.Style, maxWidth float64) []string {
 			currentLine = word
 		}
 	}
-	lines = append(lines, currentLine)
+	if currentLine != "" {
+		lines = append(lines, currentLine)
+	}
 
 	return lines
 }

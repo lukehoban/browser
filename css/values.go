@@ -275,8 +275,81 @@ func ParseColor(value string) color.RGBA {
 		return parseHexColor(value)
 	}
 
+	// CSS3: rgb() and rgba() functional notation
+	if strings.HasPrefix(value, "rgb(") || strings.HasPrefix(value, "rgba(") {
+		return parseRGBColor(value)
+	}
+
 	// Default to black
 	return color.RGBA{0, 0, 0, 255}
+}
+
+// parseRGBColor parses rgb() and rgba() color functions.
+// CSS3 Color Module: rgb(r, g, b) and rgba(r, g, b, a)
+func parseRGBColor(value string) color.RGBA {
+	// Strip function name and parentheses
+	inner := value
+	if strings.HasPrefix(inner, "rgba(") {
+		inner = strings.TrimPrefix(inner, "rgba(")
+	} else {
+		inner = strings.TrimPrefix(inner, "rgb(")
+	}
+	inner = strings.TrimSuffix(inner, ")")
+	inner = strings.TrimSpace(inner)
+
+	// Split by comma or space
+	var parts []string
+	if strings.Contains(inner, ",") {
+		parts = strings.Split(inner, ",")
+	} else {
+		parts = strings.Fields(inner)
+	}
+
+	if len(parts) < 3 {
+		return color.RGBA{0, 0, 0, 255}
+	}
+
+	r := parseColorComponent(strings.TrimSpace(parts[0]))
+	g := parseColorComponent(strings.TrimSpace(parts[1]))
+	b := parseColorComponent(strings.TrimSpace(parts[2]))
+	a := uint8(255)
+
+	if len(parts) >= 4 {
+		alphaStr := strings.TrimSpace(parts[3])
+		if strings.HasSuffix(alphaStr, "%") {
+			if pct, err := strconv.ParseFloat(strings.TrimSuffix(alphaStr, "%"), 64); err == nil {
+				a = uint8(pct * 255.0 / 100.0)
+			}
+		} else if alpha, err := strconv.ParseFloat(alphaStr, 64); err == nil {
+			if alpha <= 1.0 {
+				a = uint8(alpha * 255.0)
+			} else {
+				a = uint8(alpha)
+			}
+		}
+	}
+
+	return color.RGBA{r, g, b, a}
+}
+
+// parseColorComponent parses a single color component (0-255 or percentage).
+func parseColorComponent(s string) uint8 {
+	if strings.HasSuffix(s, "%") {
+		if pct, err := strconv.ParseFloat(strings.TrimSuffix(s, "%"), 64); err == nil {
+			return uint8(pct * 255.0 / 100.0)
+		}
+		return 0
+	}
+	if val, err := strconv.Atoi(s); err == nil {
+		if val < 0 {
+			return 0
+		}
+		if val > 255 {
+			return 255
+		}
+		return uint8(val)
+	}
+	return 0
 }
 
 // parseHexColor parses a hex color string (#RGB or #RRGGBB).
