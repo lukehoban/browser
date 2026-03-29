@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+body { font-size: 14px; margin: 0; padding: 8px; }
+.mw-heading { border-bottom: 1px solid #a2a9b1; margin-top: 1em; }
+.mw-heading h2 { font-size: 1.5em; font-weight: bold; }
+.mw-heading h3 { font-size: 1.17em; font-weight: bold; }
+.reference { font-size: 0.8em; vertical-align: super; }
+.reflist { font-size: 0.9em; }
+.infobox { border: 1px solid #a2a9b1; background-color: #f8f9fa; margin: 0 0 1em 1em; padding: 0.5em; }
+.infobox th { background-color: #ddd; padding: 4px; text-align: left; }
+.infobox td { padding: 4px; }
+.navbox { border: 1px solid #aaa; background-color: #fdfdfd; margin-top: 1em; }
+.navbox th { background-color: #ccf; padding: 2px 4px; text-align: center; }
+.toc { background-color: #f8f9fa; border: 1px solid #a2a9b1; padding: 0.5em; display: block; }
+.toc ul { margin: 0; padding-left: 1.5em; }
+.hatnote { font-style: italic; padding-left: 1.6em; margin-bottom: 0.5em; }
+.thumb { margin: 0.5em 0; padding: 3px; border: 1px solid #c8ccd1; background-color: #f8f9fa; }
+.thumbcaption { font-size: 0.9em; padding: 3px; }
+sup { font-size: 0.75em; }
+.mw-editsection { display: none; }
+.noprint { display: none; }
+code { background-color: #f4f4f4; padding: 1px 4px; font-family: monospace; }
+blockquote { margin: 1em 2em; padding-left: 1em; border-left: 3px solid #c8ccd1; }
+</style>
+</head>
+<body>
+<h1>Go (programming language)</h1>
+<div class="hatnote">For other uses, see <a href="#">Go (disambiguation)</a>.</div>
+
+<p><b>Go</b> is a <a href="#">statically typed</a>, <a href="#">compiled</a> <a href="#">programming language</a> designed at <a href="#">Google</a><sup class="reference">[1]</sup> by Robert Griesemer, Rob Pike, and Ken Thompson.<sup class="reference">[2]</sup> It is syntactically similar to <a href="#">C</a>, but also has memory safety, garbage collection, structural typing, and CSP-style <a href="#">concurrency</a>.<sup class="reference">[3]</sup></p>
+
+<div class="toc">
+<p><b>Contents</b></p>
+<ul>
+<li><a href="#">1 History</a></li>
+<li><a href="#">2 Design</a></li>
+<li><a href="#">3 Syntax</a>
+<ul>
+<li><a href="#">3.1 Types</a></li>
+<li><a href="#">3.2 Interface system</a></li>
+</ul>
+</li>
+<li><a href="#">4 Concurrency</a></li>
+</ul>
+</div>
+
+<table class="infobox">
+<tr><th colspan="2" style="text-align: center; background-color: #b0c4de;">Go</th></tr>
+<tr><th>Paradigm</th><td><a href="#">Multi-paradigm</a>: concurrent, functional, imperative, object-oriented</td></tr>
+<tr><th>Designed by</th><td>Robert Griesemer, Rob Pike, Ken Thompson</td></tr>
+<tr><th>Developer</th><td>The Go Authors</td></tr>
+<tr><th>First appeared</th><td>November 10, 2009</td></tr>
+<tr><th>Stable release</th><td>1.22.0 / February 6, 2024</td></tr>
+<tr><th>Typing</th><td>Static, strong, inferred, structural</td></tr>
+<tr><th>OS</th><td>Linux, macOS, Windows, FreeBSD, and others</td></tr>
+<tr><th>License</th><td>BSD-style + patent grant</td></tr>
+<tr><th>Website</th><td><a href="#">go.dev</a></td></tr>
+</table>
+
+<div class="mw-heading"><h2>History</h2></div>
+<p>Go was designed at Google in 2007 to improve programming productivity in an era of multicore, networked machines and large codebases. The designers wanted to address criticism of other languages in use at Google, but keep their useful characteristics:</p>
+<ul>
+<li>Static typing and run-time efficiency (like C)</li>
+<li>Readability and usability (like Python)</li>
+<li>High-performance networking and multiprocessing</li>
+</ul>
+
+<p>Its designers were primarily motivated by their shared dislike of <a href="#">C++</a>.<sup class="reference">[4]</sup></p>
+
+<blockquote>
+<p>"Go is an attempt to combine the ease of programming of an interpreted, dynamically typed language with the efficiency and safety of a statically typed, compiled language."</p>
+</blockquote>
+
+<div class="mw-heading"><h2>Syntax</h2></div>
+<p>Go's syntax includes changes from C aimed at keeping code concise and readable. A combined declaration/initialization operator was introduced that allows the programmer to write <code>i := 3</code> or <code>s := "Hello, world!"</code> without specifying the types of variables used.</p>
+
+<div class="mw-heading"><h3>Types</h3></div>
+<p>Go has a number of built-in types, including numeric ones (<code>byte</code>, <code>int64</code>, <code>float32</code>, etc.), booleans, and character strings (<code>string</code>). Strings are immutable; built-in operators and keywords provide concatenation, comparison, and UTF-8 encoding/decoding.</p>
+
+<div class="mw-heading"><h2>Concurrency</h2></div>
+<p>Go provides facilities for writing concurrent programs. Goroutines are lightweight processes (not operating system threads), and channels are typed conduits through which you can send and receive values. This was inspired by <a href="#">communicating sequential processes</a> (CSP).</p>
+
+<table class="navbox" style="border-collapse: collapse;">
+<tr><th colspan="2">Go programming language</th></tr>
+<tr><td>Implementations</td><td><a href="#">gc</a> | <a href="#">gccgo</a> | <a href="#">GopherJS</a> | <a href="#">TinyGo</a></td></tr>
+<tr><td>People</td><td><a href="#">Rob Pike</a> | <a href="#">Ken Thompson</a> | <a href="#">Robert Griesemer</a></td></tr>
+</table>
+
+<div class="noprint">This content should be hidden</div>
+
+<footer style="margin-top: 2em; padding-top: 1em; border-top: 1px solid #ccc; font-size: 0.85em; color: #666;">
+<p>This page was last edited on 15 March 2026. Text is available under the Creative Commons Attribution-ShareAlike License.</p>
+</footer>
+</body>
+</html>

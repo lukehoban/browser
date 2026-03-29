@@ -60,6 +60,10 @@ code, kbd, samp, tt { font-family: monospace; }
 small { font-size: 0.83em; }
 big { font-size: 1.17em; }
 
+/* Superscript and subscript */
+sup { font-size: 0.75em; }
+sub { font-size: 0.75em; }
+
 /* Preformatted text */
 pre { font-family: monospace; white-space: pre; margin: 1em 0; }
 
@@ -72,8 +76,17 @@ input, textarea, select, button {
 	font-family: inherit;
 }
 
+/* Definition lists */
+dl { margin: 1em 0; }
+dt { font-weight: bold; }
+dd { margin-left: 40px; }
+
 /* Quotations */
 blockquote { margin: 1em 40px; }
+
+/* Figure */
+figure { margin: 1em 40px; }
+figcaption { font-size: 0.9em; }
 
 /* Center element - deprecated but still used */
 center { text-align: center; }
