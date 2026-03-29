@@ -73,9 +73,13 @@ func (p *Parser) Parse() *Stylesheet {
 			continue
 		}
 
+		savedPos := p.tokenizer.pos
 		rule := p.parseRule()
 		if rule != nil {
 			stylesheet.Rules = append(stylesheet.Rules, rule)
+		} else if p.tokenizer.pos == savedPos {
+			// Error recovery: if parsing didn't advance, skip to next rule
+			p.skipToNextRule()
 		}
 	}
 
@@ -109,6 +113,30 @@ func (p *Parser) skipAtRule() {
 			if braceDepth <= 0 {
 				break
 			}
+		}
+	}
+}
+
+// skipToNextRule skips tokens until the next rule boundary (after '}' or ';').
+// This is used for error recovery when parsing gets stuck.
+func (p *Parser) skipToNextRule() {
+	braceDepth := 0
+	for {
+		token := p.tokenizer.Next()
+		if token.Type == EOFToken {
+			break
+		}
+		if token.Type == LeftBraceToken {
+			braceDepth++
+		}
+		if token.Type == RightBraceToken {
+			braceDepth--
+			if braceDepth <= 0 {
+				break
+			}
+		}
+		if token.Type == SemicolonToken && braceDepth == 0 {
+			break
 		}
 	}
 }

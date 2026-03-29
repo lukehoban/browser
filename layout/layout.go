@@ -125,8 +125,11 @@ type EdgeSizes struct {
 // LayoutTree builds a layout tree from a styled tree.
 // CSS 2.1 §9.2 Controlling box generation
 func LayoutTree(styledNode *style.StyledNode, containingBlock Dimensions) *LayoutBox {
-	// Set initial containing block dimensions
-	containingBlock.Content.Width = 800.0 // Default viewport width
+	// Use the viewport width from the containing block (set by the caller)
+	// Fall back to 800px if not specified
+	if containingBlock.Content.Width <= 0 {
+		containingBlock.Content.Width = 800.0
+	}
 
 	root := buildLayoutTree(styledNode)
 	root.Layout(containingBlock)
@@ -193,7 +196,18 @@ func buildLayoutTree(styledNode *style.StyledNode) *LayoutBox {
 		// CSS 2.1 §9.2.2: Inline-level elements and inline boxes
 		// These elements generate inline boxes by default
 		case "a", "span", "b", "strong", "i", "em", "font", "code", "small", "big",
-			"abbr", "cite", "kbd", "samp", "var", "sub", "sup", "mark", "u", "s", "del", "ins":
+			"abbr", "cite", "kbd", "samp", "var", "sub", "sup", "mark", "u", "s", "del", "ins",
+			"time", "label", "q":
+			display = "inline"
+		// HTML5 §4.3-4.4: Semantic sectioning and grouping elements are block-level
+		case "section", "article", "nav", "aside", "header", "footer", "main",
+			"figure", "figcaption", "details", "summary", "dialog":
+			display = "block"
+		// HTML5 §12.1.2: Void elements that create line breaks
+		case "br":
+			display = "block"
+		// HTML5 §4.8.2: Images are replaced inline elements
+		case "img":
 			display = "inline"
 		// HTML5 §10.3.1: Elements that should not be rendered
 		// These elements have display:none in the default UA stylesheet
@@ -321,6 +335,24 @@ func (box *LayoutBox) calculateBlockWidth(containingBlock Dimensions) {
 			borderLeft - borderRight - paddingLeft - paddingRight
 		if width < 0 {
 			width = 0
+		}
+	}
+
+	// CSS 2.1 §10.4: Apply max-width constraint
+	if maxWidthStr := styles["max-width"]; maxWidthStr != "" {
+		if maxWidth := parseLength(maxWidthStr, containingBlock.Content.Width); maxWidth >= 0 {
+			if width > maxWidth {
+				width = maxWidth
+			}
+		}
+	}
+
+	// CSS 2.1 §10.4: Apply min-width constraint
+	if minWidthStr := styles["min-width"]; minWidthStr != "" {
+		if minWidth := parseLength(minWidthStr, containingBlock.Content.Width); minWidth >= 0 {
+			if width < minWidth {
+				width = minWidth
+			}
 		}
 	}
 
@@ -592,9 +624,16 @@ func (box *LayoutBox) calculateBlockHeight() {
 // Returns -1 if the value is "auto" or invalid.
 // CSS 2.1 §4.3.2 Lengths
 func parseLength(value string, referenceLength float64) float64 {
+	return parseLengthWithFont(value, referenceLength, css.BaseFontHeight)
+}
+
+// parseLengthWithFont parses a CSS length value with a specific font size for em units.
+// Returns -1 if the value is "auto" or invalid.
+// CSS 2.1 §4.3.2 Lengths
+func parseLengthWithFont(value string, referenceLength float64, fontSize float64) float64 {
 	value = strings.TrimSpace(value)
 
-	if value == "" || value == "auto" {
+	if value == "" || value == "auto" || value == "none" {
 		return -1
 	}
 
@@ -610,6 +649,38 @@ func parseLength(value string, referenceLength float64) float64 {
 	if strings.HasSuffix(value, "px") {
 		if px, err := strconv.ParseFloat(value[:len(value)-2], 64); err == nil {
 			return px
+		}
+		return -1
+	}
+
+	// Parse em units - CSS 2.1 §4.3.2: relative to font-size of the element
+	if strings.HasSuffix(value, "em") {
+		if em, err := strconv.ParseFloat(value[:len(value)-2], 64); err == nil {
+			return em * fontSize
+		}
+		return -1
+	}
+
+	// Parse rem units - CSS3: relative to root font-size
+	if strings.HasSuffix(value, "rem") {
+		if rem, err := strconv.ParseFloat(value[:len(value)-3], 64); err == nil {
+			return rem * css.BaseFontHeight
+		}
+		return -1
+	}
+
+	// Parse pt units - CSS 2.1 §4.3.2: 1pt = 1/72 inch, at 96dpi: 1pt ≈ 1.333px
+	if strings.HasSuffix(value, "pt") {
+		if pt, err := strconv.ParseFloat(value[:len(value)-2], 64); err == nil {
+			return pt * 96.0 / 72.0
+		}
+		return -1
+	}
+
+	// Parse vw units - CSS3: 1vw = 1% of viewport width
+	if strings.HasSuffix(value, "vw") {
+		if vw, err := strconv.ParseFloat(value[:len(value)-2], 64); err == nil {
+			return referenceLength * vw / 100.0
 		}
 		return -1
 	}
@@ -668,8 +739,9 @@ func applyExplicitRowHeight(box *LayoutBox, styles map[string]string) bool {
 	return true
 }
 
-// layoutText lays out a text node.
+// layoutText lays out a text node with word wrapping.
 // CSS 2.1 §16 Text
+// CSS 2.1 §9.4.2: Text is wrapped at the edge of the containing block
 func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	// Get the text content
 	text := box.StyledNode.Node.Data
@@ -680,7 +752,6 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	}
 
 	// CSS 2.1 §16.6.1: Collapse whitespace for layout calculations
-	// This ensures dimensions match what will actually be rendered
 	text = collapseWhitespace(text)
 
 	if text == "" {
@@ -693,21 +764,74 @@ func (box *LayoutBox) layoutText(containingBlock Dimensions) {
 	fontSize := extractFontSize(box.StyledNode.Styles)
 	fontWeight := extractFontWeight(box.StyledNode.Styles)
 	fontStyleStr := extractFontStyle(box.StyledNode.Styles)
-	
-	// Measure text using shared font.MeasureText
-	// This ensures layout and rendering use the same measurements
+
 	fontStyle := font.Style{
 		Size:   fontSize,
 		Weight: fontWeight,
 		Style:  fontStyleStr,
 	}
-	width, height := font.MeasureText(text, fontStyle)
+
+	// Available width for text wrapping
+	availableWidth := containingBlock.Content.Width
+	if availableWidth <= 0 {
+		availableWidth = 800
+	}
+
+	// Wrap text into lines that fit the available width
+	lines := wrapText(text, fontStyle, availableWidth)
+
+	// Calculate dimensions based on wrapped lines
+	maxLineWidth := 0.0
+	lineHeight := fontSize * 1.2 // CSS default line-height is ~1.2
+	totalHeight := lineHeight * float64(len(lines))
+
+	for _, line := range lines {
+		w, _ := font.MeasureText(line, fontStyle)
+		if w > maxLineWidth {
+			maxLineWidth = w
+		}
+	}
 
 	// Position the text node
 	box.Dimensions.Content.X = containingBlock.Content.X
 	box.Dimensions.Content.Y = containingBlock.Content.Y + containingBlock.Content.Height
-	box.Dimensions.Content.Width = width
-	box.Dimensions.Content.Height = height
+	box.Dimensions.Content.Width = maxLineWidth
+	box.Dimensions.Content.Height = totalHeight
+
+	// Store wrapped lines for rendering
+	if box.StyledNode != nil {
+		box.StyledNode.Node.WrappedLines = lines
+	}
+}
+
+// wrapText breaks text into lines that fit within the given width.
+// CSS 2.1 §16.6: Line breaking occurs at word boundaries.
+func wrapText(text string, fontStyle font.Style, maxWidth float64) []string {
+	if maxWidth <= 0 {
+		return []string{text}
+	}
+
+	words := strings.Fields(text)
+	if len(words) == 0 {
+		return []string{}
+	}
+
+	var lines []string
+	currentLine := words[0]
+
+	for _, word := range words[1:] {
+		testLine := currentLine + " " + word
+		w, _ := font.MeasureText(testLine, fontStyle)
+		if w <= maxWidth {
+			currentLine = testLine
+		} else {
+			lines = append(lines, currentLine)
+			currentLine = word
+		}
+	}
+	lines = append(lines, currentLine)
+
+	return lines
 }
 
 // extractFontSize extracts the font-size from CSS styles and returns it in pixels.

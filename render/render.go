@@ -746,21 +746,6 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 		return
 	}
 
-	// Get the text content
-	text := box.StyledNode.Node.Data
-	if text == "" {
-		return
-	}
-
-	// CSS 2.1 §16.6.1: Whitespace processing
-	// Collapse sequences of whitespace (spaces, tabs, newlines) into a single space
-	// This is the default behavior for normal text (not pre-formatted)
-	text = collapseWhitespace(text)
-	
-	if text == "" {
-		return
-	}
-
 	// Get text color from styles (default to black)
 	textColor := css.ParseColor(box.StyledNode.Styles["color"])
 	if textColor == (color.RGBA{0, 0, 0, 0}) {
@@ -769,9 +754,29 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 
 	// Extract font properties from styles
 	fontStyle := extractFontStyle(box.StyledNode.Styles)
-	
-	// Render the text at the box's position
-	// Add a vertical offset to position text at baseline
+
+	// Check if we have pre-wrapped lines from layout
+	if lines := box.StyledNode.Node.WrappedLines; len(lines) > 0 {
+		x := int(box.Dimensions.Content.X)
+		lineHeight := fontStyle.Size * 1.2
+		for i, line := range lines {
+			y := int(box.Dimensions.Content.Y) + int(fontStyle.Size) + int(float64(i)*lineHeight)
+			canvas.DrawStyledText(line, x, y, textColor, fontStyle)
+		}
+		return
+	}
+
+	// Fallback: render single line (for inline text without wrapping)
+	text := box.StyledNode.Node.Data
+	if text == "" {
+		return
+	}
+
+	text = collapseWhitespace(text)
+	if text == "" {
+		return
+	}
+
 	x := int(box.Dimensions.Content.X)
 	y := int(box.Dimensions.Content.Y) + int(fontStyle.Size)
 

@@ -280,8 +280,8 @@ func matchesDescendant(node *dom.Node, selectors []*css.SimpleSelector) bool {
 // matchesSimpleSelector checks if a node matches a simple selector.
 // CSS 2.1 §5.2 Selector syntax
 func matchesSimpleSelector(node *dom.Node, selector *css.SimpleSelector) bool {
-	// Check element type
-	if selector.TagName != "" && selector.TagName != node.Data {
+	// Check element type ("*" is universal selector - matches any element)
+	if selector.TagName != "" && selector.TagName != "*" && selector.TagName != node.Data {
 		return false
 	}
 

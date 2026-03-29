@@ -19,8 +19,14 @@ tr { display: table-row; }
 td, th { display: table-cell; padding: 1px; }
 
 /* CSS 2.1 §9.2.1: Block-level elements */
-div, p, h1, h2, h3, h4, h5, h6, ul, ol, li, dl, dt, dd, 
+div, p, h1, h2, h3, h4, h5, h6, ul, ol, li, dl, dt, dd,
 blockquote, pre, form, fieldset, hr, address, center {
+	display: block;
+}
+
+/* HTML5 §4.3-4.4: Semantic sectioning and grouping elements */
+section, article, nav, aside, header, footer, main,
+figure, figcaption, details, summary, dialog {
 	display: block;
 }
 
