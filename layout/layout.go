@@ -409,7 +409,10 @@ func (box *LayoutBox) calculateBlockPosition(containingBlock Dimensions) {
 }
 
 // layoutBlockChildren lays out the children of a block box.
+// CSS 2.1 §8.3.1: Implements vertical margin collapsing between adjacent block boxes.
 func (box *LayoutBox) layoutBlockChildren() {
+	prevMarginBottom := 0.0
+
 	for i := 0; i < len(box.Children); {
 		child := box.Children[i]
 
@@ -421,12 +424,24 @@ func (box *LayoutBox) layoutBlockChildren() {
 				i++
 			}
 			box.layoutInlineChildren(inlineRun)
+			prevMarginBottom = 0
 			continue
 		}
 
-		// Block-level layout (existing behavior)
+		// Block-level layout
 		child.Layout(box.Dimensions)
+
+		// CSS 2.1 §8.3.1: Vertical margin collapsing
+		// Adjacent block-level boxes collapse their vertical margins
+		if prevMarginBottom > 0 && child.Dimensions.Margin.Top > 0 {
+			// Collapse: use the larger margin, subtract the smaller one
+			collapsed := math.Min(prevMarginBottom, child.Dimensions.Margin.Top)
+			child.shiftY(-collapsed)
+			box.Dimensions.Content.Height -= collapsed
+		}
+
 		box.Dimensions.Content.Height += child.marginBox().Height
+		prevMarginBottom = child.Dimensions.Margin.Bottom
 		i++
 	}
 }
@@ -964,20 +979,16 @@ func collapseWhitespace(text string) string {
 // CSS 2.1 §17.5 Visual layout of table contents
 // CSS 2.1 §17.6.1: Border-spacing property adds space between cells
 func (box *LayoutBox) layoutTable(containingBlock Dimensions) {
-	// CSS 2.1 §17.6.2: Border-collapse model - not yet implemented
-	if borderCollapse := box.StyledNode.Styles["border-collapse"]; borderCollapse == "collapse" {
-		log.Warnf("CSS 2.1 §17.6.2: border-collapse:collapse not yet implemented, using separate borders")
-	}
-	
 	// Calculate table width (similar to block)
 	box.calculateBlockWidth(containingBlock)
 	box.calculateBlockPosition(containingBlock)
 
 	// Get border-spacing value (CSS 2.1 §17.6.1)
-	// For simplicity, we use the same spacing for horizontal and vertical
-	// (full spec supports "horizontal vertical" syntax)
 	borderSpacing := 2.0 // Default from user-agent stylesheet
-	if spacing := box.StyledNode.Styles["border-spacing"]; spacing != "" {
+	if borderCollapse := box.StyledNode.Styles["border-collapse"]; borderCollapse == "collapse" {
+		// CSS 2.1 §17.6.2: In the collapsing border model, border-spacing is 0
+		borderSpacing = 0
+	} else if spacing := box.StyledNode.Styles["border-spacing"]; spacing != "" {
 		if parsed := parseLength(spacing, 0); parsed >= 0 {
 			borderSpacing = parsed
 		}

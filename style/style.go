@@ -425,6 +425,40 @@ func resolveRelativeFontSize(value string, parentStyles map[string]string) float
 func expandShorthand(property, value string) map[string]string {
 	result := make(map[string]string)
 
+	// Handle font shorthand
+	// CSS 2.1 §15.8: font shorthand
+	if property == "font" {
+		if value == "inherit" {
+			// Just pass through - inheritance handles this
+			result[property] = value
+			return result
+		}
+		// Basic font shorthand parsing - extract font-size if present
+		parts := splitWhitespace(value)
+		for _, part := range parts {
+			if size := css.ParseFontSize(part); size > 0 {
+				result["font-size"] = part
+			} else if part == "bold" || part == "bolder" {
+				result["font-weight"] = part
+			} else if part == "italic" || part == "oblique" {
+				result["font-style"] = part
+			} else if part == "normal" {
+				// Skip - it's a reset value
+			}
+		}
+		if len(result) == 0 {
+			result[property] = value
+		}
+		return result
+	}
+
+	// Handle list-style shorthand
+	// CSS 2.1 §12.5: list-style shorthand
+	if property == "list-style" || property == "list-style-type" {
+		result[property] = value
+		return result
+	}
+
 	// Handle background shorthand - extract color when it's a simple color value
 	// CSS 2.1 §14.2.1: The background shorthand
 	if property == "background" {
