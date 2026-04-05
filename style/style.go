@@ -27,6 +27,7 @@
 package style
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -217,14 +218,11 @@ func matchRules(node *dom.Node, stylesheet *css.Stylesheet) []MatchedRule {
 		}
 	}
 
-	// Sort by specificity (simple bubble sort for small lists)
-	for i := 0; i < len(matched); i++ {
-		for j := i + 1; j < len(matched); j++ {
-			if matched[i].Specificity.Compare(matched[j].Specificity) > 0 {
-				matched[i], matched[j] = matched[j], matched[i]
-			}
-		}
-	}
+	// Sort by specificity (lowest to highest)
+	// CSS 2.1 §6.4.3: Rules with higher specificity override lower ones
+	sort.Slice(matched, func(i, j int) bool {
+		return matched[i].Specificity.Compare(matched[j].Specificity) < 0
+	})
 
 	return matched
 }
@@ -519,25 +517,7 @@ func parseBorderValue(value string) (width, style, color string) {
 
 // splitWhitespace splits a string on whitespace characters.
 func splitWhitespace(s string) []string {
-	var result []string
-	var current string
-
-	for _, ch := range s {
-		if ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r' {
-			if current != "" {
-				result = append(result, current)
-				current = ""
-			}
-		} else {
-			current += string(ch)
-		}
-	}
-
-	if current != "" {
-		result = append(result, current)
-	}
-
-	return result
+	return strings.Fields(s)
 }
 
 // applyDeclaration applies a CSS declaration to a styles map, expanding shorthand properties.

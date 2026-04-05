@@ -7,6 +7,8 @@
 package font
 
 import (
+	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/lukehoban/browser/css"
@@ -96,6 +98,54 @@ func SelectFont(style Style) *opentype.Font {
 		return goItalicFont
 	}
 	return goRegularFont
+}
+
+// ExtractStyle extracts font styling properties from a CSS styles map.
+// CSS 2.1 §15 Fonts and §16 Text
+// This is the single source of truth for converting CSS properties to font.Style,
+// ensuring layout and rendering interpret font properties identically.
+func ExtractStyle(styles map[string]string) Style {
+	s := Style{
+		Size:       css.BaseFontHeight,
+		Weight:     "normal",
+		Style:      "normal",
+		Decoration: "none",
+	}
+
+	// CSS 2.1 §15.7: font-size
+	if fontSize := styles["font-size"]; fontSize != "" {
+		if size := css.ParseFontSize(fontSize); size > 0 {
+			s.Size = size
+		}
+	}
+
+	// CSS 2.1 §15.6: font-weight
+	if fontWeight := styles["font-weight"]; fontWeight != "" {
+		fw := strings.TrimSpace(strings.ToLower(fontWeight))
+		if fw == "bold" || fw == "bolder" {
+			s.Weight = "bold"
+		} else if weight, err := strconv.Atoi(fw); err == nil && weight >= 600 {
+			s.Weight = "bold"
+		}
+	}
+
+	// CSS 2.1 §15.4: font-style
+	if fontStyle := styles["font-style"]; fontStyle != "" {
+		fs := strings.TrimSpace(strings.ToLower(fontStyle))
+		if fs == "italic" || fs == "oblique" {
+			s.Style = "italic"
+		}
+	}
+
+	// CSS 2.1 §16.3.1: text-decoration
+	if textDecoration := styles["text-decoration"]; textDecoration != "" {
+		td := strings.TrimSpace(strings.ToLower(textDecoration))
+		if strings.Contains(td, "underline") {
+			s.Decoration = "underline"
+		}
+	}
+
+	return s
 }
 
 // MeasureText measures the dimensions of text using TrueType fonts.

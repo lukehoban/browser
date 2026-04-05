@@ -42,7 +42,6 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"os"
-	"strconv"
 	"strings"
 
 	"github.com/lukehoban/browser/css"
@@ -108,6 +107,50 @@ func (c *Canvas) Clear(bg color.RGBA) {
 func (c *Canvas) SetPixel(x, y int, col color.RGBA) {
 	if x >= 0 && x < c.Width && y >= 0 && y < c.Height {
 		c.Pixels[y*c.Width+x] = col
+	}
+}
+
+// BlendPixel alpha-blends a source color onto the existing pixel at (x, y).
+// Uses standard alpha compositing (source-over) for smooth antialiasing.
+func (c *Canvas) BlendPixel(x, y int, src color.RGBA) {
+	if x < 0 || x >= c.Width || y < 0 || y >= c.Height {
+		return
+	}
+	if src.A == 0 {
+		return
+	}
+	if src.A == 255 {
+		c.Pixels[y*c.Width+x] = src
+		return
+	}
+	alpha := float64(src.A) / 255.0
+	existing := c.Pixels[y*c.Width+x]
+	c.Pixels[y*c.Width+x] = color.RGBA{
+		R: uint8(float64(src.R)*alpha + float64(existing.R)*(1-alpha)),
+		G: uint8(float64(src.G)*alpha + float64(existing.G)*(1-alpha)),
+		B: uint8(float64(src.B)*alpha + float64(existing.B)*(1-alpha)),
+		A: 255,
+	}
+}
+
+// blendPixel16 alpha-blends a 16-bit color (from RGBA()) onto the existing pixel.
+// Used for compositing text and image rendering where colors come from image.Image.At().RGBA().
+func (c *Canvas) blendPixel16(x, y int, r, g, b, a uint32) {
+	if x < 0 || x >= c.Width || y < 0 || y >= c.Height || a == 0 {
+		return
+	}
+	src := color.RGBA{R: uint8(r >> 8), G: uint8(g >> 8), B: uint8(b >> 8), A: uint8(a >> 8)}
+	if a >= 0xFFFF {
+		c.Pixels[y*c.Width+x] = src
+		return
+	}
+	alpha := float64(a) / 65535.0
+	existing := c.Pixels[y*c.Width+x]
+	c.Pixels[y*c.Width+x] = color.RGBA{
+		R: uint8(float64(r>>8)*alpha + float64(existing.R)*(1-alpha)),
+		G: uint8(float64(g>>8)*alpha + float64(existing.G)*(1-alpha)),
+		B: uint8(float64(b>>8)*alpha + float64(existing.B)*(1-alpha)),
+		A: 255,
 	}
 }
 
@@ -228,27 +271,11 @@ func (c *Canvas) DrawStyledText(text string, x, y int, col color.RGBA, style Fon
 	// Calculate baseline offset
 	baselineOffset := metrics.Ascent.Ceil()
 	
-	// Copy text pixels to canvas with proper alpha blending
+	// Copy text pixels to canvas with alpha blending
 	for dy := 0; dy < textHeight; dy++ {
 		for dx := 0; dx < textWidth; dx++ {
-			px := x + dx
-			py := y - baselineOffset + dy
-			
-			if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
-				r, g, b, a := textImg.At(dx, dy).RGBA()
-				if a > 0 {
-					// Use alpha blending for smooth antialiasing
-					alpha := float64(a) / 65535.0
-					existing := c.Pixels[py*c.Width+px]
-					
-					c.Pixels[py*c.Width+px] = color.RGBA{
-						R: uint8(float64(r>>8)*alpha + float64(existing.R)*(1-alpha)),
-						G: uint8(float64(g>>8)*alpha + float64(existing.G)*(1-alpha)),
-						B: uint8(float64(b>>8)*alpha + float64(existing.B)*(1-alpha)),
-						A: 255, // Canvas is opaque
-					}
-				}
-			}
+			r, g, b, a := textImg.At(dx, dy).RGBA()
+			c.blendPixel16(x+dx, y-baselineOffset+dy, r, g, b, a)
 		}
 	}
 	
@@ -301,35 +328,15 @@ func (c *Canvas) drawScaledBasicFont(text string, x, y int, col color.RGBA, styl
 	baselineOffset := int(float64(baseFace.Ascent) * scale)
 	
 	// Copy text pixels to canvas with italic slant if needed
-	// Alpha blending is used to properly composite antialiased text
 	for dy := 0; dy < scaledHeight; dy++ {
+		// CSS 2.1 §15.7: Apply italic slant
+		slant := 0
+		if style.Style == "italic" {
+			slant = int(float64(scaledHeight-dy) * italicSlantFactor)
+		}
 		for dx := 0; dx < scaledWidth; dx++ {
-			// CSS 2.1 §15.7: Apply italic slant
-			slant := 0
-			if style.Style == "italic" {
-				slant = int(float64(scaledHeight-dy) * italicSlantFactor)
-			}
-			
-			px := x + dx + slant
-			py := y - baselineOffset + dy
-			
-			if px >= 0 && px < c.Width && py >= 0 && py < c.Height {
-				r, g, b, a := textImg.At(dx, dy).RGBA()
-				if a > 0 {
-					// Use alpha blending for smooth rendering
-					alpha := float64(a) / 65535.0
-					existing := c.Pixels[py*c.Width+px]
-					
-					blended := color.RGBA{
-						R: uint8(float64(r>>8)*alpha + float64(existing.R)*(1-alpha)),
-						G: uint8(float64(g>>8)*alpha + float64(existing.G)*(1-alpha)),
-						B: uint8(float64(b>>8)*alpha + float64(existing.B)*(1-alpha)),
-						A: 255, // Canvas is opaque
-					}
-					
-					c.Pixels[py*c.Width+px] = blended
-				}
-			}
+			r, g, b, a := textImg.At(dx, dy).RGBA()
+			c.blendPixel16(x+dx+slant, y-baselineOffset+dy, r, g, b, a)
 		}
 	}
 	
@@ -391,39 +398,8 @@ func (c *Canvas) DrawImage(img image.Image, x, y, width, height int) {
 			srcX := bounds.Min.X + (dx * srcWidth / width)
 			srcY := bounds.Min.Y + (dy * srcHeight / height)
 
-			// Get source color and convert to RGBA
-			col := img.At(srcX, srcY)
-			r, g, b, a := col.RGBA()
-
-			// Convert from 16-bit to 8-bit color
-			rgba := color.RGBA{
-				R: uint8(r >> 8),
-				G: uint8(g >> 8),
-				B: uint8(b >> 8),
-				A: uint8(a >> 8),
-			}
-
-			// Handle alpha blending with existing pixel
-			destX := x + dx
-			destY := y + dy
-
-			if rgba.A == 255 {
-				c.SetPixel(destX, destY, rgba)
-			} else if rgba.A > 0 {
-				// Check bounds before accessing pixel array directly
-				if destX >= 0 && destX < c.Width && destY >= 0 && destY < c.Height {
-					// Simple alpha blending
-					existing := c.Pixels[destY*c.Width+destX]
-					alpha := float64(rgba.A) / 255.0
-					blended := color.RGBA{
-						R: uint8(float64(rgba.R)*alpha + float64(existing.R)*(1-alpha)),
-						G: uint8(float64(rgba.G)*alpha + float64(existing.G)*(1-alpha)),
-						B: uint8(float64(rgba.B)*alpha + float64(existing.B)*(1-alpha)),
-						A: 255,
-					}
-					c.SetPixel(destX, destY, blended)
-				}
-			}
+			r, g, b, a := img.At(srcX, srcY).RGBA()
+			c.blendPixel16(x+dx, y+dy, r, g, b, a)
 		}
 	}
 }
@@ -589,18 +565,8 @@ func renderBackground(canvas *Canvas, box *layout.LayoutBox) {
 				width := int(contentBox.Width)
 				height := int(contentBox.Height)
 				
-				// Check if it's an SVG by looking for SVG XML structure
-				// Look for <svg tag with word boundaries to avoid false positives
-				isSVG := false
-				dataStr := string(data)
-				if strings.Contains(dataStr, "<svg ") || 
-				   strings.Contains(dataStr, "<svg>") || 
-				   strings.HasPrefix(strings.TrimSpace(dataStr), "<svg") ||
-				   strings.Contains(dataStr, "<?xml") && strings.Contains(dataStr, "<svg") {
-					isSVG = true
-				}
-				
-				if isSVG {
+				// SVG detection per SVG 1.1 §5.1 - use shared svg.IsSVG helper
+				if svg.IsSVG(data) {
 					// Render as SVG
 					err := canvas.DrawSVG(data, int(contentBox.X), int(contentBox.Y), width, height)
 					if err == nil {
@@ -767,8 +733,8 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 		textColor = color.RGBA{0, 0, 0, 255} // Default to black
 	}
 
-	// Extract font properties from styles
-	fontStyle := extractFontStyle(box.StyledNode.Styles)
+	// Extract font properties from styles using shared extractor
+	fontStyle := browserfont.ExtractStyle(box.StyledNode.Styles)
 	
 	// Render the text at the box's position
 	// Add a vertical offset to position text at baseline
@@ -778,89 +744,11 @@ func renderText(canvas *Canvas, box *layout.LayoutBox) {
 	canvas.DrawStyledText(text, x, y, textColor, fontStyle)
 }
 
-// extractFontStyle extracts font styling properties from CSS styles.
-// CSS 2.1 §15 Fonts and §16 Text
-func extractFontStyle(styles map[string]string) FontStyle {
-	fontStyle := FontStyle{
-		Size:       13.0, // Default font size
-		Weight:     "normal",
-		Style:      "normal",
-		Decoration: "none",
-	}
-	
-	// Parse font-size (CSS 2.1 §15.7)
-	if fontSize := styles["font-size"]; fontSize != "" {
-		if size := css.ParseFontSize(fontSize); size > 0 {
-			fontStyle.Size = size
-		}
-	}
-	
-	// CSS 2.1 §15.6: Parse font-weight
-	if fontWeight := styles["font-weight"]; fontWeight != "" {
-		fontWeight = strings.TrimSpace(strings.ToLower(fontWeight))
-		if fontWeight == "bold" || fontWeight == "bolder" {
-			fontStyle.Weight = "bold"
-		} else if weight, err := strconv.Atoi(fontWeight); err == nil && weight >= 600 {
-			fontStyle.Weight = "bold"
-		}
-	}
-	
-	// CSS 2.1 §15.7: Parse font-style
-	if fontStyleVal := styles["font-style"]; fontStyleVal != "" {
-		fontStyleVal = strings.TrimSpace(strings.ToLower(fontStyleVal))
-		if fontStyleVal == "italic" || fontStyleVal == "oblique" {
-			fontStyle.Style = "italic"
-		}
-	}
-	
-	// CSS 2.1 §16.3.1: Parse text-decoration
-	if textDecoration := styles["text-decoration"]; textDecoration != "" {
-		textDecoration = strings.TrimSpace(strings.ToLower(textDecoration))
-		if strings.Contains(textDecoration, "underline") {
-			fontStyle.Decoration = "underline"
-		}
-	}
-	
-	return fontStyle
-}
 
-// collapseWhitespace collapses consecutive whitespace characters into a single space.
+// collapseWhitespace delegates to css.CollapseWhitespace.
 // CSS 2.1 §16.6.1: The white-space property
-// For normal text (white-space: normal, which is the default):
-// - Sequences of whitespace (space, tab, newline, carriage return) are collapsed into a single space
-// - Leading and trailing whitespace is removed
 func collapseWhitespace(text string) string {
-	if text == "" {
-		return text
-	}
-	
-	var result strings.Builder
-	lastWasSpace := true // Start as true to trim leading whitespace
-	
-	for _, ch := range text {
-		// Check if character is whitespace (space, tab, newline, carriage return)
-		isSpace := ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
-		
-		if isSpace {
-			// Only add a space if we haven't just added one
-			if !lastWasSpace {
-				result.WriteRune(' ')
-				lastWasSpace = true
-			}
-		} else {
-			// Regular character - add it
-			result.WriteRune(ch)
-			lastWasSpace = false
-		}
-	}
-	
-	// Trim trailing whitespace
-	output := result.String()
-	if lastWasSpace && len(output) > 0 {
-		output = output[:len(output)-1]
-	}
-	
-	return output
+	return css.CollapseWhitespace(text)
 }
 
 // renderImage renders an image element if present.

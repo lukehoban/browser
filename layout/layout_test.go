@@ -645,20 +645,23 @@ tr.AppendChild(td1)
 tr.AppendChild(td2)
 table.AppendChild(tr)
 
-// Create styled nodes
+// Create styled nodes (display properties must be set explicitly
+// since we bypass the cascade that would apply UA stylesheet defaults)
 styledTable := &style.StyledNode{
 Node: table,
 Styles: map[string]string{
+"display": "table",
 "width": "400px",
 },
 Children: []*style.StyledNode{
 {
 Node:   tr,
-Styles: map[string]string{},
+Styles: map[string]string{"display": "table-row"},
 Children: []*style.StyledNode{
 {
 Node: td1,
 Styles: map[string]string{
+"display": "table-cell",
 "padding": "10px",
 },
 Children: []*style.StyledNode{
@@ -672,6 +675,7 @@ Children: []*style.StyledNode{},
 {
 Node: td2,
 Styles: map[string]string{
+"display": "table-cell",
 "padding": "10px",
 },
 Children: []*style.StyledNode{

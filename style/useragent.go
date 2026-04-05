@@ -71,6 +71,16 @@ blockquote { margin: 1em 40px; }
 
 /* Center element - deprecated but still used */
 center { text-align: center; }
+
+/* CSS 2.1 §9.2.2: Inline-level elements */
+a, span, font, code, small, big, abbr, cite, kbd, samp, var,
+sub, sup, mark, s, del, ins, tt { display: inline; }
+
+/* HTML5 §10.3.1: Elements that should not be rendered */
+head, title, meta, link, style, script, noscript, base { display: none; }
+
+/* HTML5 §4.8.2: The img element is inline replaced */
+img { display: inline; }
 `
 
 	stylesheet := css.Parse(defaultCSS)

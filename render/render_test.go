@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/lukehoban/browser/css"
+	browserfont "github.com/lukehoban/browser/font"
 	"github.com/lukehoban/browser/layout"
 	"github.com/lukehoban/browser/style"
 )
@@ -431,9 +432,9 @@ func TestExtractFontStyle(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := extractFontStyle(tt.styles)
+			result := browserfont.ExtractStyle(tt.styles)
 			if result != tt.expected {
-				t.Errorf("extractFontStyle() = %+v, expected %+v", result, tt.expected)
+				t.Errorf("ExtractStyle() = %+v, expected %+v", result, tt.expected)
 			}
 		})
 	}

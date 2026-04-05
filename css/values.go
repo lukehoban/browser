@@ -251,6 +251,41 @@ func ParseColor(value string) color.RGBA {
 	return color.RGBA{0, 0, 0, 255}
 }
 
+// CollapseWhitespace collapses consecutive whitespace characters into a single space.
+// CSS 2.1 §16.6.1: The white-space property
+// For normal text (white-space: normal, which is the default):
+// - Sequences of whitespace (space, tab, newline, carriage return) are collapsed into a single space
+// - Leading and trailing whitespace is removed
+func CollapseWhitespace(text string) string {
+	if text == "" {
+		return text
+	}
+
+	var result strings.Builder
+	lastWasSpace := true // Start as true to trim leading whitespace
+
+	for _, ch := range text {
+		isSpace := ch == ' ' || ch == '\t' || ch == '\n' || ch == '\r'
+
+		if isSpace {
+			if !lastWasSpace {
+				result.WriteRune(' ')
+				lastWasSpace = true
+			}
+		} else {
+			result.WriteRune(ch)
+			lastWasSpace = false
+		}
+	}
+
+	output := result.String()
+	if lastWasSpace && len(output) > 0 {
+		output = output[:len(output)-1]
+	}
+
+	return output
+}
+
 // parseHexColor parses a hex color string (#RGB or #RRGGBB).
 // CSS 2.1 §4.3.6: Color syntax
 func parseHexColor(hex string) color.RGBA {
