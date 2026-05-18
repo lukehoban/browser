@@ -34,7 +34,11 @@ browser/
 ├── style/           # Style computation and cascade
 ├── layout/          # Layout engine (visual formatting model)
 ├── render/          # Rendering engine
+├── font/            # Font loading and metrics
+├── svg/             # SVG parsing and rendering
+├── log/             # Logging utilities
 ├── wasm/            # WebAssembly demo page
+├── reftest/         # Reference test infrastructure
 └── test/            # Test files and fixtures
 ```
 
