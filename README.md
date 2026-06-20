@@ -83,6 +83,12 @@ The browser uses the [Go fonts](https://blog.golang.org/go-fonts) - high-quality
 
 ![Font Comparison](./font_comparison_screenshot.png)
 
+### Inline Styles
+
+Example showing inline CSS styles applied via `<style>` tags:
+
+![Inline Style Rendering](./inline_style_screenshot.png)
+
 ### Test Case Rendering
 
 Example of styled HTML with borders, colors, and text formatting:
@@ -95,11 +101,13 @@ Latest Hacker News render (1024x768):
 
 ![Hacker News Rendering](./hackernews_screenshot.png)
 
-### Testing
+## Testing
 
 ```bash
 go test ./...
 ```
+
+See [TESTING.md](TESTING.md) for the full testing strategy and W3C test suite integration details.
 
 ## WebAssembly
 
@@ -110,6 +118,18 @@ To build locally:
 GOOS=js GOARCH=wasm go build -o wasm/browser.wasm ./cmd/browser-wasm
 cd wasm && python3 -m http.server 8080
 ```
+
+### WASM Demo
+
+Enter HTML and CSS in the editor panel and click "Render" to see the result:
+
+![WASM Demo](./wasm_demo_screenshot.png)
+
+### WASM Hacker News
+
+Hacker News rendered via the live WASM demo:
+
+![WASM Hacker News](./wasm_hn_screenshot.png)
 
 See [wasm/README.md](wasm/README.md) for more details.
 
