@@ -53,7 +53,14 @@ This browser implementation follows these W3C specifications:
 
 ## Quick Start
 
-### Building
+### Installing
+
+```bash
+# Install the latest release directly (no clone required)
+go install github.com/lukehoban/browser/cmd/browser@latest
+```
+
+### Building from source
 
 ```bash
 go build ./cmd/browser
@@ -74,6 +81,18 @@ go build ./cmd/browser
 # Custom viewport size
 ./browser -output output.png -width 1024 -height 768 test/hackernews.html
 ```
+
+### CLI flags
+
+| Flag | Default | Description |
+| --- | --- | --- |
+| `-output` | *(none)* | Output PNG file path. When omitted, the layout or render tree is printed as text instead. |
+| `-width` | `800` | Viewport width in pixels. |
+| `-height` | `600` | Viewport height in pixels. |
+| `-log-level` | `warn` | Log level: `debug`, `info`, `warn`, `error`. |
+| `-verbose` | `false` | Enable verbose logging (equivalent to `-log-level=info`). |
+| `-show-layout` | `false` | Display the layout tree instead of rendering. |
+| `-show-render` | `false` | Display the render tree (styled nodes) instead of rendering. |
 
 ## Screenshots
 
@@ -130,4 +149,4 @@ See [MILESTONES.md](MILESTONES.md) for detailed progress and known limitations.
 
 ## License
 
-MIT
+[MIT](LICENSE)
